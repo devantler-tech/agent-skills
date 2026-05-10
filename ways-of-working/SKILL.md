@@ -33,7 +33,7 @@ Follow the [test-driven-development](https://github.com/obra/superpowers/tree/ma
 
 | Type | Tooling | When to run |
 |------|---------|-------------|
-| **Linting** | Language-specific linters (e.g. `golangci-lint`, `eslint`, `MegaLinter`) | CI on every PR |
+| **Linting** | Linters and linting runners (e.g. `golangci-lint`, `eslint`, `MegaLinter`) | CI on every PR |
 | **Scanning** | Security & quality scanners (e.g. CodeQL, Trivy, SonarQube) | CI on every PR |
 | **Unit tests** | SDK test frameworks (e.g. `go test`, `xunit`, `jest`) | CI on every PR |
 | **Integration tests** | SDK test frameworks | CI on every PR |
@@ -61,7 +61,7 @@ Platform lifecycle commands:
 
 ## Code Quality Gates (CI)
 
-Every pull request **must** pass all linting and scanning checks defined in the [Testing](#testing) section, plus:
+Every pull request **must** pass all linting and scanning checks defined in the [Testing](#testing) section. For application / library repositories, additionally:
 
 - **No code coverage regression** — coverage must not decrease compared to the base branch.
 - **No benchmark regression** — benchmark results must not regress compared to the base branch.
