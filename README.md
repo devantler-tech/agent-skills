@@ -46,7 +46,7 @@ This repo is a **pointer list** and publisher of in-house skills. Each row below
 
 | Skill | Upstream | Install |
 |-------|----------|---------|
-| `bubbletea` | [`ggprompts/tfe`](https://github.com/ggprompts/tfe/tree/main/.claude/skills/bubbletea) | `gh skill install ggprompts/tfe bubbletea` |
+| `bubbletea` | [`GGPrompts/my-gg-plugins`](https://github.com/GGPrompts/my-gg-plugins/tree/main/skills/bubbletea) | `gh skill install GGPrompts/my-gg-plugins bubbletea` |
 | `golang-pro` | [`Jeffallan/claude-skills`](https://github.com/Jeffallan/claude-skills/tree/main/skills/golang-pro) | `gh skill install Jeffallan/claude-skills golang-pro` |
 
 </details>
