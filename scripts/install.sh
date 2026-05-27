@@ -36,12 +36,16 @@ else
 fi
 
 # Extract "<owner/repo> <skill>" from every `gh skill install <owner/repo> <skill>`
-# occurrence in the README, ignoring any trailing flags, and de-duplicate.
+# occurrence in the curated index, ignoring any trailing flags, and de-duplicate.
+# Scope the scan to the "## Skills" section (up to the next "## " heading) so
+# example commands elsewhere in the README — e.g. under "## Installing" — are
+# never picked up as installable entries.
 entries=()
 while IFS= read -r entry; do
   [ -n "$entry" ] && entries+=("$entry")
 done < <(
-  grep -oE 'gh skill install [A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+ [A-Za-z0-9_.-]+' "$readme" \
+  awk '/^## Skills[[:space:]]*$/{in_skills=1; next} /^## /{in_skills=0} in_skills' "$readme" \
+    | grep -oE 'gh skill install [A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+ [A-Za-z0-9_.-]+' \
     | awk '{print $4, $5}' \
     | sort -u
 )
@@ -59,11 +63,14 @@ for agent in "${agents[@]}"; do
   for entry in "${entries[@]}"; do
     repo=${entry%% *}
     skill=${entry##* }
-    if gh skill install "$repo" "$skill" \
-        --agent "$agent" --scope user --force --allow-hidden-dirs >/dev/null 2>&1; then
+    # Capture output so the success path stays quiet but a failure can surface
+    # the actual error (auth, network, missing skill, …) instead of swallowing it.
+    if out=$(gh skill install "$repo" "$skill" \
+        --agent "$agent" --scope user --force --allow-hidden-dirs 2>&1); then
       echo "  ok   [$agent] $repo $skill"
     else
       echo "  FAIL [$agent] $repo $skill" >&2
+      printf '%s\n' "$out" | sed 's/^/         /' >&2
       fail=$((fail + 1))
     fi
   done
