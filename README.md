@@ -2,6 +2,8 @@
 
 A curated index of generic [agent skills](https://agentskills.io) installable with the [`gh skill`](https://github.blog/changelog/2026-04-16-manage-agent-skills-with-github-cli/) CLI (v2.90.0+).
 
+These skills are **agent-neutral**: every `SKILL.md` follows the [`agentskills.io`](https://agentskills.io) spec, so the same skill works in **GitHub Copilot, Claude Code, Cursor, Codex, Gemini CLI**, and the other agents `gh skill` supports — pick the target with `--agent`. See [Installing](#installing) to install for one agent or several at once.
+
 This repo is a **pointer list** and publisher of in-house skills. Each row below is either an in-house skill or installs directly from its original upstream so `gh skill` records the true source in the skill's `SKILL.md` frontmatter (`metadata.github-repo`, `github-path`, `github-ref`, `github-tree-sha`) and `gh skill update --all` works natively — no lockfile, no sync bot, no custom metadata.
 
 ## Skills
@@ -23,7 +25,6 @@ This repo is a **pointer list** and publisher of in-house skills. Each row below
 
 | Skill | Upstream | Install |
 |-------|----------|---------|
-| `gh-cli` | [`github/awesome-copilot`](https://github.com/github/awesome-copilot/tree/main/skills/gh-cli) | `gh skill install github/awesome-copilot gh-cli` |
 | `gh-stack` | [`github/gh-stack`](https://github.com/github/gh-stack/tree/main/skills/gh-stack) | `gh skill install github/gh-stack gh-stack` |
 | `github-actions-docs` | [`xixu-me/skills`](https://github.com/xixu-me/skills/tree/main/skills/github-actions-docs) | `gh skill install xixu-me/skills github-actions-docs` |
 | `github-issues` | [`github/awesome-copilot`](https://github.com/github/awesome-copilot/tree/main/skills/github-issues) | `gh skill install github/awesome-copilot github-issues` |
@@ -46,7 +47,7 @@ This repo is a **pointer list** and publisher of in-house skills. Each row below
 
 | Skill | Upstream | Install |
 |-------|----------|---------|
-| `bubbletea` | [`ggprompts/tfe`](https://github.com/ggprompts/tfe/tree/main/.claude/skills/bubbletea) | `gh skill install ggprompts/tfe bubbletea` |
+| `bubbletea` | [`ggprompts/tfe`](https://github.com/ggprompts/tfe/tree/main/.claude/skills/bubbletea) | `gh skill install ggprompts/tfe bubbletea --allow-hidden-dirs` |
 | `golang-pro` | [`Jeffallan/claude-skills`](https://github.com/Jeffallan/claude-skills/tree/main/skills/golang-pro) | `gh skill install Jeffallan/claude-skills golang-pro` |
 
 </details>
@@ -82,15 +83,39 @@ This repo is a **pointer list** and publisher of in-house skills. Each row below
 
 </details>
 
-Each `gh skill install` accepts `--agent <name>`, `--scope user|project`, and `--pin <ref>` (or `@ref` suffix on the skill name) — see `gh skill install --help`.
+## Installing
+
+Each `gh skill install` accepts `--agent <name>`, `--scope user|project`, and `--pin <ref>` (or an `@ref` suffix on the skill name) — see `gh skill install --help` for the full list of supported agents.
+
+The install commands in the tables above use the default agent (GitHub Copilot) at project scope. To install for **Claude Code** instead, or for **both agents at once at user scope** (so the skill is available everywhere), add `--agent` / `--scope`:
+
+```sh
+# GitHub Copilot, user scope -> ~/.copilot/skills/<skill>/
+gh skill install devantler-tech/skills ways-of-working --agent github-copilot --scope user
+
+# Claude Code, user scope -> ~/.claude/skills/<skill>/
+gh skill install devantler-tech/skills ways-of-working --agent claude-code --scope user
+```
+
+### Install everything for both Copilot and Claude
+
+[`scripts/install.sh`](scripts/install.sh) installs every skill listed above for the agents you name (default: `github-copilot` and `claude-code`) at user scope:
+
+```sh
+./scripts/install.sh                          # both Copilot + Claude Code (user scope)
+./scripts/install.sh claude-code              # just Claude Code
+AGENTS="github-copilot claude-code cursor" ./scripts/install.sh   # any gh skill agents
+```
+
+The script is the single source of truth's consumer — it reads the install commands straight out of this README, so it never drifts from the index.
 
 ## Automated installation and updates
 
 To adopt these skills in another repository:
 
-- [`devantler-tech/actions/setup-copilot-skills`](https://github.com/devantler-tech/actions/tree/main/setup-copilot-skills) — composite action that installs a newline list of `<owner/repo> <skill>[@pin]` entries.
-- [`devantler-tech/actions/update-copilot-skills`](https://github.com/devantler-tech/actions/tree/main/update-copilot-skills) — composite action that runs `gh skill update --all` against the checked-in skills.
-- [`devantler-tech/reusable-workflows/.github/workflows/update-copilot-skills.yaml`](https://github.com/devantler-tech/reusable-workflows/blob/main/.github/workflows/update-copilot-skills.yaml) — reusable workflow that opens a PR when any skill's upstream has drifted.
+- [`devantler-tech/actions/setup-agent-skills`](https://github.com/devantler-tech/actions/tree/main/setup-agent-skills) — composite action that installs a newline list of `<owner/repo> <skill>[@pin]` entries, for one or more agents.
+- [`devantler-tech/actions/update-agent-skills`](https://github.com/devantler-tech/actions/tree/main/update-agent-skills) — composite action that runs `gh skill update --all` against the checked-in skills.
+- [`devantler-tech/reusable-workflows/.github/workflows/update-agent-skills.yaml`](https://github.com/devantler-tech/reusable-workflows/blob/main/.github/workflows/update-agent-skills.yaml) — reusable workflow that opens a PR when any skill's upstream has drifted.
 
 All three rely on the `github-*` metadata that `gh skill install` injects into each `SKILL.md`, so no lockfile or external manifest is required.
 
