@@ -25,6 +25,13 @@ jobs:
       - name: 🏷️ Calculate next version
         uses: mathieudutour/github-tag-action@a22cf08638b34d5badda920f9daf6e72c477b07b # v6.2
         id: tag
+        # With default_bump: none, github-tag-action calls setFailed("Could not
+        # increment version.") whenever no commit on the push warrants a release
+        # (e.g. docs:/refactor:-only pushes). The publish job below is already
+        # gated on `needs.version.outputs.tag != ''`, so the intended behaviour is
+        # a green "no release" skip — not a red job. Tolerate the non-release
+        # outcome here so a no-op push doesn't show a failed Release run on main.
+        continue-on-error: true
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           dry_run: true
