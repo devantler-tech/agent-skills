@@ -37,6 +37,16 @@ jobs:
           dry_run: true
           default_bump: none
 
+      - name: ⚠️ Surface a skipped release
+        # continue-on-error above keeps the run green, which would otherwise also
+        # hide a genuine github-tag-action error (e.g. an API outage) behind the
+        # benign "no release warranted" case. Emit a warning annotation whenever
+        # the step did not succeed so a skipped release stays visible in the run
+        # summary rather than passing silently.
+        if: steps.tag.outcome == 'failure'
+        run: |
+          echo "::warning title=Release skipped::No version tag was produced, so no release was published. This is expected for pushes that do not warrant a release (e.g. docs:/refactor:-only). If a release was expected, inspect the '🏷️ Calculate next version' step log for a genuine github-tag-action error."
+
   publish:
     name: Publish
     needs: version
