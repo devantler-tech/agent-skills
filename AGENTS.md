@@ -59,34 +59,38 @@ copy; only add a directory here for genuinely **in-house** skills.
    `uses: owner/repo@<sha> # <version-comment>`.
 4. **`permissions: {}` at the workflow top level**, granting specific permissions per-job; set
    `persist-credentials: false` on `actions/checkout` unless a job must push.
-5. **Conventional-commit messages** (`feat:`/`fix:`/`chore:`/`ci:`/`docs:`/`refactor:`) — releases are
-   cut by [semantic-release](https://semantic-release.gitbook.io/) on every push to `main`, so the
-   commit type determines the next version. A `docs:`/`refactor:`-only push is a deliberate green
-   "no release" skip (see `release.yaml`).
+5. **Conventional-commit messages** (`feat:`/`fix:`/`chore:`/`ci:`/`docs:`/`refactor:`) — on every push
+   to `main`, `release.yaml` runs [`mathieudutour/github-tag-action`](https://github.com/mathieudutour/github-tag-action)
+   to calculate the next version tag from the commit types, then hands off to `cd.yaml` to publish it,
+   so the commit type determines the next version. A `docs:`/`refactor:`-only push yields no version
+   bump (`default_bump: none`), a deliberate green "no release" skip (see `release.yaml`).
 6. **README and its consumers stay in lockstep.** Any change to the index updates the README tables;
    never hand-maintain a parallel list — `install.sh` and the actions read the README.
 
 ## Validation
 
-Run before opening any PR (the same gates CI enforces):
+Run before opening any PR. Steps 1–2 mirror the CI gates; steps 3–4 are best-effort local lints that
+CI does not currently enforce but that keep changes clean:
 
 ```bash
 # 1. Validate the in-house skill(s) the way the publish pipeline does (requires gh >= 2.90.0).
 gh skill publish --dry-run
 
-# 2. Validate each skill against the agentskills.io spec (the matrixed CI check).
-python -m pip install "skills-ref @ git+https://github.com/agentskills/agentskills.git#subdirectory=skills-ref"
+# 2. Validate each skill against the agentskills.io spec (the matrixed CI check). Pin to the SAME
+#    agentskills commit CI uses (AGENTSKILLS_REF in .github/workflows/ci.yaml) so local matches CI.
+python -m pip install "skills-ref @ git+https://github.com/agentskills/agentskills.git@8d8fcbc69e0c42e05922c2ffc287a3bbdef7b0a3#subdirectory=skills-ref"
 skills-ref validate ways-of-working
 
-# 3. Lint the install script (it parses the README index).
+# 3. (local only) Lint the install script (it parses the README index).
 bash -n scripts/install.sh && shellcheck scripts/install.sh
 
-# 4. Lint changed workflows.
+# 4. (local only) Lint changed workflows.
 actionlint
 ```
 
 The required gate is the aggregated **`CI - Required Checks`** job (validate + discover-skills +
-validate-spec). Never weaken a check to pass — fix the root cause.
+validate-spec); `shellcheck`/`actionlint` above are local-only conveniences, not CI gates. Never
+weaken a check to pass — fix the root cause.
 
 ## Maintenance (autonomous AI assistant)
 
