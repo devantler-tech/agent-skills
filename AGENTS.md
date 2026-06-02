@@ -69,8 +69,8 @@ copy; only add a directory here for genuinely **in-house** skills.
 
 ## Validation
 
-Run before opening any PR. Steps 1–2 mirror the CI gates; steps 3–4 are best-effort local lints that
-CI does not currently enforce but that keep changes clean:
+Run before opening any PR. Steps 1–3 mirror the CI gates; step 4 is a best-effort local lint that CI
+does not currently enforce but that keeps changes clean:
 
 ```bash
 # 1. Validate the in-house skill(s) the way the publish pipeline does (requires gh >= 2.90.0).
@@ -81,15 +81,16 @@ gh skill publish --dry-run
 python -m pip install "skills-ref @ git+https://github.com/agentskills/agentskills.git@8d8fcbc69e0c42e05922c2ffc287a3bbdef7b0a3#subdirectory=skills-ref"
 skills-ref validate ways-of-working
 
-# 3. (local only) Lint the install script (it parses the README index).
+# 3. Lint the install script + smoke-test the README index parser (the `lint-scripts` CI job).
 bash -n scripts/install.sh && shellcheck scripts/install.sh
+./scripts/install.sh --list   # parses the README index (no gh needed); must print a non-empty list
 
 # 4. (local only) Lint changed workflows.
 actionlint
 ```
 
 The required gate is the aggregated **`CI - Required Checks`** job (validate + discover-skills +
-validate-spec); `shellcheck`/`actionlint` above are local-only conveniences, not CI gates. Never
+validate-spec + lint-scripts); `actionlint` above is a local-only convenience, not a CI gate. Never
 weaken a check to pass — fix the root cause.
 
 ## Maintenance (autonomous AI assistant)
