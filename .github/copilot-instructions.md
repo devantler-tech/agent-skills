@@ -2,8 +2,8 @@
 
 This repo is a curated, **agent-neutral index** of generic [agent skills](https://agentskills.io)
 installable via `gh skill`, plus the publisher of devantler-tech's own in-house skills (e.g.
-`ways-of-working`). Canonical conventions live in [`AGENTS.md`](../AGENTS.md); this is the concise
-review checklist — flag violations of the rules below.
+`ways-of-working`). This checklist is **self-contained for code review** — it distills the conventions
+in [`AGENTS.md`](../AGENTS.md), which automated review does not load. Flag violations of the rules below.
 
 ## Always (every PR)
 
@@ -43,7 +43,7 @@ review checklist — flag violations of the rules below.
   tags; flag an unpinned or tag-only action.
 - **`permissions: {}` at workflow top level**, granted per-job; `persist-credentials: false` on
   `actions/checkout` unless a job must push. Keep workflows `actionlint`-clean.
-- `scripts/install.sh` must stay `shellcheck`-clean and `bash -n`-valid, and `./scripts/install.sh
-  --list` must print a non-empty list (it parses the README index).
+- `scripts/install.sh` must stay `shellcheck`-clean and `bash -n`-valid, and
+  `./scripts/install.sh --list` must print a non-empty list (it parses the README index).
 
-When unsure, defer to [`AGENTS.md`](../AGENTS.md).
+When a rule here is ambiguous, flag it and request human clarification rather than assuming.
