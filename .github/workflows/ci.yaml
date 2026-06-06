@@ -140,6 +140,16 @@ jobs:
             echo "::error::README index parsed to zero entries — the Skills tables or the parser drifted."
             exit 1
           fi
+          # Every skill table row contributes exactly one `gh skill install`
+          # entry, so the parsed count must equal the number of Skills-table
+          # rows. A mismatch means a row's install command is malformed (and so
+          # silently dropped from every consumer install path) or duplicated —
+          # neither of which the non-empty or in-house checks below would catch.
+          rows=$(awk '/^## Skills[[:space:]]*$/{in_skills=1; next} /^## /{in_skills=0} in_skills' README.md | grep -cE '^\| `' || true)
+          if [ "$count" -ne "$rows" ]; then
+            echo "::error::README index drift: parsed $count install entries but the Skills tables have $rows row(s) — a row's \`gh skill install\` command is malformed or duplicated."
+            exit 1
+          fi
           # Every in-house skill (a directory with a SKILL.md) MUST appear in the
           # index, or it would be silently dropped from the publish/install path.
           missing=0
