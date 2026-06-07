@@ -128,39 +128,12 @@ jobs:
         run: shellcheck scripts/*.sh
 
       - name: 🔗 Smoke-test the README index parser
-        run: |
-          # `install.sh --list` parses the README index (no gh/network needed),
-          # so this proves the load-bearing lockstep between the curated index and
-          # every consumer install path still extracts a non-empty skill list.
-          entries=$(./scripts/install.sh --list)
-          count=$(printf '%s\n' "$entries" | grep -c . || true)
-          echo "Parsed $count skill entries from the README index:"
-          printf '%s\n' "$entries" | sed 's/^/  /'
-          if [ "$count" -eq 0 ]; then
-            echo "::error::README index parsed to zero entries — the Skills tables or the parser drifted."
-            exit 1
-          fi
-          # Every skill table row contributes exactly one `gh skill install`
-          # entry, so the parsed count must equal the number of Skills-table
-          # rows. A mismatch means a row's install command is malformed (and so
-          # silently dropped from every consumer install path) or duplicated —
-          # neither of which the non-empty or in-house checks below would catch.
-          rows=$(awk '/^## Skills[[:space:]]*$/{in_skills=1; next} /^## /{in_skills=0} in_skills' README.md | grep -cE '^\| `' || true)
-          if [ "$count" -ne "$rows" ]; then
-            echo "::error::README index drift: parsed $count install entries but the Skills tables have $rows row(s) — a row's \`gh skill install\` command is malformed or duplicated."
-            exit 1
-          fi
-          # Every in-house skill (a directory with a SKILL.md) MUST appear in the
-          # index, or it would be silently dropped from the publish/install path.
-          missing=0
-          while IFS= read -r dir; do
-            [ -n "$dir" ] || continue
-            if ! grep -qxF "devantler-tech/skills $dir" <<<"$entries"; then
-              echo "::error::in-house skill '$dir' is missing from the README index."
-              missing=1
-            fi
-          done < <(find . -mindepth 2 -maxdepth 2 -name SKILL.md -printf '%h\n' | sed 's|^\./||')
-          exit "$missing"
+        # Proves the load-bearing lockstep between the curated README index and
+        # every consumer install path: a non-empty parse, the parsed count equal
+        # to the number of Skills-table rows, and every in-house skill present in
+        # the index. The same script is documented in AGENTS.md for local runs,
+        # so the gate stays a single source of truth (no inline/doc drift).
+        run: ./scripts/check-readme-index.sh
 
   ci-required-checks:
     name: CI - Required Checks

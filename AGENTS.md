@@ -81,9 +81,10 @@ gh skill publish --dry-run
 python -m pip install "skills-ref @ git+https://github.com/agentskills/agentskills.git@8d8fcbc69e0c42e05922c2ffc287a3bbdef7b0a3#subdirectory=skills-ref"
 skills-ref validate ways-of-working
 
-# 3. Lint the install script + smoke-test the README index parser (the `lint-scripts` CI job).
-bash -n scripts/install.sh && shellcheck scripts/install.sh
-./scripts/install.sh --list   # parses the README index (no gh needed); must print a non-empty list
+# 3. Lint the scripts + check the README index lockstep (the `lint-scripts` CI job).
+shellcheck scripts/*.sh
+./scripts/check-readme-index.sh   # the exact check CI runs (no gh needed): non-empty parse,
+                                  # parsed count == Skills-table rows, every in-house skill indexed
 
 # 4. (local only) Lint changed workflows.
 actionlint
