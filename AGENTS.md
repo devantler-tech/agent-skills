@@ -84,7 +84,8 @@ skills-ref validate ways-of-working
 # 3. Lint the scripts + check the README index lockstep (the `lint-scripts` CI job).
 shellcheck scripts/*.sh
 ./scripts/check-readme-index.sh   # the exact check CI runs (no gh needed): non-empty parse,
-                                  # parsed count == Skills-table rows, every in-house skill indexed
+                                  # parsed count == Skills-table rows, every in-house skill indexed,
+                                  # every in-house index entry resolves to an on-disk skill dir
 
 # 4. (local only) Lint changed workflows.
 actionlint

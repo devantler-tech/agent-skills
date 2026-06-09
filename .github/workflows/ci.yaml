@@ -130,9 +130,10 @@ jobs:
       - name: 🔗 Smoke-test the README index parser
         # Proves the load-bearing lockstep between the curated README index and
         # every consumer install path: a non-empty parse, the parsed count equal
-        # to the number of Skills-table rows, and every in-house skill present in
-        # the index. The same script is documented in AGENTS.md for local runs,
-        # so the gate stays a single source of truth (no inline/doc drift).
+        # to the number of Skills-table rows, every in-house skill present in the
+        # index, and every in-house index entry resolving to an on-disk skill dir.
+        # The same script is documented in AGENTS.md for local runs, so the gate
+        # stays a single source of truth (no inline/doc drift).
         run: ./scripts/check-readme-index.sh
 
   ci-required-checks:
