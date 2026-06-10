@@ -121,7 +121,10 @@ control or a check to pass.
 **Task menu** (1–2 items/run; high care):
 - **Curate the index:** add a high-quality generic skill (prefer pointing at its canonical upstream),
   fix a stale/renamed upstream reference, or recategorise — keeping the README tables tidy and the
-  consumers in lockstep.
+  consumers in lockstep. New rows must clear the
+  [inclusion criteria](README.md#inclusion-criteria) in the README *Contributing* section
+  (generic & reusable, upstream-pointer by default, spec-conformant + agent-neutral, quality upstream,
+  right naming/category, lockstep).
 - **In-house skills:** improve `ways-of-working` (or future in-house skills) for accuracy, clarity, and
   agent-neutrality; keep frontmatter spec-conformant.
 - **Workflow & action hygiene:** keep third-party actions pinned & aligned with the sibling CI repos;
