@@ -69,8 +69,8 @@ copy; only add a directory here for genuinely **in-house** skills.
 
 ## Validation
 
-Run before opening any PR. Steps 1–3 mirror the CI gates; step 4 is a best-effort local lint that CI
-does not currently enforce but that keeps changes clean:
+Run before opening any PR. Steps 1–3 mirror the CI gates; steps 4–5 are best-effort local checks CI
+does not enforce as a PR gate but that keep changes clean:
 
 ```bash
 # 1. Validate the in-house skill(s) the way the publish pipeline does (requires gh >= 2.90.0).
@@ -89,11 +89,20 @@ shellcheck scripts/*.sh
 
 # 4. (local only) Lint changed workflows.
 actionlint
+
+# 5. Resolve every UPSTREAM index row against its source repo (needs gh auth / network).
+#    Step 3 only proves the in-house self-pointers resolve on disk; this is the upstream half —
+#    it confirms each `gh skill install <owner/repo> <skill>` target still exists, the
+#    highest-blast-radius drift for this shared library. Run it after touching the index.
+./scripts/check-upstream-skills.sh
 ```
 
 The required gate is the aggregated **`CI - Required Checks`** job (validate + discover-skills +
-validate-spec + lint-scripts); `actionlint` above is a local-only convenience, not a CI gate. Never
-weaken a check to pass — fix the root cause.
+validate-spec + lint-scripts). `actionlint` and `check-upstream-skills.sh` are **not** part of it:
+`actionlint` is a local-only convenience, and the upstream-resolution check runs as the standalone
+scheduled **`🔗 Upstream skill targets`** workflow (weekly + on index-touch PRs) so a third-party
+outage never gates a contributor PR — it downgrades transient errors to warnings and fails only on real
+drift. Never weaken a check to pass — fix the root cause.
 
 ## Maintenance (autonomous AI assistant)
 
@@ -113,8 +122,9 @@ index drives `install.sh` and the `setup-/update-agent-skills` actions, so a mal
 in-house `SKILL.md` ripples into every consumer repo. Prefer additive, backward-compatible changes;
 keep the README the single source of truth and keep its consumers in lockstep.
 
-**Validate before any PR:** run the four checks under *Validation* above (spec-validate in-house
-skills, lint `install.sh`, `actionlint` changed workflows). No app build here — `SKILL.md`
+**Validate before any PR:** run the checks under *Validation* above (spec-validate in-house
+skills, lint `install.sh`, `actionlint` changed workflows, and — after any index edit —
+`check-upstream-skills.sh`). No app build here — `SKILL.md`
 spec-conformance, a parseable README index, and pinned workflows are the gate. Never weaken a security
 control or a check to pass.
 
