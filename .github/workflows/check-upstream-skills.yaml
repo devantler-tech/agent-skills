@@ -1,0 +1,45 @@
+name: 🔗 Upstream skill targets
+
+# Verify every UPSTREAM README index row still resolves to a real skill on its
+# source repo (the network half of the index→source lockstep that the offline
+# `check-readme-index.sh` / `lint-scripts` gate cannot cover). Because it depends
+# on third-party availability, this is DELIBERATELY a standalone workflow and is
+# NOT part of `CI - Required Checks` — an upstream outage must never block a
+# contributor PR. It runs weekly (catches upstream-side renames/deletions over
+# time) and on PRs that touch the index (catches a bad row at authoring time);
+# the script downgrades transient network/rate-limit errors to warnings so only
+# real drift fails the run.
+on:
+  schedule:
+    # Weekly, Monday 06:00 UTC.
+    - cron: "0 6 * * 1"
+  pull_request:
+    branches: [main]
+    paths:
+      - README.md
+      - scripts/check-upstream-skills.sh
+      - .github/workflows/check-upstream-skills.yaml
+  workflow_dispatch:
+
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  check-upstream-skills:
+    name: Check upstream skill targets
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: 📄 Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: 🔗 Resolve every upstream skill target
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./scripts/check-upstream-skills.sh
