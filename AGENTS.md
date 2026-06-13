@@ -85,7 +85,9 @@ skills-ref validate ways-of-working
 shellcheck scripts/*.sh
 ./scripts/check-readme-index.sh   # the exact check CI runs (no gh needed): non-empty parse,
                                   # parsed count == Skills-table rows, every in-house skill indexed,
-                                  # every in-house index entry resolves to an on-disk skill dir
+                                  # every in-house index entry resolves to an on-disk skill dir, and
+                                  # every row's Install command agrees with its Skill name + Upstream
+                                  # link (cross-column consistency — no wrong-repo/slug install ships)
 
 # 4. (local only) Lint changed workflows.
 actionlint
