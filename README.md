@@ -122,7 +122,7 @@ All three rely on the `github-*` metadata that `gh skill install` injects into e
 
 ## Contributing
 
-This repository follows the [`agentskills.io`](https://agentskills.io) spec: skill directories live at the repository root and include a conformant `SKILL.md` at their root. Pull requests are validated by [`gh skill publish --dry-run`](.github/workflows/ci.yaml); releases are cut automatically by [semantic-release](https://semantic-release.gitbook.io/) on every push to `main` — [`release.yaml`](.github/workflows/release.yaml) uses [commit conventions](https://www.conventionalcommits.org/) to determine the next version, and [`cd.yaml`](.github/workflows/cd.yaml) then runs `gh skill publish` against the resulting tag.
+This repository follows the [`agentskills.io`](https://agentskills.io) spec: skill directories live at the repository root and include a conformant `SKILL.md` at their root. Pull requests are validated by [`gh skill publish --dry-run`](.github/workflows/ci.yaml); releases are cut automatically on every push to `main` — [`release.yaml`](.github/workflows/release.yaml) uses [`mathieudutour/github-tag-action`](https://github.com/mathieudutour/github-tag-action) to derive the next version tag from [commit conventions](https://www.conventionalcommits.org/), and [`cd.yaml`](.github/workflows/cd.yaml) then runs `gh skill publish` against the resulting tag.
 
 The publish pipeline publishes in-house skills (e.g. `ways-of-working`) on each release.
 
