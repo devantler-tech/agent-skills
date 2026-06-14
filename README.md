@@ -16,6 +16,7 @@ This repo is a **pointer list** and publisher of in-house skills. Each row below
 | `gitops-cluster-debug` | [`fluxcd/agent-skills`](https://github.com/fluxcd/agent-skills/tree/main/skills/gitops-cluster-debug) | `gh skill install fluxcd/agent-skills gitops-cluster-debug` |
 | `gitops-knowledge` | [`fluxcd/agent-skills`](https://github.com/fluxcd/agent-skills/tree/main/skills/gitops-knowledge) | `gh skill install fluxcd/agent-skills gitops-knowledge` |
 | `gitops-repo-audit` | [`fluxcd/agent-skills`](https://github.com/fluxcd/agent-skills/tree/main/skills/gitops-repo-audit) | `gh skill install fluxcd/agent-skills gitops-repo-audit` |
+| `gitops-tenant-onboarding` | [`devantler-tech/skills`](https://github.com/devantler-tech/skills/tree/main/gitops-tenant-onboarding) | `gh skill install devantler-tech/skills gitops-tenant-onboarding` |
 | `siderolabs` | [`siderolabs/docs`](https://github.com/siderolabs/docs/tree/main/skills/siderolabs) | `gh skill install siderolabs/docs siderolabs` |
 
 </details>
