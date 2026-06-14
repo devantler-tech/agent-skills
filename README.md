@@ -74,6 +74,15 @@ This repo is a **pointer list** and publisher of in-house skills. Each row below
 </details>
 
 <details open>
+<summary>Social Automation</summary>
+
+| Skill | Upstream | Install |
+|-------|----------|---------|
+| `hermes-tweet` | [`Xquik-dev/hermes-tweet`](https://github.com/Xquik-dev/hermes-tweet/tree/master/skills/hermes-tweet) | `gh skill install Xquik-dev/hermes-tweet hermes-tweet` |
+
+</details>
+
+<details open>
 <summary>Frontend &amp; Design</summary>
 
 | Skill | Upstream | Install |
