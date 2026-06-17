@@ -123,9 +123,18 @@ All three rely on the `github-*` metadata that `gh skill install` injects into e
 
 ## Contributing
 
-This repository follows the [`agentskills.io`](https://agentskills.io) spec: skill directories live at the repository root and include a conformant `SKILL.md` at their root. Pull requests are validated by [`gh skill publish --dry-run`](.github/workflows/ci.yaml); releases are cut automatically on every push to `main` — [`release.yaml`](.github/workflows/release.yaml) uses [`mathieudutour/github-tag-action`](https://github.com/mathieudutour/github-tag-action) to derive the next version tag from [commit conventions](https://www.conventionalcommits.org/), and [`cd.yaml`](.github/workflows/cd.yaml) then runs `gh skill publish` against the resulting tag.
+This repository follows the [`agentskills.io`](https://agentskills.io) spec: skill directories live at the repository root and include a conformant `SKILL.md` at their root.
 
-The publish pipeline publishes in-house skills (e.g. `ways-of-working`) on each release.
+Every pull request runs the [`🧪 CI`](.github/workflows/ci.yaml) workflow, whose `CI - Required Checks` aggregator gates the merge on four jobs:
+
+- **Publish dry-run** — `gh skill publish --dry-run` confirms the repo is publishable as a skill bundle.
+- **Spec validation** — each in-house skill is validated against the [`agentskills.io`](https://agentskills.io) spec with `skills-ref validate`.
+- **Script lint** — `shellcheck` over `scripts/*.sh`.
+- **Index lockstep** — [`./scripts/check-readme-index.sh`](scripts/check-readme-index.sh) asserts the README `## Skills` tables stay in lockstep with every consumer: a non-empty parse, parsed install-count equal to the number of table rows, every in-house skill present in the index, every in-house entry resolving to an on-disk `SKILL.md`, and each row's Skill/Upstream/Install columns agreeing (so a typo'd repo or slug can't ship a broken install command).
+
+A separate [`🔗 Upstream skill targets`](.github/workflows/check-upstream-skills.yaml) workflow verifies every *upstream* row still resolves to a real skill at its source. It runs weekly and on any PR that touches the index, but is **deliberately not** a required check — a third-party outage must never block a contributor PR, so transient errors downgrade to warnings and only definitive drift fails.
+
+Releases are cut automatically on every push to `main` — [`release.yaml`](.github/workflows/release.yaml) uses [`mathieudutour/github-tag-action`](https://github.com/mathieudutour/github-tag-action) to derive the next version tag from [commit conventions](https://www.conventionalcommits.org/), and [`cd.yaml`](.github/workflows/cd.yaml) then runs `gh skill publish` against the resulting tag. The publish pipeline publishes in-house skills (e.g. `ways-of-working`) on each release.
 
 ### Inclusion criteria
 
@@ -151,7 +160,7 @@ assistant) applies the same bar:
   existing ones.
 - **Lockstep.** Every change updates the README `## Skills` tables — the **single source of truth**
   that `install.sh` and the `setup-`/`update-agent-skills` consumers parse. Never hand-maintain a
-  parallel list; run [`./scripts/check-readme-index.sh`](scripts/check-readme-index.sh) before
+  parallel list; run [`./scripts/check-readme-index.sh`](scripts/check-readme-index.sh) — the same gate CI enforces — before
   opening a PR.
 
 See the [devantler-tech organization guidelines](https://github.com/devantler-tech/.github) for PR/issue templates and general contribution rules.
