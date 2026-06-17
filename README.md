@@ -67,6 +67,7 @@ This repo is a **pointer list** and publisher of in-house skills. Each row below
 
 | Skill | Upstream | Install |
 |-------|----------|---------|
+| `agent-instructions` | [`devantler-tech/skills`](https://github.com/devantler-tech/skills/tree/main/agent-instructions) | `gh skill install devantler-tech/skills agent-instructions` |
 | `conventional-release` | [`devantler-tech/skills`](https://github.com/devantler-tech/skills/tree/main/conventional-release) | `gh skill install devantler-tech/skills conventional-release` |
 | `refactor` | [`github/awesome-copilot`](https://github.com/github/awesome-copilot/tree/main/skills/refactor) | `gh skill install github/awesome-copilot refactor` |
 | `test-driven-development` | [`obra/superpowers`](https://github.com/obra/superpowers/tree/main/skills/test-driven-development) | `gh skill install obra/superpowers test-driven-development` |
