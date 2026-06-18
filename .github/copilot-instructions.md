@@ -1,4 +1,4 @@
-# Copilot code review — devantler-tech/skills
+# Copilot code review — devantler-tech/agent-skills
 
 This repo is a curated, **agent-neutral index** of generic [agent skills](https://agentskills.io)
 installable via `gh skill`, plus the publisher of devantler-tech's own in-house skills (e.g.

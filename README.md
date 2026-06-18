@@ -1,4 +1,4 @@
-# devantler-tech/skills
+# devantler-tech/agent-skills
 
 A curated index of generic [agent skills](https://agentskills.io) installable with the [`gh skill`](https://github.blog/changelog/2026-04-16-manage-agent-skills-with-github-cli/) CLI (v2.90.0+).
 
@@ -16,7 +16,7 @@ This repo is a **pointer list** and publisher of in-house skills. Each row below
 | `gitops-cluster-debug` | [`fluxcd/agent-skills`](https://github.com/fluxcd/agent-skills/tree/main/skills/gitops-cluster-debug) | `gh skill install fluxcd/agent-skills gitops-cluster-debug` |
 | `gitops-knowledge` | [`fluxcd/agent-skills`](https://github.com/fluxcd/agent-skills/tree/main/skills/gitops-knowledge) | `gh skill install fluxcd/agent-skills gitops-knowledge` |
 | `gitops-repo-audit` | [`fluxcd/agent-skills`](https://github.com/fluxcd/agent-skills/tree/main/skills/gitops-repo-audit) | `gh skill install fluxcd/agent-skills gitops-repo-audit` |
-| `gitops-tenant-onboarding` | [`devantler-tech/skills`](https://github.com/devantler-tech/skills/tree/main/gitops-tenant-onboarding) | `gh skill install devantler-tech/skills gitops-tenant-onboarding` |
+| `gitops-tenant-onboarding` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/main/gitops-tenant-onboarding) | `gh skill install devantler-tech/agent-skills gitops-tenant-onboarding` |
 | `siderolabs` | [`siderolabs/docs`](https://github.com/siderolabs/docs/tree/main/skills/siderolabs) | `gh skill install siderolabs/docs siderolabs` |
 
 </details>
@@ -67,11 +67,11 @@ This repo is a **pointer list** and publisher of in-house skills. Each row below
 
 | Skill | Upstream | Install |
 |-------|----------|---------|
-| `agent-instructions` | [`devantler-tech/skills`](https://github.com/devantler-tech/skills/tree/main/agent-instructions) | `gh skill install devantler-tech/skills agent-instructions` |
-| `conventional-release` | [`devantler-tech/skills`](https://github.com/devantler-tech/skills/tree/main/conventional-release) | `gh skill install devantler-tech/skills conventional-release` |
+| `agent-instructions` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/main/agent-instructions) | `gh skill install devantler-tech/agent-skills agent-instructions` |
+| `conventional-release` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/main/conventional-release) | `gh skill install devantler-tech/agent-skills conventional-release` |
 | `refactor` | [`github/awesome-copilot`](https://github.com/github/awesome-copilot/tree/main/skills/refactor) | `gh skill install github/awesome-copilot refactor` |
 | `test-driven-development` | [`obra/superpowers`](https://github.com/obra/superpowers/tree/main/skills/test-driven-development) | `gh skill install obra/superpowers test-driven-development` |
-| `ways-of-working` | [`devantler-tech/skills`](https://github.com/devantler-tech/skills/tree/main/ways-of-working) | `gh skill install devantler-tech/skills ways-of-working` |
+| `ways-of-working` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/main/ways-of-working) | `gh skill install devantler-tech/agent-skills ways-of-working` |
 
 </details>
 
@@ -94,10 +94,10 @@ The install commands in the tables above use the default agent (GitHub Copilot) 
 
 ```sh
 # GitHub Copilot, user scope -> ~/.copilot/skills/<skill>/
-gh skill install devantler-tech/skills ways-of-working --agent github-copilot --scope user
+gh skill install devantler-tech/agent-skills ways-of-working --agent github-copilot --scope user
 
 # Claude Code, user scope -> ~/.claude/skills/<skill>/
-gh skill install devantler-tech/skills ways-of-working --agent claude-code --scope user
+gh skill install devantler-tech/agent-skills ways-of-working --agent claude-code --scope user
 ```
 
 ### Install everything for both Copilot and Claude
