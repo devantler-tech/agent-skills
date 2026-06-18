@@ -13,7 +13,7 @@
 #      dropped from every consumer install path) or duplicated.
 #   3. Every in-house skill (a directory with a SKILL.md) appears in the index, or
 #      it would be silently dropped from the publish/install path.
-#   4. Every in-house index entry (`devantler-tech/skills <skill>`) resolves to a
+#   4. Every in-house index entry (`devantler-tech/agent-skills <skill>`) resolves to a
 #      real on-disk skill directory — the reverse of check 3. A self-pointer row
 #      whose `<skill>` slug is typo'd or stale would otherwise pass count-lockstep
 #      and only fail at `gh skill install` time for every consumer. (Upstream rows
@@ -58,7 +58,7 @@ while IFS= read -r skill_md; do
   dir=$(dirname "$skill_md")
   dir=${dir#./}
   [ -n "$dir" ] || continue
-  if ! grep -qxF "devantler-tech/skills $dir" <<<"$entries"; then
+  if ! grep -qxF "devantler-tech/agent-skills $dir" <<<"$entries"; then
     echo "::error::in-house skill '$dir' is missing from the README index."
     missing=1
   fi
@@ -66,7 +66,7 @@ done < <(find . -mindepth 2 -maxdepth 2 -name SKILL.md)
 
 # 4. Every in-house index entry must resolve to a real on-disk skill directory
 # (index -> disk; the reverse of check 3). Upstream pointers name other repos and
-# can't be resolved without network/auth, so only the `devantler-tech/skills`
+# can't be resolved without network/auth, so only the `devantler-tech/agent-skills`
 # self-pointers are checked here — a typo'd or stale in-house slug would otherwise
 # pass count-lockstep and only fail at `gh skill install` time for every consumer.
 unresolved=0
@@ -74,7 +74,7 @@ while IFS= read -r entry; do
   [ -n "$entry" ] || continue
   repo=${entry%% *}
   skill=${entry##* }
-  [ "$repo" = "devantler-tech/skills" ] || continue
+  [ "$repo" = "devantler-tech/agent-skills" ] || continue
   if [ ! -f "$skill/SKILL.md" ]; then
     echo "::error::in-house index entry '$repo $skill' does not resolve — no '$skill/SKILL.md' on disk."
     unresolved=1

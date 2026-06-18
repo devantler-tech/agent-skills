@@ -1,11 +1,11 @@
-# devantler-tech/skills
+# devantler-tech/agent-skills
 
 A curated, agent-neutral **index** of generic [agent skills](https://agentskills.io) installable with
 the [`gh skill`](https://github.blog/changelog/2026-04-16-manage-agent-skills-with-github-cli/) CLI,
 plus the **publisher** of devantler-tech's own in-house skills (e.g. `ways-of-working`). Every
 `SKILL.md` follows the [`agentskills.io`](https://agentskills.io) spec, so the same skill works in
 GitHub Copilot, Claude Code, Cursor, Codex, Gemini CLI, and the other agents `gh skill` supports.
-Sibling repo to [devantler-tech/plugins](https://github.com/devantler-tech/plugins) (a tool-neutral
+Sibling repo to [devantler-tech/agent-plugins](https://github.com/devantler-tech/agent-plugins) (a tool-neutral
 plugin marketplace that bundles these skills).
 
 This file is the single canonical instructions file for the repository. It is read natively by GitHub
@@ -141,7 +141,7 @@ control or a check to pass.
   agent-neutrality; keep frontmatter spec-conformant.
 - **Workflow & action hygiene:** keep third-party actions pinned & aligned with the sibling CI repos;
   bundle Dependabot `github_actions` PRs; flag majors; keep CI `actionlint`-clean.
-- **Consistency** with [devantler-tech/plugins](https://github.com/devantler-tech/plugins) and with how
+- **Consistency** with [devantler-tech/agent-plugins](https://github.com/devantler-tech/agent-plugins) and with how
   consumer repos install these skills.
 - **Triage** new issues/PRs; one insightful comment on the oldest uncommented item.
 - **Maintain your own PRs:** fix CI you caused, resolve conflicts.

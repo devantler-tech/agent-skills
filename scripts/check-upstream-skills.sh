@@ -2,7 +2,7 @@
 #
 # Verify every UPSTREAM skill row in the README index still resolves to a real
 # skill on its source repo. This is the network half of the index→source
-# lockstep: `check-readme-index.sh` proves the in-house `devantler-tech/skills`
+# lockstep: `check-readme-index.sh` proves the in-house `devantler-tech/agent-skills`
 # self-pointers resolve on disk (offline), but it explicitly CANNOT verify that
 # each upstream `gh skill install <owner/repo> <skill>` target still exists —
 # that needs network + auth. A typo'd, renamed, or upstream-deleted repo/skill
@@ -63,12 +63,12 @@ resolve_target() {
 }
 
 # Scope to the `## Skills` section, keep only table rows that carry an Upstream
-# github tree URL, and drop the in-house `devantler-tech/skills` self-pointers
+# github tree URL, and drop the in-house `devantler-tech/agent-skills` self-pointers
 # (covered offline by check-readme-index.sh).
 rows=$(awk '/^## Skills[[:space:]]*$/{in_skills=1; next} /^## /{in_skills=0} in_skills' README.md \
   | grep -E '^\| ' \
   | grep 'https://github.com/' \
-  | grep -v 'devantler-tech/skills' || true)
+  | grep -v 'devantler-tech/agent-skills' || true)
 
 if [ -z "$rows" ]; then
   echo "::error::No upstream skill rows parsed from the README '## Skills' index — the tables or parser drifted."
