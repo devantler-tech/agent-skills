@@ -2,31 +2,33 @@
 name: agent-instructions
 description: >-
   Architect a repository's AI-agent instruction files so one canonical source
-  drives every tool without drift — AGENTS.md as the cross-tool source of truth,
-  thin per-tool shims (CLAUDE.md, GEMINI.md) that include it, and a concise
-  review-focused .github/copilot-instructions.md subset. Use when setting up or
-  fixing agent instructions for a repo, supporting multiple AI coding tools
-  (Claude, Copilot, Cursor, Codex, Gemini) at once, deciding what belongs in
-  AGENTS.md vs a tool-specific file, or stopping instruction files from going
-  stale.
+  drives every tool without drift — AGENTS.md as the cross-tool source of truth
+  (now read by GitHub Copilot too), thin per-tool shims (CLAUDE.md, GEMINI.md)
+  that include it, and optional path-scoped .github/instructions/ rules. Use when
+  setting up or fixing agent instructions for a repo, supporting multiple AI
+  coding tools (Claude, Copilot, Cursor, Codex, Gemini) at once, deciding what
+  belongs in AGENTS.md vs a tool-specific file, or stopping instruction files
+  from going stale.
 license: Apache-2.0
 ---
 
 # Agent Instructions
 
-Most AI coding tools read project guidance from a file in the repo — but each looks in a
+Most AI coding tools read project guidance from a file in the repo — historically each looked in a
 *different* place (`AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, …). Copy the same
 guidance into each one and the copies **drift**: a command changes in one file and the others keep
 telling agents the old way. The fix is one **canonical** source plus thin tool-specific **shims**
-(which include the canonical file) and the occasional deliberate **subset** (for a tool that can't
-read the canonical file). Keep all durable guidance in the canonical file; keep only genuine
-tool-specific quirks in a tool's own file.
+(which include the canonical file). Keep all durable guidance in the canonical file; keep only
+genuine tool-specific quirks in a tool's own file.
+
+The good news: `AGENTS.md` is now read by nearly every major tool — **including GitHub Copilot** — so
+the "one canonical file" ideal is finally achievable without a per-tool copy.
 
 ## The canonical file: `AGENTS.md`
 
-`AGENTS.md` is the emerging cross-tool standard — a plain-Markdown file at the repo root, read
-natively by a growing set of agents and editors (e.g. Codex and Cursor). Make it the **single
-source of truth** for everything durable and tool-neutral:
+`AGENTS.md` is the cross-tool standard — a plain-Markdown file at the repo root, read natively by a
+growing set of agents and editors (Codex, Cursor, Gemini CLI, and GitHub Copilot). Make it the
+**single source of truth** for everything durable and tool-neutral:
 
 - **What the project is** — one-paragraph purpose, the stack, where the important code lives.
 - **How to build, test, validate, and run** — the exact commands an agent should use (and which
@@ -40,77 +42,85 @@ Write it **tool-neutral**: no "when you are Claude…" assumptions. Anything tru
 goes in that tool's file, not here. Keep it readable and scoped — an agent re-reads it every turn,
 so length is a cost.
 
+**Nested `AGENTS.md`.** In a monorepo or a large sub-package, drop an `AGENTS.md` in the subdirectory:
+tools that support the standard read the nearest one and let it **take precedence** over the root on
+conflicts. Reach for this before a path-scoped tool-specific file when the guidance is itself
+tool-neutral.
+
 ## Map each tool to its file
 
 | Tool | File it reads | How to wire it |
 |---|---|---|
-| Codex / Cursor / generic | `AGENTS.md` | Read natively — no shim needed. |
+| Codex / Cursor / Gemini / generic | `AGENTS.md` | Read natively — no shim needed. |
 | Claude Code | `CLAUDE.md` | One-line **shim**: a single `@AGENTS.md` line (Claude expands `@`-includes), so there is one source, not two. |
 | Gemini CLI | `GEMINI.md` | Same shim approach — include `AGENTS.md` rather than duplicating it. |
-| GitHub Copilot — coding agent / chat | `.github/copilot-instructions.md` (repo-wide) + `.github/instructions/**/*.instructions.md` (path-scoped via `applyTo:` globs) | Concise **subset** (see below). |
-| GitHub Copilot — code review | `.github/copilot-instructions.md` + `.instructions.md` **only** | Same subset — and it does **not** read `AGENTS.md`. |
+| GitHub Copilot — code review | `AGENTS.md` | Read natively ([since 2026-06-18](https://github.blog/changelog/2026-06-18-copilot-code-review-agents-md-support-and-ui-improvements/)) — no separate file needed. |
+| GitHub Copilot — coding agent / chat | `AGENTS.md` **plus** optional `.github/copilot-instructions.md` + `.github/instructions/**/*.instructions.md` | Reads `AGENTS.md`; an optional `copilot-instructions.md` adds always-on emphasis (see below). |
 
-**Shim vs. subset.** A *shim* (`CLAUDE.md`, `GEMINI.md`) just includes the canonical file, so it
-never drifts and needs no upkeep. A *subset* (`.github/copilot-instructions.md`) is deliberately
-*different* content because the consuming tool cannot read `AGENTS.md` — so it carries its own
-maintenance burden (see *Keep them in sync*).
+**Shims need no upkeep.** A *shim* (`CLAUDE.md`, `GEMINI.md`) just includes the canonical file, so it
+never drifts. Everything else reads `AGENTS.md` directly.
 
-## The Copilot gotcha
+## Copilot now reads `AGENTS.md`
 
-GitHub Copilot is the case that breaks the "one canonical file" ideal, and it has **two distinct
-consumers** with the same files but different limits:
+GitHub Copilot used to be the exception that forced a second file — it couldn't read `AGENTS.md`, so
+you maintained a `.github/copilot-instructions.md`. **That is no longer true:**
 
-- Copilot **does not read `AGENTS.md`** — neither the coding agent nor code review. It reads
-  `.github/copilot-instructions.md` (repo-wide) and `.github/instructions/**/*.instructions.md`
-  (path-specific).
-- Copilot **code review** in particular **truncates** the instructions past roughly **4000
-  characters** — guidance beyond that point is silently ignored during review.
+- Copilot **code review** reads `AGENTS.md` from the repo root
+  ([changelog, 2026-06-18](https://github.blog/changelog/2026-06-18-copilot-code-review-agents-md-support-and-ui-improvements/)).
+- Copilot **coding agent** reads `AGENTS.md` too (root + nested, nearest-wins).
 
-So `.github/copilot-instructions.md` must be a **concise, review-focused subset** — short
-imperative rules a reviewer applies (the bugs and conventions you most want caught), **not** a copy
-of `AGENTS.md`. Keep it well under the limit. Use path-specific `.instructions.md` files (with an
-`applyTo:` frontmatter glob) for rules that only apply to part of the tree, so each stays small.
+So `AGENTS.md` alone now covers Copilot, and a separate `.github/copilot-instructions.md` is
+**optional**, not required:
 
-> **Anti-pattern:** consolidating `copilot-instructions.md` *into* `AGENTS.md` and deleting it to
-> "remove duplication". Because Copilot can't read `AGENTS.md`, this silently removes all per-repo
-> guidance from Copilot review and the coding agent. The duplication is the price of Copilot not
-> supporting the standard — manage it (below), don't eliminate it.
+- **Most repos can drop it** and rely on `AGENTS.md` — one canonical file, no subset to keep in sync.
+  Consolidating an existing `copilot-instructions.md` *into* `AGENTS.md` and deleting it is now a
+  legitimate simplification. (It used to silently strip Copilot's guidance, because Copilot couldn't
+  read `AGENTS.md`; that risk is gone.)
+- **Keep one only for a concrete reason.** Copilot's coding agent treats `.github/copilot-instructions.md`
+  as always-on context, so a short file there can pin the few rules you want weighted highest. If you
+  keep it, make it a **concise subset** — short imperative rules, *not* a copy of `AGENTS.md`. Copilot
+  code review also truncates long instruction files (~first 4000 chars), so brevity matters.
+- **Path-scoped rules** live in `.github/instructions/<area>.instructions.md` (with an `applyTo:`
+  frontmatter glob) — guidance for only part of the tree (tests, infra, a sub-package). Useful with or
+  without a `copilot-instructions.md`; `excludeAgent: "code-review"` / `"copilot-coding-agent"` targets
+  one consumer.
 
 ## Keep them in sync (definition of done)
 
-Shims (`CLAUDE.md`/`GEMINI.md` that `@`-include) never drift — that's their point. The Copilot
-**subset** does drift, because it is hand-maintained separate content. So make it part of *done*:
+Shims (`CLAUDE.md`/`GEMINI.md` that `@`-include) never drift — that's their point. If you keep **any**
+hand-maintained second file (a Copilot subset, or a path-scoped `.instructions.md`), it *can* drift,
+so make sync part of *done*:
 
 > A change that touches a command, flag, path, label, generated-file list, validation step, or
 > convention updates **every** instruction file that referenced it **in the same PR** — the
-> `AGENTS.md` canonical text *and* the `copilot-instructions.md` / `.instructions.md` subset.
+> `AGENTS.md` canonical text *and* any subset / path-scoped file.
 
-Never let the canonical file and the Copilot subset describe the project differently. A stale
-instruction file is worse than none: it actively misleads every future agent and reviewer.
+A stale instruction file is worse than none: it actively misleads every future agent and reviewer. The
+surest way never to go stale is a single `AGENTS.md` with no hand-maintained copies.
 
 ## Recipe: wire up a repo
 
 1. **Write `AGENTS.md`** — the canonical, tool-neutral guidance (sections above). This is the bulk
-   of the work; everything else points back to it.
+   of the work; everything else points back to it. Codex, Cursor, Gemini, and Copilot read it directly.
 2. **Add shims** for include-capable tools you support:
    - `CLAUDE.md` → a single line: `@AGENTS.md`
    - `GEMINI.md` → include `AGENTS.md` the same way.
-   Codex and Cursor need nothing — they read `AGENTS.md` directly.
-3. **Add `.github/copilot-instructions.md`** — a concise (≤ ~4000 char) review-focused subset of the
-   most important, checkable rules. Short imperative bullets, not prose; not a dump of `AGENTS.md`.
-4. **(Optional) Add path-specific `.github/instructions/<area>.instructions.md`** with `applyTo:`
-   globs for rules that apply to only part of the tree (e.g. tests, infra, a sub-package).
-5. **Record the sync rule** in `AGENTS.md` itself so future changes keep the subset current.
+3. **(Optional) `.github/copilot-instructions.md`** — only if you want a few always-on rules weighted
+   highest for Copilot's coding agent; keep it a concise (≤ ~4000 char) subset, not a dump of `AGENTS.md`.
+4. **(Optional) `.github/instructions/<area>.instructions.md`** with `applyTo:` globs for rules that
+   apply to only part of the tree (tests, infra, a sub-package).
+5. **Record the sync rule** in `AGENTS.md` if you kept any hand-maintained second file.
 
 ## Pitfalls checklist
 
 - ❌ Duplicating full `AGENTS.md` content into `CLAUDE.md`/`GEMINI.md` — use a one-line include
   instead so there is a single source.
-- ❌ Treating `copilot-instructions.md` as a copy of `AGENTS.md` — it is a focused subset; a copy
-  drifts and (for review) gets truncated.
-- ❌ Letting `.github/copilot-instructions.md` grow past ~4000 chars — Copilot review silently drops
-  the overflow; split path-specific rules into `.instructions.md` files.
-- ❌ Putting tool-specific assumptions in `AGENTS.md` — keep it neutral; quirks go in that tool's
-  file.
-- ❌ Changing a command/path/convention in `AGENTS.md` without updating the Copilot subset in the
-  same PR — that is how the files go stale.
+- ❌ Keeping a `.github/copilot-instructions.md` that just **duplicates** `AGENTS.md` — now that
+  Copilot reads `AGENTS.md`, a full copy is pure drift risk; drop it, or trim it to a small focused subset.
+- ❌ Putting *new* canonical guidance in a kept `copilot-instructions.md` — durable rules belong in
+  `AGENTS.md`; a subset only re-emphasises a few of them.
+- ❌ Letting any kept `.github/copilot-instructions.md` grow past ~4000 chars — Copilot review silently
+  drops the overflow; split path-specific rules into `.instructions.md` files.
+- ❌ Putting tool-specific assumptions in `AGENTS.md` — keep it neutral; quirks go in that tool's file.
+- ❌ Changing a command/path/convention in `AGENTS.md` without updating any kept subset in the same
+  PR — that is how the files go stale.
