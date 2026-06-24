@@ -136,6 +136,15 @@ jobs:
         # stays a single source of truth (no inline/doc drift).
         run: ./scripts/check-readme-index.sh
 
+      - name: 🧪 Self-test the README index guard
+        # Verifies check-readme-index.sh PASSES a consistent fixture and FAILS
+        # each drift scenario it exists to catch (zero-parse, count vs rows,
+        # in-house skill missing, unresolved entry, and every cross-column
+        # desync), so a refactor that silently weakens a check is caught here —
+        # not by a broken `gh skill install` reaching consumers. Self-contained
+        # (copies the real scripts into throwaway fixtures): no gh or network.
+        run: ./scripts/check-readme-index.test.sh
+
   ci-required-checks:
     name: CI - Required Checks
     if: always()
