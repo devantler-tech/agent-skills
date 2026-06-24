@@ -88,6 +88,9 @@ shellcheck scripts/*.sh
                                   # every in-house index entry resolves to an on-disk skill dir, and
                                   # every row's Install command agrees with its Skill name + Upstream
                                   # link (cross-column consistency — no wrong-repo/slug install ships)
+./scripts/check-readme-index.test.sh   # self-test of the guard above (also in the lint-scripts gate):
+                                       # proves it PASSES a consistent fixture and FAILS each drift it
+                                       # catches, so a refactor can't silently weaken a check
 
 # 4. (local only) Lint changed workflows.
 actionlint
