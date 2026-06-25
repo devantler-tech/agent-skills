@@ -91,6 +91,9 @@ shellcheck scripts/*.sh
 ./scripts/check-readme-index.test.sh   # self-test of the guard above (also in the lint-scripts gate):
                                        # proves it PASSES a consistent fixture and FAILS each drift it
                                        # catches, so a refactor can't silently weaken a check
+./scripts/install.test.sh   # self-test of install.sh (also in the lint-scripts gate): pins --list/-l
+                            # output (sorted, de-duplicated `<repo> <skill>`, scoped to ## Skills), that
+                            # --list is gh-free, and that a missing/empty index fails loudly
 
 # 4. (local only) Lint changed workflows.
 actionlint

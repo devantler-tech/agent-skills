@@ -145,6 +145,14 @@ jobs:
         # (copies the real scripts into throwaway fixtures): no gh or network.
         run: ./scripts/check-readme-index.test.sh
 
+      - name: 🧪 Self-test the installer
+        # Pins install.sh's own contracts the index guard doesn't assert: --list
+        # (and -l) print sorted, de-duplicated `<repo> <skill>` parsed only from
+        # `## Skills`; --list is gh-free (the documented offline path CI alone
+        # can't prove — CI always has gh); and a missing/empty index fails loudly.
+        # Self-contained (real install.sh into throwaway fixtures): no gh/network.
+        run: ./scripts/install.test.sh
+
   ci-required-checks:
     name: CI - Required Checks
     if: always()
