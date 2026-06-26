@@ -153,6 +153,16 @@ jobs:
         # Self-contained (real install.sh into throwaway fixtures): no gh/network.
         run: ./scripts/install.test.sh
 
+      - name: 🧪 Self-test the upstream-skills guard
+        # The real check-upstream-skills.sh resolves upstream targets over the network
+        # (the standalone scheduled `🔗 Upstream skill targets` workflow), so it can't
+        # gate PRs — but its parsing/control flow can: this pins that it scopes to
+        # ## Skills, decomposes Upstream tree URLs (owner/repo/ref/path), fails closed
+        # when the parser finds nothing, and discriminates hard drift (HTTP 404) from
+        # transient warnings (any other error). Self-contained — runs the REAL guard
+        # against throwaway fixtures with a deterministic offline `gh` stub: no gh/network.
+        run: ./scripts/check-upstream-skills.test.sh
+
   ci-required-checks:
     name: CI - Required Checks
     if: always()
