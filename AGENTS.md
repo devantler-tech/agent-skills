@@ -94,6 +94,11 @@ shellcheck scripts/*.sh
 ./scripts/install.test.sh   # self-test of install.sh (also in the lint-scripts gate): pins --list/-l
                             # output (sorted, de-duplicated `<repo> <skill>`, scoped to ## Skills), that
                             # --list is gh-free, and that a missing/empty index fails loudly
+./scripts/check-upstream-skills.test.sh   # self-test of the upstream guard (also in the lint-scripts
+                                          # gate): runs the REAL script against fixtures with an offline
+                                          # `gh` stub (no network) — pins ## Skills scoping, Upstream
+                                          # tree-URL parsing, fail-closed-on-no-rows, and hard-drift
+                                          # (HTTP 404) vs transient-warning discrimination
 
 # 4. (local only) Lint changed workflows.
 actionlint
@@ -110,7 +115,9 @@ validate-spec + lint-scripts). `actionlint` and `check-upstream-skills.sh` are *
 `actionlint` is a local-only convenience, and the upstream-resolution check runs as the standalone
 scheduled **`🔗 Upstream skill targets`** workflow (weekly + on index-touch PRs) so a third-party
 outage never gates a contributor PR — it downgrades transient errors to warnings and fails only on real
-drift. Never weaken a check to pass — fix the root cause.
+drift. (Its **offline self-test**, `check-upstream-skills.test.sh`, *is* in `lint-scripts` — it stubs
+`gh`, so it pins the guard's parsing/discrimination logic with no network.) Never weaken a check to
+pass — fix the root cause.
 
 ## Maintenance (autonomous AI assistant)
 

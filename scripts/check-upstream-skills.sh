@@ -40,6 +40,11 @@ if ! command -v gh >/dev/null 2>&1; then
   exit 1
 fi
 
+# Backoff command between transient-failure retries. Defaults to the real `sleep`
+# (production behaviour unchanged); the offline self-test overrides it to a no-op so
+# the persistent-transient → warning path runs without real backoff.
+UPSTREAM_RETRY_SLEEP=${UPSTREAM_RETRY_SLEEP:-sleep}
+
 # Resolve one upstream skill target. Echoes nothing on success; on a definitive
 # miss returns 1 (hard drift); on persistent transient failure returns 2 (warn).
 resolve_target() {
@@ -56,7 +61,7 @@ resolve_target() {
     fi
     # Anything else (network, 5xx, secondary-rate-limit/403) may be transient —
     # back off and retry before deciding.
-    sleep $((attempt * 2))
+    "$UPSTREAM_RETRY_SLEEP" $((attempt * 2))
   done
   printf '%s' "$err"
   return 2
