@@ -16,13 +16,19 @@ Copilot, and by Cursor, Codex, and Claude (via `CLAUDE.md` → `@AGENTS.md`).
 ```text
 .github/
 └── workflows/
-    ├── ci.yaml                 # Validate skills (gh skill publish --dry-run) + agentskills.io spec validation
-    ├── release.yaml            # Calculate next version on push to main; trigger CD when a release is warranted
-    └── cd.yaml                 # gh skill publish the in-house skills against the new tag
+    ├── ci.yaml                     # Validate skills (gh skill publish --dry-run) + agentskills.io spec validation + lint-scripts
+    ├── release.yaml                # Calculate next version on push to main; trigger CD when a release is warranted
+    ├── cd.yaml                     # gh skill publish the in-house skills against the new tag
+    └── check-upstream-skills.yaml  # 🔗 Upstream skill targets — weekly + on index-touch PRs; warns on outage, fails on real drift
 scripts/
-└── install.sh                  # Install every README-listed skill for one or more agents (user scope)
-ways-of-working/
-└── SKILL.md                    # In-house skill: devantler-tech engineering practices
+├── install.sh                  # Install every README-listed skill for one or more agents (user scope)
+├── check-readme-index.sh       # lint-scripts gate: README ## Skills index ↔ on-disk skills + cross-column consistency
+├── check-upstream-skills.sh    # 🔗 workflow: resolve each upstream index row against its source repo
+└── *.test.sh                   # Hermetic self-test beside each script above (all in the lint-scripts gate)
+agent-instructions/             # In-house skill (each dir holds a conformant SKILL.md)
+conventional-release/           # In-house skill
+gitops-tenant-onboarding/       # In-house skill
+ways-of-working/                # In-house skill: devantler-tech engineering practices
 README.md                       # The curated index — the single source of truth (see below)
 ```
 
