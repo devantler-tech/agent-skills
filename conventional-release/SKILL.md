@@ -56,7 +56,7 @@ So:
 
 ## Anatomy of the title
 
-```
+```text
 <type>(<optional scope>): <imperative summary>
 ```
 
@@ -94,7 +94,7 @@ A breaking change is a **major** bump (`X.0.0`), signalled either way:
 - a `!` after the type/scope: `feat(api)!: drop the v1 endpoint`, **or**
 - a `BREAKING CHANGE:` footer in the body:
 
-  ```
+  ```text
   feat(api): replace the auth header
 
   BREAKING CHANGE: clients must send `Authorization: Bearer` instead of `X-Token`.
