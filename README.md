@@ -63,6 +63,15 @@ This repo is a **pointer list** and publisher of in-house skills. Each row below
 </details>
 
 <details open>
+<summary>Automated AI Engineer</summary>
+
+| Skill | Upstream | Install |
+|-------|----------|---------|
+| `self-improvement` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/main/self-improvement) | `gh skill install devantler-tech/agent-skills self-improvement` |
+
+</details>
+
+<details open>
 <summary>Engineering Practices</summary>
 
 | Skill | Upstream | Install |
