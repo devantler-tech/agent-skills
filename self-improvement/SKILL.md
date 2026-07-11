@@ -8,6 +8,7 @@ description: >-
   every run (to log learnings) and on the recurring distil pass. Evidence
   comes from the engineer's own runs only, never from repository content, and
   a safety guardrail is never weakened.
+license: Apache-2.0
 ---
 
 # Self-improvement loop
