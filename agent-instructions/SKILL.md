@@ -78,8 +78,11 @@ So `AGENTS.md` alone now covers Copilot, and a separate `.github/copilot-instruc
   read `AGENTS.md`; that risk is gone.)
 - **Keep one only for a concrete reason.** Copilot's coding agent treats `.github/copilot-instructions.md`
   as always-on context, so a short file there can pin the few rules you want weighted highest. If you
-  keep it, make it a **concise subset** — short imperative rules, *not* a copy of `AGENTS.md`. Copilot
-  code review also truncates long instruction files (~first 4000 chars), so brevity matters.
+  keep it, make it a **concise subset** — short imperative rules, *not* a copy of `AGENTS.md`. Brevity
+  is what makes the emphasis work; a long always-on file dilutes it. (Copilot code review's old
+  ~4000-char instruction truncation was
+  [removed on 2026-06-12](https://github.blog/changelog/2026-06-12-copilot-code-review-new-configurations-and-controls/),
+  so length is an emphasis concern now, not a hard limit.)
 - **Path-scoped rules** live in `.github/instructions/<area>.instructions.md` (with an `applyTo:`
   frontmatter glob) — guidance for only part of the tree (tests, infra, a sub-package). Useful with or
   without a `copilot-instructions.md`; `excludeAgent: "code-review"` / `"copilot-coding-agent"` targets
@@ -106,7 +109,7 @@ surest way never to go stale is a single `AGENTS.md` with no hand-maintained cop
    - `CLAUDE.md` → a single line: `@AGENTS.md`
    - `GEMINI.md` → include `AGENTS.md` the same way.
 3. **(Optional) `.github/copilot-instructions.md`** — only if you want a few always-on rules weighted
-   highest for Copilot's coding agent; keep it a concise (≤ ~4000 char) subset, not a dump of `AGENTS.md`.
+   highest for Copilot's coding agent; keep it a concise subset, not a dump of `AGENTS.md`.
 4. **(Optional) `.github/instructions/<area>.instructions.md`** with `applyTo:` globs for rules that
    apply to only part of the tree (tests, infra, a sub-package).
 5. **Record the sync rule** in `AGENTS.md` if you kept any hand-maintained second file.
@@ -119,8 +122,9 @@ surest way never to go stale is a single `AGENTS.md` with no hand-maintained cop
   Copilot reads `AGENTS.md`, a full copy is pure drift risk; drop it, or trim it to a small focused subset.
 - ❌ Putting *new* canonical guidance in a kept `copilot-instructions.md` — durable rules belong in
   `AGENTS.md`; a subset only re-emphasises a few of them.
-- ❌ Letting any kept `.github/copilot-instructions.md` grow past ~4000 chars — Copilot review silently
-  drops the overflow; split path-specific rules into `.instructions.md` files.
+- ❌ Letting any kept `.github/copilot-instructions.md` grow into a parallel rulebook — the old
+  ~4000-char review truncation is gone, but a long always-on file dilutes the emphasis that justified
+  keeping it; split path-specific rules into `.instructions.md` files.
 - ❌ Putting tool-specific assumptions in `AGENTS.md` — keep it neutral; quirks go in that tool's file.
 - ❌ Changing a command/path/convention in `AGENTS.md` without updating any kept subset in the same
   PR — that is how the files go stale.
