@@ -7,6 +7,17 @@ on:
 
 permissions: {}
 
+# Serialize release runs: two pushes to main within seconds (e.g. a promotion
+# wave merging several PRs) otherwise both compute the same next tag from the
+# pre-push tag list, and the second `gh skill publish --tag` fails with
+# "tag already exists" (live case: runs 29163797386/29163801522, 2026-07-11).
+# cancel-in-progress stays false so an in-flight publish is never interrupted;
+# a queued run recomputes its version after the previous one has tagged.
+concurrency:
+  group: release
+  cancel-in-progress: false
+  queue: max
+
 jobs:
   version:
     name: Calculate next version
