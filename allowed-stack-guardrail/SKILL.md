@@ -45,16 +45,19 @@ Read the section fresh each session; the deployment can change it at any time.
 3. **Out-of-stack or unmatched → decline and redirect.** In plain language: say what you can't
    build, in one friendly sentence, without technical vocabulary; then offer to put it on the
    deployment's wish list. With the user's consent, prepare a well-formed issue — the need as the
-   user stated it, the outcome it serves, and why it fell outside the current building blocks — on
-   the **owning repo** of the nearest-matching block, or on the **default intake repo** when no
-   row came close. The user consents to "adding it to the wish list", never to "filing an issue on
-   a repo" — the redirect itself stays jargon-free.
+   user stated it, the outcome it serves, and why it fell outside the current building blocks.
+   Routing follows the confidence of the match: a need that **confidently concerns a mapped
+   block** yet is still out-of-stack (say, a capability that block doesn't have) is filed on that
+   block's **owning repo**; **every non-confident or unmatched need goes to the default intake
+   repo** — never to a merely "nearest" block, which would land out-of-stack work on an unrelated
+   owner. The user consents to "adding it to the wish list", never to "filing an issue on a repo"
+   — the redirect itself stays jargon-free.
 
 ## Fail closed
 
-When the `## Stack map` section is **absent**, or **malformed** (no table, or any row missing a
-required field, or no default intake repo when the catch-all is needed), treat **every** need as
-out-of-stack:
+When the `## Stack map` section is **absent**, or **malformed** — no table, any row missing a
+required field, or **no default intake repo** (it is required once per map; its absence makes the
+whole map malformed even when every row parses) — treat **every** need as out-of-stack:
 
 - Decline plainly: explain that your catalogue of what can be built here isn't available right
   now, so you can't safely agree to build anything yet.
