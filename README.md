@@ -85,6 +85,17 @@ This repo is a **pointer list** and publisher of in-house skills. Each row below
 </details>
 
 <details open>
+<summary>Vibe Coding</summary>
+
+| Skill | Upstream | Install |
+|-------|----------|---------|
+| `allowed-stack-guardrail` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/main/allowed-stack-guardrail) | `gh skill install devantler-tech/agent-skills allowed-stack-guardrail` |
+| `jargon-free-voice` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/main/jargon-free-voice) | `gh skill install devantler-tech/agent-skills jargon-free-voice` |
+| `needs-stack-mapping` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/main/needs-stack-mapping) | `gh skill install devantler-tech/agent-skills needs-stack-mapping` |
+
+</details>
+
+<details open>
 <summary>Frontend &amp; Design</summary>
 
 | Skill | Upstream | Install |
