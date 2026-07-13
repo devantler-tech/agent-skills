@@ -21,6 +21,12 @@ one concern per PR, never weaken a safety/security guardrail. The *advance* half
 and roadmaps, triage, implementation, coverage, performance, refactoring, docs, security posture)
 lives in the companion `product-engineering` skill; this skill is the loop that schedules it.
 
+**Companion skills — install them together.** This loop delegates its *advance* movement to
+`product-engineering` and its learnings-distil step to `self-improvement`; a single-skill install
+does not pull companions in automatically. Install all three from this library, or — when a
+companion is absent — the corresponding movement falls back to the consuming deployment's own
+`AGENTS.md` guidance rather than being silently skipped.
+
 This skill is authored against the consumer contract sections defined by the consuming deployment's
 `AGENTS.md` (per the Automated AI Engineer plugin's parameterization contract): the **Portfolio map**
 (which repositories are in scope, plus each product's `## Maintenance` card — validate commands,
@@ -49,8 +55,11 @@ skill says "per the *X* section", the consuming repo supplies the concrete fact.
 
 Build one compact picture of the portfolio's live state. Where your runtime supports subagents,
 **delegate the survey to a read-only subagent** that returns a digest, so the raw query output stays
-out of your context; otherwise run the same leaned survey inline (org-wide searches first, deepening
-only the candidates — never a heavy per-repo loop). The survey covers, for every in-scope repository:
+out of your context; otherwise run the same leaned survey inline. Either way, keep the cheap
+queries **scoped to the Portfolio map's repositories** (batched `repo:` qualifiers rather than a
+whole-organization sweep — the portfolio may be a subset of an organization, and out-of-scope
+repositories must never enter the digest or selection set), deepening only the candidates — never
+a heavy per-repo loop. The survey covers, for every in-scope repository:
 
 - **Breakage:** CI red on the default branch; a broken build, site, or release pipeline.
 - **Every open own/trusted-author PR** (drafts *and* promoted, fresh *and* old, merge-gated or not)
@@ -89,7 +98,9 @@ Pick the highest-value work across the whole portfolio, then go deep rather than
 actionable issue; else a merged trusted PR, a well-formed new issue, a triage/strategy pass, or an
 unblocking review-thread resolution) — a survey-and-exit run that authors nothing is a failure mode,
 not a valid outcome. The floor is a minimum, never a ceiling or a stopping point: keep working while
-actionable work remains. **Stop starting, start finishing:** before opening any new draft, drive
+actionable work remains, **within the per-run budget and stop conditions the deployment's Cadence
+section sets** — an unattended run ends when actionable work is exhausted or blocked, or when that
+budget is spent, never merely after a few items. **Stop starting, start finishing:** before opening any new draft, drive
 every own in-flight PR to merged (if promoted) or review-ready (the full pentad clear) — a finished
 draft awaiting promotion is the deliverable; a half-finished one is unfinished work to clear first.
 
