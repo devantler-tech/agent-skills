@@ -67,6 +67,7 @@ This repo is a **pointer list** and publisher of in-house skills. Each row below
 
 | Skill | Upstream | Install |
 |-------|----------|---------|
+| `portfolio-maintenance` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/main/portfolio-maintenance) | `gh skill install devantler-tech/agent-skills portfolio-maintenance` |
 | `product-engineering` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/main/product-engineering) | `gh skill install devantler-tech/agent-skills product-engineering` |
 | `self-improvement` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/main/self-improvement) | `gh skill install devantler-tech/agent-skills self-improvement` |
 
