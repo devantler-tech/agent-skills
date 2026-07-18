@@ -129,6 +129,9 @@ Two CLIs install these skills, and **they reach different things** — because t
 
 [`npx skills`](https://github.com/vercel-labs/skills) needs no install of its own and prompts for which skills and which agents you want. Pointed at this repo it offers the **10 in-house skills**; for an indexed upstream skill, point it at that skill's own repo instead.
 
+> [!NOTE]
+> Requires **Node.js ≥ 22.20.0** (the `skills` package's declared `engines.node`). On an older Node this fails before any skill is fetched. `gh skill` has no Node dependency.
+
 ```sh
 # Browse what's on offer without installing anything
 npx skills add devantler-tech/agent-skills --list
@@ -141,7 +144,9 @@ npx skills add devantler-tech/agent-skills --skill ways-of-working --agent claud
 npx skills add devantler-tech/agent-skills --all
 ```
 
-Add `-g` to install to your user directory instead of the current project. Installs made through this CLI are what surface a repo on the [skills.sh](https://skills.sh) directory — it indexes from anonymous CLI telemetry, with no submission step.
+Add `-g` to install to your user directory instead of the current project.
+
+The [skills.sh](https://skills.sh) directory has no submission step — it lists a repo off **anonymous install telemetry** from this CLI. That telemetry is opt-out (`DISABLE_TELEMETRY` or `DO_NOT_TRACK`) and is disabled automatically in CI, so only telemetry-enabled installs contribute to a listing.
 
 ### With `gh skill`
 
