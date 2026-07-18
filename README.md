@@ -1,8 +1,13 @@
 # devantler-tech/agent-skills
 
-A curated index of generic [agent skills](https://agentskills.io) installable with the [`gh skill`](https://github.blog/changelog/2026-04-16-manage-agent-skills-with-github-cli/) CLI (v2.90.0+).
+<!-- A skills.sh badge (https://skills.sh/b/devantler-tech/agent-skills) is deliberately NOT here yet.
+     skills.sh indexes a repo from anonymous `skills` CLI install telemetry, so until this repo has
+     its first installs the badge renders "custom badge | resource not found" rather than an install
+     count. Add it once https://skills.sh/devantler-tech/agent-skills stops 404ing. -->
 
-These skills are **agent-neutral**: every `SKILL.md` follows the [`agentskills.io`](https://agentskills.io) spec, so the same skill works in **GitHub Copilot, Claude Code, Cursor, Codex, Gemini CLI**, and the other agents `gh skill` supports — pick the target with `--agent`. See [Installing](#installing) to install for one agent or several at once.
+A curated index of generic [agent skills](https://agentskills.io) installable with either the [`gh skill`](https://github.blog/changelog/2026-04-16-manage-agent-skills-with-github-cli/) CLI (v2.90.0+) or [`npx skills`](https://github.com/vercel-labs/skills).
+
+These skills are **agent-neutral**: every `SKILL.md` follows the [`agentskills.io`](https://agentskills.io) spec, so the same skill works in **GitHub Copilot, Claude Code, Cursor, Codex, Gemini CLI**, and the other agents these CLIs support — pick the target with `--agent`. See [Installing](#installing) to install for one agent or several at once.
 
 This repo is a **pointer list** and publisher of in-house skills. Each row below is either an in-house skill or installs directly from its original upstream so `gh skill` records the true source in the skill's `SKILL.md` frontmatter (`metadata.github-repo`, `github-path`, `github-ref`, `github-tree-sha`) and `gh skill update --all` works natively — no lockfile, no sync bot, no custom metadata.
 
@@ -109,6 +114,41 @@ This repo is a **pointer list** and publisher of in-house skills. Each row below
 </details>
 
 ## Installing
+
+Two CLIs install these skills, and **they reach different things** — because this repo is a *pointer list*, not a re-host. Of the 28 rows above, only **10 are in-house** (hosted here); the other 18 point at their own upstream repo.
+
+| CLI | Reaches | Best for |
+|-----|---------|----------|
+| [`gh skill`](https://github.blog/changelog/2026-04-16-manage-agent-skills-with-github-cli/) | **Every row above** — each row's command already targets that skill's true source | Anything in the index. Records upstream provenance in the installed `SKILL.md`, so `gh skill update --all` works natively. **Copy the command from the table**, don't retype it against this repo. |
+| [`npx skills`](https://github.com/vercel-labs/skills) | **The 10 in-house skills only** — it installs what physically lives in the repo you point it at | The in-house skills, several at once, or an agent `gh skill` doesn't cover (70+ supported). For an indexed upstream skill, point it at that upstream instead (e.g. `npx skills add fluxcd/agent-skills`). |
+
+> [!NOTE]
+> There is no registry to sign up for and no package to publish — both CLIs resolve `owner/repo` straight from GitHub.
+
+### With `npx skills`
+
+[`npx skills`](https://github.com/vercel-labs/skills) needs no install of its own and prompts for which skills and which agents you want. Pointed at this repo it offers the **10 in-house skills**; for an indexed upstream skill, point it at that skill's own repo instead.
+
+> [!NOTE]
+> Requires **Node.js ≥ 22.20.0** (the `skills` package's declared `engines.node`). On an older Node this fails before any skill is fetched. `gh skill` has no Node dependency.
+
+```sh
+# Browse what's on offer without installing anything
+npx skills add devantler-tech/agent-skills --list
+
+# Install specific skills for specific agents
+npx skills add devantler-tech/agent-skills --skill ways-of-working --agent claude-code
+
+# Install every in-house skill, for EVERY supported agent, no prompts.
+# Note --all is not scoped to agents you have installed — pass --agent to limit it.
+npx skills add devantler-tech/agent-skills --all
+```
+
+Add `-g` to install to your user directory instead of the current project.
+
+The [skills.sh](https://skills.sh) directory has no submission step — it lists a repo off **anonymous install telemetry** from this CLI. That telemetry is opt-out (`DISABLE_TELEMETRY` or `DO_NOT_TRACK`) and is disabled automatically in CI, so only telemetry-enabled installs contribute to a listing.
+
+### With `gh skill`
 
 Each `gh skill install` accepts `--agent <name>`, `--scope user|project`, and `--pin <ref>` (or an `@ref` suffix on the skill name) — see `gh skill install --help` for the full list of supported agents.
 
