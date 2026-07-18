@@ -115,16 +115,19 @@ This repo is a **pointer list** and publisher of in-house skills. Each row below
 
 ## Installing
 
-Two CLIs install these skills. Both resolve `devantler-tech/agent-skills` straight from GitHub — there is no registry to sign up for and no package to add.
+Two CLIs install these skills, and **they reach different things** — because this repo is a *pointer list*, not a re-host. Of the 28 rows above, only **10 are in-house** (hosted here); the other 18 point at their own upstream repo.
 
-| CLI | Best for | One-liner |
-|-----|----------|-----------|
-| [`gh skill`](https://github.blog/changelog/2026-04-16-manage-agent-skills-with-github-cli/) | Picking individual skills; records upstream provenance in the installed `SKILL.md` so `gh skill update --all` works natively | `gh skill install devantler-tech/agent-skills <skill>` |
-| [`npx skills`](https://github.com/vercel-labs/skills) | Grabbing several skills at once, or targeting an agent `gh skill` does not cover (70+ supported) | `npx skills add devantler-tech/agent-skills` |
+| CLI | Reaches | Best for |
+|-----|---------|----------|
+| [`gh skill`](https://github.blog/changelog/2026-04-16-manage-agent-skills-with-github-cli/) | **Every row above** — each row's command already targets that skill's true source | Anything in the index. Records upstream provenance in the installed `SKILL.md`, so `gh skill update --all` works natively. **Copy the command from the table**, don't retype it against this repo. |
+| [`npx skills`](https://github.com/vercel-labs/skills) | **The 10 in-house skills only** — it installs what physically lives in the repo you point it at | The in-house skills, several at once, or an agent `gh skill` doesn't cover (70+ supported). For an indexed upstream skill, point it at that upstream instead (e.g. `npx skills add fluxcd/agent-skills`). |
+
+> [!NOTE]
+> There is no registry to sign up for and no package to publish — both CLIs resolve `owner/repo` straight from GitHub.
 
 ### With `npx skills`
 
-[`npx skills`](https://github.com/vercel-labs/skills) needs no install of its own and prompts for which skills and which agents you want:
+[`npx skills`](https://github.com/vercel-labs/skills) needs no install of its own and prompts for which skills and which agents you want. Pointed at this repo it offers the **10 in-house skills**; for an indexed upstream skill, point it at that skill's own repo instead.
 
 ```sh
 # Browse what's on offer without installing anything
@@ -133,7 +136,8 @@ npx skills add devantler-tech/agent-skills --list
 # Install specific skills for specific agents
 npx skills add devantler-tech/agent-skills --skill ways-of-working --agent claude-code
 
-# Install everything, for every detected agent, no prompts
+# Install every in-house skill, for EVERY supported agent, no prompts.
+# Note --all is not scoped to agents you have installed — pass --agent to limit it.
 npx skills add devantler-tech/agent-skills --all
 ```
 
