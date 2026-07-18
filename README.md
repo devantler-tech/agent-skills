@@ -72,6 +72,7 @@ This repo is a **pointer list** and publisher of in-house skills. Each row below
 
 | Skill | Upstream | Install |
 |-------|----------|---------|
+| `agent-improvement` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/main/agent-improvement) | `gh skill install devantler-tech/agent-skills agent-improvement` |
 | `portfolio-maintenance` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/main/portfolio-maintenance) | `gh skill install devantler-tech/agent-skills portfolio-maintenance` |
 | `product-engineering` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/main/product-engineering) | `gh skill install devantler-tech/agent-skills product-engineering` |
 | `self-improvement` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/main/self-improvement) | `gh skill install devantler-tech/agent-skills self-improvement` |
@@ -115,19 +116,19 @@ This repo is a **pointer list** and publisher of in-house skills. Each row below
 
 ## Installing
 
-Two CLIs install these skills, and **they reach different things** — because this repo is a *pointer list*, not a re-host. Of the 28 rows above, only **10 are in-house** (hosted here); the other 18 point at their own upstream repo.
+Two CLIs install these skills, and **they reach different things** — because this repo is a *pointer list*, not a re-host. Of the 29 rows above, only **11 are in-house** (hosted here); the other 18 point at their own upstream repo.
 
 | CLI | Reaches | Best for |
 |-----|---------|----------|
 | [`gh skill`](https://github.blog/changelog/2026-04-16-manage-agent-skills-with-github-cli/) | **Every row above** — each row's command already targets that skill's true source | Anything in the index. Records upstream provenance in the installed `SKILL.md`, so `gh skill update --all` works natively. **Copy the command from the table**, don't retype it against this repo. |
-| [`npx skills`](https://github.com/vercel-labs/skills) | **The 10 in-house skills only** — it installs what physically lives in the repo you point it at | The in-house skills, several at once, or an agent `gh skill` doesn't cover (70+ supported). For an indexed upstream skill, point it at that upstream instead (e.g. `npx skills add fluxcd/agent-skills`). |
+| [`npx skills`](https://github.com/vercel-labs/skills) | **The 11 in-house skills only** — it installs what physically lives in the repo you point it at | The in-house skills, several at once, or an agent `gh skill` doesn't cover (70+ supported). For an indexed upstream skill, point it at that upstream instead (e.g. `npx skills add fluxcd/agent-skills`). |
 
 > [!NOTE]
 > There is no registry to sign up for and no package to publish — both CLIs resolve `owner/repo` straight from GitHub.
 
 ### With `npx skills`
 
-[`npx skills`](https://github.com/vercel-labs/skills) needs no install of its own and prompts for which skills and which agents you want. Pointed at this repo it offers the **10 in-house skills**; for an indexed upstream skill, point it at that skill's own repo instead.
+[`npx skills`](https://github.com/vercel-labs/skills) needs no install of its own and prompts for which skills and which agents you want. Pointed at this repo it offers the **11 in-house skills**; for an indexed upstream skill, point it at that skill's own repo instead.
 
 > [!NOTE]
 > Requires **Node.js ≥ 22.20.0** (the `skills` package's declared `engines.node`). On an older Node this fails before any skill is fetched. `gh skill` has no Node dependency.
