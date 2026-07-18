@@ -45,7 +45,7 @@ parse them directly, so they never drift from the index:
 - The composite actions
   [`setup-agent-skills`](https://github.com/devantler-tech/actions/tree/main/setup-agent-skills) /
   [`update-agent-skills`](https://github.com/devantler-tech/actions/tree/main/update-agent-skills)
-  (and the [`update-agent-skills.yaml`](https://github.com/devantler-tech/reusable-workflows/blob/main/.github/workflows/update-agent-skills.yaml)
+  (and the [`update-agent-skills.yaml`](https://github.com/devantler-tech/actions/blob/main/.github/workflows/update-agent-skills.yaml)
   reusable workflow) adopt and refresh these skills in consumer repos.
 
 Because every row either hosts an in-house skill or installs **directly from its original upstream**,
