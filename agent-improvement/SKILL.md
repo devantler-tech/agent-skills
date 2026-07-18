@@ -97,6 +97,22 @@ point, stale by default. Verify anything actionable against live state before ac
 present — **stop and report**, change nothing. Never improve what you cannot see, and never improvise
 the procedure from the bootstrap entry alone.
 
+**Contract guard — check this yourself; do not assume a wrapper did.** This skill can be invoked
+directly, without any agent definition around it, so it must establish its own bounds before step 4
+routes a change at a bootstrap entry or a permission file. Confirm the consuming deployment's contract
+defines both:
+
+- **Agent definition locations** — every surface you may change, and which are version-controlled
+  (ship as a pull request) versus not (bootstrap/loader entries, permission or approval configuration
+  — edited in place, backed up first). Anything not named there is out of scope.
+- **Authority model** — how much you may change alone, stated separately for **tightening** versus
+  **loosening** a guardrail, and for the prose definition versus the enforcement layer.
+
+**If either is missing or malformed, fail closed on that dimension**: report the gap and change
+nothing that depends on it. Do not infer which surfaces are yours, and do not assume an authority you
+were not granted. This guard is load-bearing precisely because the skill edits guardrails — improvising
+its own bounds would remove them before any other check runs.
+
 ---
 
 ## 1. Gather
@@ -168,6 +184,14 @@ Route each change to its surface: version-controlled definition (contract, agent
 ships as a **pull request**; a non-version-controlled surface (a bootstrap entry, a permission or
 approval configuration) is edited in place **after backing it up** to a timestamped copy naming the
 reason.
+
+**A VENDORED copy is not the surface — fix it at its upstream.** Where a definition file was installed
+from somewhere else (a bundled skill in a plugin or marketplace, a vendored agent definition), the copy
+usually records its origin in frontmatter or a lockfile, and the consuming repository generally forbids
+hand-editing it — a local edit is silently reverted by the next sync, so the defect returns and the fix
+looks like it failed. Change it in the repository it came from, let the normal sync carry it, and note
+the upstream link in your report. Check for that origin marker before editing any definition file you
+did not author.
 
 **Every change carries its evidence** — the signature, the count, the window. **Every change is
 reversible**, and the before/after goes into memory and the run report: a pull request is auditable by
