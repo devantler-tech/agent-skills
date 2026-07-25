@@ -68,7 +68,7 @@ This repo is a **pointer list** and publisher of in-house skills. Each row below
 </details>
 
 <details open>
-<summary>Automated AI Engineer</summary>
+<summary>Agentic Engineer</summary>
 
 | Skill | Upstream | Install |
 |-------|----------|---------|

@@ -21,7 +21,7 @@ maintainer promotes (the checkpoint), one concern per PR, never weaken a safety/
 never hand-edit generated files.
 
 This skill is authored against the consumer contract sections defined by the consuming deployment's
-`AGENTS.md` (per the Automated AI Engineer plugin's parameterization contract): the **Portfolio map**
+`AGENTS.md` (per the agentic-engineering plugin's parameterization contract): the **Portfolio map**
 (which products exist, plus each product's `## Maintenance` card — validate commands, labels,
 protected/generated files, its feature-flag mechanism, and its roadmap home), the **Trust gate** (who
 may be driven to merge and the per-repo merge mechanics), the **Cadence** (rotation frequencies for

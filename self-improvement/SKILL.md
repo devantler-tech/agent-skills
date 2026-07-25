@@ -21,7 +21,7 @@ deliberate gate); once promoted and green with review threads resolved, drive yo
 merge yourself the same way as any other of your own PRs; never weaken a guardrail.**
 
 This skill is authored against the consumer contract sections defined by the consuming deployment's
-`AGENTS.md` (per the Automated AI Engineer plugin's parameterization contract): **Memory** (where
+`AGENTS.md` (per the agentic-engineering plugin's parameterization contract): **Memory** (where
 durable cross-run state lives), **Cadence** (how often the distil pass runs), **Trust gate** (who is
 trusted and the per-repo merge mechanics), and **Maintainer channels** (how a human decision is
 reached). Where this skill says "per the *X* section", the consuming repo supplies the concrete fact.
