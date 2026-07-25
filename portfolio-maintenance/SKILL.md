@@ -28,7 +28,7 @@ companion is absent — the corresponding movement falls back to the consuming d
 `AGENTS.md` guidance rather than being silently skipped.
 
 This skill is authored against the consumer contract sections defined by the consuming deployment's
-`AGENTS.md` (per the Automated AI Engineer plugin's parameterization contract): the **Portfolio map**
+`AGENTS.md` (per the agentic-engineering plugin's parameterization contract): the **Portfolio map**
 (which repositories are in scope, plus each product's `## Maintenance` card — validate commands,
 labels, protected/generated files, roadmap home), the **Trust gate** (the exact logins that may be
 auto-driven, which bots are reviewer-only, and the per-repo merge mechanics such as merge queues or
