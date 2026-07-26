@@ -145,6 +145,11 @@ jobs:
         # (copies the real scripts into throwaway fixtures): no gh or network.
         run: ./scripts/check-readme-index.test.sh
 
+      - name: 🧪 Verify Agent Improver hypothesis eligibility
+        # Rate-based hypotheses must not receive a success/failure verdict
+        # before both their time and observation-volume floors are met.
+        run: bash ./scripts/agent-improvement-contract.test.sh
+
       - name: 🧪 Self-test the installer
         # Pins install.sh's own contracts the index guard doesn't assert: --list
         # (and -l) print sorted, de-duplicated `<repo> <skill>` parsed only from

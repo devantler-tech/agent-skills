@@ -220,8 +220,13 @@ Two verifications, both required:
    boots; confirm a permission change admits the intended call and still blocks the unintended one.
    Never assume a configuration edit does what it says.
 2. **Next run: did the metric move?** Every change registers a **hypothesis** in memory — the change,
-   the signature it targets, the baseline count, the window, the expected direction, and a date to
-   check. The next run **checks it before starting new work**:
+   the signature it targets, the baseline count, the window, and the expected direction.
+   For a rate-based metric, record a **UTC not-before timestamp** and a **minimum observation volume**
+   in the unit that generates the evidence (for example sessions, dispatches, requests, or artifacts).
+   A state metric whose outcome is decisive from one live inspection may omit the volume floor.
+   The next run checks eligibility before applying a verdict:
+   - either floor is unmet → record **NOT-YET-DUE**, keep the hypothesis open without applying a
+     verdict, and continue with other authorised work;
    - metric fell → close the hypothesis, keep the change;
    - metric unchanged → the diagnosis was wrong. **Say so**, then revert or reshape — never layer a
      second guess on an unverified first;
@@ -235,8 +240,9 @@ a self-improving system.
 
 ## 6. Record and report
 
-Into memory: the scorecard, every change with before/after, open hypotheses with check dates, and
-findings deliberately **not** acted on with the reason — so a future run need not re-derive the decision.
+Into memory: the scorecard, every change with before/after, open hypotheses with their eligibility
+floors, and findings deliberately **not** acted on with the reason — so a future run need not re-derive
+the decision.
 
 The report states the window and volume analysed, the scorecard with deltas, changes shipped with their
 evidence, hypotheses now open, and anything needing the maintainer. Sensitive specifics — credentials,
