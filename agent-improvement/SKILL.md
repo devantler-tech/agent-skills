@@ -220,12 +220,23 @@ Two verifications, both required:
    boots; confirm a permission change admits the intended call and still blocks the unintended one.
    Never assume a configuration edit does what it says.
 2. **Next run: did the metric move?** Every change registers a **hypothesis** in memory — the change,
-   the signature it targets, the baseline count, the window, the expected direction, and a date to
-   check. The next run **checks it before starting new work**:
+   the signature it targets, the baseline value, the window, and the expected direction.
+   For a rate-based metric, record the normalized baseline rate and its **baseline observation volume**,
+   a **UTC verification-window start** when the change became effective, a **UTC not-before timestamp**,
+   and a **minimum post-change observation volume** in the unit that generates the evidence (for example
+   sessions, dispatches, requests, or artifacts). Count only evidence generated at or after the
+   verification-window start toward the post-change volume.
+   A state metric whose outcome is decisive from one live inspection may omit the volume floor.
+   The next run checks eligibility before applying a verdict:
+   - if either floor is unmet → record **NOT-YET-DUE**, keep the hypothesis open without applying a
+     verdict, and continue with other authorised work;
    - metric fell → close the hypothesis, keep the change;
    - metric unchanged → the diagnosis was wrong. **Say so**, then revert or reshape — never layer a
      second guess on an unverified first;
    - metric rose → **revert first, diagnose after**.
+
+While the hypothesis remains pending, continue only with work that cannot affect its tracked signature
+or metric; otherwise wait for evidence or choose a non-overlapping improvement.
 
 A fix whose metric is never checked is indistinguishable from a fix that did not work. This step is what
 stops a definition accreting well-intentioned text that never helped anything — the main failure mode of
@@ -235,8 +246,9 @@ a self-improving system.
 
 ## 6. Record and report
 
-Into memory: the scorecard, every change with before/after, open hypotheses with check dates, and
-findings deliberately **not** acted on with the reason — so a future run need not re-derive the decision.
+Into memory: the scorecard, every change with before/after, open hypotheses with their eligibility
+floors, and findings deliberately **not** acted on with the reason — so a future run need not re-derive
+the decision.
 
 The report states the window and volume analysed, the scorecard with deltas, changes shipped with their
 evidence, hypotheses now open, and anything needing the maintainer. Sensitive specifics — credentials,

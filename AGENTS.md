@@ -105,6 +105,8 @@ shellcheck scripts/*.sh
                                           # `gh` stub (no network) — pins ## Skills scoping, Upstream
                                           # tree-URL parsing, fail-closed-on-no-rows, and hard-drift
                                           # (HTTP 404) vs transient-warning discrimination
+./scripts/agent-improvement-contract.test.sh   # pins rate-hypothesis baseline comparability,
+                                               # post-change evidence floors, and state-metric carve-out
 
 # 4. (local only) Lint changed workflows.
 actionlint
