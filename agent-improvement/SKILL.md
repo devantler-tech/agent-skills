@@ -220,17 +220,23 @@ Two verifications, both required:
    boots; confirm a permission change admits the intended call and still blocks the unintended one.
    Never assume a configuration edit does what it says.
 2. **Next run: did the metric move?** Every change registers a **hypothesis** in memory — the change,
-   the signature it targets, the baseline count, the window, and the expected direction.
-   For a rate-based metric, record a **UTC not-before timestamp** and a **minimum observation volume**
-   in the unit that generates the evidence (for example sessions, dispatches, requests, or artifacts).
+   the signature it targets, the baseline value, the window, and the expected direction.
+   For a rate-based metric, record the normalized baseline rate and its **baseline observation volume**,
+   a **UTC verification-window start** when the change became effective, a **UTC not-before timestamp**,
+   and a **minimum post-change observation volume** in the unit that generates the evidence (for example
+   sessions, dispatches, requests, or artifacts). Count only evidence generated at or after the
+   verification-window start toward the post-change volume.
    A state metric whose outcome is decisive from one live inspection may omit the volume floor.
    The next run checks eligibility before applying a verdict:
-   - either floor is unmet → record **NOT-YET-DUE**, keep the hypothesis open without applying a
+   - if either floor is unmet → record **NOT-YET-DUE**, keep the hypothesis open without applying a
      verdict, and continue with other authorised work;
    - metric fell → close the hypothesis, keep the change;
    - metric unchanged → the diagnosis was wrong. **Say so**, then revert or reshape — never layer a
      second guess on an unverified first;
    - metric rose → **revert first, diagnose after**.
+
+While the hypothesis remains pending, continue only with work that cannot affect its tracked signature
+or metric; otherwise wait for evidence or choose a non-overlapping improvement.
 
 A fix whose metric is never checked is indistinguishable from a fix that did not work. This step is what
 stops a definition accreting well-intentioned text that never helped anything — the main failure mode of
