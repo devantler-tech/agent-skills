@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 #
-# Contract test for the agent-improvement skill's hypothesis-verification
-# eligibility gate. Rate-based metrics need comparable baselines, post-change
-# time and observation-volume floors, and an uncontaminated observation window
-# before a success/failure verdict is meaningful; state checks may be decisive
-# from one live inspection.
+# Contract test for the agent-improvement skill's evidence gates. Rate-based
+# metrics need comparable baselines, post-change time and observation-volume
+# floors, and an uncontaminated observation window before a success/failure
+# verdict is meaningful; coordination verdicts need distinct-writer provenance.
+# State checks may be decisive from one live inspection.
 set -Eeuo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -28,6 +28,15 @@ check_contract() { # skill
   grep -Eqi 'state metric.{0,240}(single|one) live inspection.{0,240}(omit|without).{0,120}volume floor' <<<"$flat" || return 1
 }
 
+check_coordination_contract() { # skill
+  local flat
+  flat="$(tr '\n' ' ' <"$1" | sed -E 's/[[:space:]]+/ /g')"
+
+  grep -Eqi '(cross-instance collision|two-writer race).{0,240}(at least two|two distinct).{0,80}(writers|instances)' <<<"$flat" || return 1
+  grep -Eqi 'single session.{0,240}(stale edit|dirty local merge).{0,240}(reliability|local-state).{0,160}not.{0,80}(collision|coordination verdict)' <<<"$flat" || return 1
+  grep -Eqi '(second-writer|two-writer) provenance.{0,160}(unavailable|missing).{0,160}(UNKNOWN|candidate)' <<<"$flat" || return 1
+}
+
 fail=0
 
 if check_contract "$skill"; then
@@ -36,6 +45,43 @@ else
   printf '  ❌ live skill permits an underpowered hypothesis verdict\n' >&2
   fail=1
 fi
+
+if check_coordination_contract "$skill"; then
+  printf '  ✅ live skill requires two-writer collision evidence\n'
+else
+  printf '  ❌ live skill permits a single-session collision verdict\n' >&2
+  fail=1
+fi
+
+coordination_good="$tmp/coordination-good.md"
+cat >"$coordination_good" <<'EOF'
+A cross-instance collision or two-writer race requires evidence identifying at least two distinct
+writers or instances. A single session's stale edit or dirty local merge is reliability or local-state
+evidence, not a collision verdict. When second-writer provenance is unavailable, keep the signal
+UNKNOWN or a candidate pending investigation.
+EOF
+
+if check_coordination_contract "$coordination_good"; then
+  printf '  ✅ complete coordination evidence contract passes\n'
+else
+  printf '  ❌ complete coordination evidence contract unexpectedly fails\n' >&2
+  fail=1
+fi
+
+for missing in distinct_writer single_session unknown_verdict; do
+  fixture="$tmp/coordination-$missing.md"
+  case "$missing" in
+    distinct_writer) sed 's/at least two distinct/a local/' "$coordination_good" >"$fixture" ;;
+    single_session) sed "s/single session's stale edit/single run's edit/" "$coordination_good" >"$fixture" ;;
+    unknown_verdict) sed 's/UNKNOWN or a candidate/a collision/' "$coordination_good" >"$fixture" ;;
+  esac
+  if check_coordination_contract "$fixture"; then
+    printf '  ❌ missing coordination %s unexpectedly passed\n' "$missing" >&2
+    fail=1
+  else
+    printf '  ✅ missing coordination %s fails closed\n' "$missing"
+  fi
+done
 
 good="$tmp/good.md"
 cat >"$good" <<'EOF'
