@@ -144,6 +144,13 @@ matter more than absolute values, and only a recorded number can trend.
 **A metric that moved the wrong way outranks a new finding** — regression first. Verify any change
 awaiting confirmation (step 5) **before** starting new work.
 
+**Collision verdicts require writer provenance.** A cross-instance collision or two-writer race
+requires evidence identifying at least two distinct writers or instances and the artifacts or shared
+state on which they conflicted. Absent that distinct-writer provenance, a single session's stale edit
+or dirty local merge is reliability or local-state evidence, not a coordination verdict. When
+second-writer provenance is unavailable, keep the signal **UNKNOWN** or a candidate pending
+investigation; do not count it as a collision.
+
 ---
 
 ## 3. Diagnose
