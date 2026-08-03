@@ -32,9 +32,10 @@ check_coordination_contract() { # skill
   local flat
   flat="$(tr '\n' ' ' <"$1" | sed -E 's/[[:space:]]+/ /g')"
 
-  grep -Eqi '(cross-instance collision|two-writer race).{0,240}(at least two|two distinct).{0,80}(writers|instances)' <<<"$flat" || return 1
-  grep -Eqi 'single session.{0,240}(stale edit|dirty local merge).{0,240}(reliability|local-state).{0,160}not.{0,80}(collision|coordination verdict)' <<<"$flat" || return 1
-  grep -Eqi '(second-writer|two-writer) provenance.{0,160}(unavailable|missing).{0,160}(UNKNOWN|candidate)' <<<"$flat" || return 1
+  grep -Eqi '(cross-instance collision|two-writer race).{0,240}(at least two|two) distinct.{0,80}(writers|instances).{0,240}(artifacts?|shared state)' <<<"$flat" || return 1
+  grep -Eqi 'single session.{0,240}stale edit.{0,240}(reliability|local-state).{0,160}not.{0,80}(collision|coordination verdict)' <<<"$flat" || return 1
+  grep -Eqi 'single session.{0,240}dirty local merge.{0,240}(reliability|local-state).{0,160}not.{0,80}(collision|coordination verdict)' <<<"$flat" || return 1
+  grep -Eqi '(second-writer|two-writer) provenance.{0,160}(unavailable|missing).{0,160}(UNKNOWN|candidate).{0,240}(do not|not).{0,80}(count|classify|treat).{0,80}(collision|coordination verdict)' <<<"$flat" || return 1
 }
 
 fail=0
@@ -55,10 +56,12 @@ fi
 
 coordination_good="$tmp/coordination-good.md"
 cat >"$coordination_good" <<'EOF'
-A cross-instance collision or two-writer race requires evidence identifying at least two distinct
-writers or instances. A single session's stale edit or dirty local merge is reliability or local-state
-evidence, not a collision verdict. When second-writer provenance is unavailable, keep the signal
-UNKNOWN or a candidate pending investigation.
+A cross-instance collision or two-writer race requires evidence identifying at least two distinct writers
+or instances and the artifact or shared state on which they conflicted.
+A single session's stale edit is reliability or local-state evidence, not a coordination verdict.
+A single session's dirty local merge is reliability or local-state evidence, not a coordination verdict.
+When second-writer provenance is unavailable, keep the signal UNKNOWN or candidate-only pending
+investigation; do not count it as a collision.
 EOF
 
 if check_coordination_contract "$coordination_good"; then
@@ -68,12 +71,17 @@ else
   fail=1
 fi
 
-for missing in distinct_writer single_session unknown_verdict; do
+for missing in distinct_writer conflicted_state stale_edit dirty_merge local_classification provenance_missing unknown_verdict non_collision; do
   fixture="$tmp/coordination-$missing.md"
   case "$missing" in
-    distinct_writer) sed 's/at least two distinct/a local/' "$coordination_good" >"$fixture" ;;
-    single_session) sed "s/single session's stale edit/single run's edit/" "$coordination_good" >"$fixture" ;;
-    unknown_verdict) sed 's/UNKNOWN or a candidate/a collision/' "$coordination_good" >"$fixture" ;;
+    distinct_writer) sed 's/two distinct writers/two writers/' "$coordination_good" >"$fixture" ;;
+    conflicted_state) sed 's/ and the artifact or shared state//' "$coordination_good" >"$fixture" ;;
+    stale_edit) sed '/stale edit/d' "$coordination_good" >"$fixture" ;;
+    dirty_merge) sed '/dirty local merge/d' "$coordination_good" >"$fixture" ;;
+    local_classification) sed 's/reliability or local-state/ordinary/' "$coordination_good" >"$fixture" ;;
+    provenance_missing) sed 's/provenance is unavailable/provenance is observed/' "$coordination_good" >"$fixture" ;;
+    unknown_verdict) sed 's/UNKNOWN or candidate-only/a collision/' "$coordination_good" >"$fixture" ;;
+    non_collision) sed 's/do not count it as a collision/count it as a collision/' "$coordination_good" >"$fixture" ;;
   esac
   if check_coordination_contract "$fixture"; then
     printf '  ❌ missing coordination %s unexpectedly passed\n' "$missing" >&2
