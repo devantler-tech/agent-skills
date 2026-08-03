@@ -30,15 +30,16 @@ check_contract() { # skill
 
 check_coordination_contract() { # skill
   local coordination_contract flat
-  flat="$(LC_ALL=C tr '\n' ' ' <"$1" | LC_ALL=C tr '[:upper:]' '[:lower:]' | LC_ALL=C tr -d '*' | LC_ALL=C sed -E 's/[[:space:]]+/ /g')"
-  coordination_contract="a cross-instance collision or two-writer race requires evidence identifying at least two distinct writers or instances and the artifacts or shared state on which they conflicted. "
+  flat="$(LC_ALL=C awk '
+    /^\*\*Collision verdicts require writer provenance\.\*\*/ { capture=1 }
+    capture && NF == 0 { exit }
+    capture { print }
+  ' "$1" | LC_ALL=C tr '\n' ' ' | LC_ALL=C tr '[:upper:]' '[:lower:]' | LC_ALL=C tr -d '*' | LC_ALL=C sed -E 's/[[:space:]]+/ /g; s/ $//')"
+  coordination_contract="collision verdicts require writer provenance. a cross-instance collision or two-writer race requires evidence identifying at least two distinct writers or instances and the artifacts or shared state on which they conflicted. "
   coordination_contract+="absent that distinct-writer provenance, a single session's stale edit or dirty local merge is reliability or local-state evidence, not a coordination verdict. "
   coordination_contract+="when second-writer provenance is unavailable, keep the signal unknown or a candidate pending investigation; do not count it as a collision."
 
-  case "$flat" in
-    *"$coordination_contract"*) ;;
-    *) return 1 ;;
-  esac
+  [ "$flat" = "$coordination_contract" ]
 }
 
 fail=0
@@ -59,6 +60,7 @@ fi
 
 coordination_good="$tmp/coordination-good.md"
 cat >"$coordination_good" <<'EOF'
+**Collision verdicts require writer provenance.**
 A cross-instance collision or two-writer race requires evidence identifying at least two distinct
 writers or instances and the artifacts or shared state on which they conflicted.
 Absent that distinct-writer provenance, a single session's stale edit or dirty local merge is
@@ -74,9 +76,11 @@ else
   fail=1
 fi
 
-for missing in positive_requirement distinct_writer positive_conflicted_state conflicted_state positive_local_qualification provenance_qualification stale_edit dirty_merge local_classification provenance_missing positive_fallback unknown_verdict non_collision; do
+for missing in broad_heading leading_negation positive_requirement distinct_writer positive_conflicted_state conflicted_state positive_local_qualification provenance_qualification stale_edit dirty_merge local_classification provenance_missing positive_fallback unknown_verdict non_collision; do
   fixture="$tmp/coordination-$missing.md"
   case "$missing" in
+    broad_heading) sed 's/Collision verdicts/Coordination verdicts/' "$coordination_good" >"$fixture" ;;
+    leading_negation) sed 's/A cross-instance/It is not true that a cross-instance/' "$coordination_good" >"$fixture" ;;
     positive_requirement) sed 's/race requires evidence/race does not require evidence/' "$coordination_good" >"$fixture" ;;
     distinct_writer) sed 's/two distinct/two/' "$coordination_good" >"$fixture" ;;
     positive_conflicted_state) sed 's/instances and the artifacts/instances but does not require the artifacts/' "$coordination_good" >"$fixture" ;;
