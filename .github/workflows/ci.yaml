@@ -8,8 +8,16 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: "${{ github.workflow }}-${{ github.ref }}"
-  cancel-in-progress: true
+  # On main each run is that commit's verification record, so it gets a run-unique
+  # group and nothing there queues behind or evicts anything else. Disabling
+  # cancellation alone would not be enough: a concurrency group holds one running
+  # plus one pending run, and a third push cancels the pending one, so a second
+  # push's checks would still be lost. A cancelled check is not a failed check, so
+  # main would report green over verification that never completed.
+  #
+  # Pull requests keep the ref-keyed group, so superseded runs there still cancel.
+  group: "${{ github.workflow }}-${{ github.ref == 'refs/heads/main' && github.run_id || github.ref }}"
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions: {}
 
