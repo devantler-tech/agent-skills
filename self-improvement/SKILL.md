@@ -24,6 +24,9 @@ author, programmatic validation with all required CI and pre-merge quality check
 unresolved thread and non-thread review findings, no merge conflict, a green review at the current
 head, and tried and evaluated as a user.**
 
+**Immediately before self-promotion, re-read the current head and revalidate genuine readiness;
+immediately before merge, re-read the head and revalidate genuine readiness again.**
+
 This skill is authored against the consumer contract sections defined by the consuming deployment's
 `AGENTS.md` (per the agentic-engineering plugin's parameterization contract): **Memory** (where
 durable cross-run state lives), **Cadence** (how often the distil pass runs), **Trust gate** (who is

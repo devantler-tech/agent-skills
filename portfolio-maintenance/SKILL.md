@@ -120,7 +120,9 @@ draft is unfinished work to clear first.
    trusted-author, non-draft PR whose current-head pentad is clear, merge it with the mechanics the
    **Trust gate** names for that author and repo (e.g. auto-merge arming for single-author bots,
    direct merge for your own promoted PRs; on merge-queue repos, root-cause a queue kick-out before
-   re-queuing — a queued-but-unmerged PR has usually been evicted by a failed queue check). Keep
+   re-queuing — a queued-but-unmerged PR has usually been evicted by a failed queue check).
+   **Immediately before every merge in this path, re-read the current head and revalidate genuine
+   readiness; abort if any condition changed.** Keep
    **every** open own/trusted PR hygienic while it waits: root-cause-fix failing CI, fix-or-refute
    and resolve reviewer findings, clear conflicts, green the pre-merge checks, and **secure a
    current-head green review** — where auto-review is disabled, requesting (and re-requesting after
