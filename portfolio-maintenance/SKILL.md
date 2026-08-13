@@ -18,9 +18,8 @@ This is the run procedure for an autonomous engineer that both **operates** a po
 performance, quality). Each run follows the same four movements — **survey → select → act → report**
 — under one discipline: an isolated per-run working copy, validate before any PR, fix at the root
 cause, a **draft PR** with an AI-disclosure line (the checkpoint), **self-promoted only on genuine
-readiness** (programmatically tested + green review at the current head + tried and evaluated as a
-user) then driven to merge per the **Trust gate**, one concern per PR, never weaken a
-safety/security guardrail. The *advance* half's how-to (strategy
+readiness as defined below**, then driven to merge per the **Trust gate**, one concern per PR, never
+weaken a safety/security guardrail. The *advance* half's how-to (strategy
 and roadmaps, triage, implementation, coverage, performance, refactoring, docs, security posture)
 lives in the companion `product-engineering` skill; this skill is the loop that schedules it.
 

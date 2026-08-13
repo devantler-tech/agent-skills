@@ -105,9 +105,8 @@ Issues are the unit of advance work — this is where new work enters the queue.
    costly.
 5. **Open a draft PR:** conventional-commit title, AI-disclosure line, labels, and `Fixes #N` so it
    closes the issue on merge; body = why and what, with trade-offs and flags for breaking changes or
-   new dependencies. Work in draft; **self-promote only on genuine readiness** (programmatically
-   tested + green review at the current head + tried and evaluated as a user), then drive to merge
-   per the **Trust gate**. Keep the draft review-ready meanwhile (root-cause-fix failing CI, resolve
+   new dependencies. Work in draft; **self-promote only on genuine readiness as defined above**, then
+   drive to merge per the **Trust gate**. Keep the draft review-ready meanwhile (root-cause-fix failing CI, resolve
    review threads); a PR missing any readiness condition stays draft.
 
 ## 4. Test coverage
