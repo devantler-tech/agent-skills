@@ -21,6 +21,14 @@ before any PR, fix at the root cause, a **draft PR** with an AI-disclosure line 
 **self-promoted only on genuine readiness** then driven to merge per the **Trust gate**, one concern
 per PR, never weaken a safety/security guardrail, never hand-edit generated files.
 
+**Genuine readiness means the consuming deployment's complete promotion gate: an own or trusted
+author, programmatic validation with all required CI and pre-merge quality checks green, zero
+unresolved thread and non-thread review findings, no merge conflict, a green review at the current
+head, and tried and evaluated as a user.**
+
+**Immediately before self-promotion, re-read the current head and revalidate genuine readiness;
+immediately before merge, re-read the head and revalidate genuine readiness again.**
+
 This skill is authored against the consumer contract sections defined by the consuming deployment's
 `AGENTS.md` (per the agentic-engineering plugin's parameterization contract): the **Portfolio map**
 (which products exist, plus each product's `## Maintenance` card — validate commands, labels,
@@ -100,9 +108,8 @@ Issues are the unit of advance work — this is where new work enters the queue.
    costly.
 5. **Open a draft PR:** conventional-commit title, AI-disclosure line, labels, and `Fixes #N` so it
    closes the issue on merge; body = why and what, with trade-offs and flags for breaking changes or
-   new dependencies. Work in draft; **self-promote only on genuine readiness** (programmatically
-   tested + green review at the current head + tried and evaluated as a user), then drive to merge
-   per the **Trust gate**. Keep the draft review-ready meanwhile (root-cause-fix failing CI, resolve
+   new dependencies. Work in draft; **self-promote only on genuine readiness as defined above**, then
+   drive to merge per the **Trust gate**. Keep the draft review-ready meanwhile (root-cause-fix failing CI, resolve
    review threads); a PR missing any readiness condition stays draft.
 
 ## 4. Test coverage

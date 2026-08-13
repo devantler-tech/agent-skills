@@ -18,11 +18,15 @@ This is the run procedure for an autonomous engineer that both **operates** a po
 performance, quality). Each run follows the same four movements — **survey → select → act → report**
 — under one discipline: an isolated per-run working copy, validate before any PR, fix at the root
 cause, a **draft PR** with an AI-disclosure line (the checkpoint), **self-promoted only on genuine
-readiness** (programmatically tested + green review at the current head + tried and evaluated as a
-user) then driven to merge per the **Trust gate**, one concern per PR, never weaken a
-safety/security guardrail. The *advance* half's how-to (strategy
+readiness as defined below**, then driven to merge per the **Trust gate**, one concern per PR, never
+weaken a safety/security guardrail. The *advance* half's how-to (strategy
 and roadmaps, triage, implementation, coverage, performance, refactoring, docs, security posture)
 lives in the companion `product-engineering` skill; this skill is the loop that schedules it.
+
+**Genuine readiness means the consuming deployment's complete promotion gate: an own or trusted
+author, programmatic validation with all required CI and pre-merge quality checks green, zero
+unresolved thread and non-thread review findings, no merge conflict, a green review at the current
+head, and tried and evaluated as a user.**
 
 **Companion skills — install them together.** This loop delegates its *advance* movement to
 `product-engineering` and its learnings-distil step to `self-improvement`; a single-skill install
@@ -116,7 +120,9 @@ draft is unfinished work to clear first.
    trusted-author, non-draft PR whose current-head pentad is clear, merge it with the mechanics the
    **Trust gate** names for that author and repo (e.g. auto-merge arming for single-author bots,
    direct merge for your own promoted PRs; on merge-queue repos, root-cause a queue kick-out before
-   re-queuing — a queued-but-unmerged PR has usually been evicted by a failed queue check). Keep
+   re-queuing — a queued-but-unmerged PR has usually been evicted by a failed queue check).
+   **Immediately before every merge in this path, re-read the current head and revalidate genuine
+   readiness; abort if any condition changed.** Keep
    **every** open own/trusted PR hygienic while it waits: root-cause-fix failing CI, fix-or-refute
    and resolve reviewer findings, clear conflicts, green the pre-merge checks, and **secure a
    current-head green review** — where auto-review is disabled, requesting (and re-requesting after
@@ -175,8 +181,9 @@ runs in a short window be more selective — dedupe against what earlier runs al
    with a conventional-commit title, the AI-disclosure line, labels, and `Fixes #N` when it closes
    an issue; the body is short and maintainer-facing — why and what, with breaking changes and new
    dependencies flagged. Watch the PRs you spawn while the session lives: react to a check going
-   red, a new review, or readiness newly holding (→ self-promote + merge), instead of leaving it for
-   the next run to discover.
+   red, a new review, or readiness newly holding. **Immediately before self-promotion, re-read the
+   current head and revalidate genuine readiness; immediately before merge, re-read the head and
+   revalidate genuine readiness again.** Then act instead of leaving it for the next run to discover.
 4. **Clean up:** remove the per-run working copy; leave no dirty state behind.
 
 ## 4. Report — update memory, then one consolidated report

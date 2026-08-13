@@ -158,6 +158,12 @@ jobs:
         # before both their time and observation-volume floors are met.
         run: bash ./scripts/agent-improvement-contract.test.sh
 
+      - name: 🧪 Verify promotion readiness contracts
+        # Each independently installable engineering skill must carry the full
+        # readiness gate, and the portfolio loop must revalidate it at both
+        # promotion and merge rather than reuse an earlier observation.
+        run: ./scripts/promotion-readiness-contract.test.sh
+
       - name: 🧪 Self-test the installer
         # Pins install.sh's own contracts the index guard doesn't assert: --list
         # (and -l) print sorted, de-duplicated `<repo> <skill>` parsed only from
