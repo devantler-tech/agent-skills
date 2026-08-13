@@ -24,6 +24,11 @@ safety/security guardrail. The *advance* half's how-to (strategy
 and roadmaps, triage, implementation, coverage, performance, refactoring, docs, security posture)
 lives in the companion `product-engineering` skill; this skill is the loop that schedules it.
 
+**Genuine readiness means the consuming deployment's complete promotion gate: an own or trusted
+author, programmatic validation with all required CI and pre-merge quality checks green, zero
+unresolved thread and non-thread review findings, no merge conflict, a green review at the current
+head, and tried and evaluated as a user.**
+
 **Companion skills — install them together.** This loop delegates its *advance* movement to
 `product-engineering` and its learnings-distil step to `self-improvement`; a single-skill install
 does not pull companions in automatically. Install all three from this library, or — when a
@@ -175,8 +180,9 @@ runs in a short window be more selective — dedupe against what earlier runs al
    with a conventional-commit title, the AI-disclosure line, labels, and `Fixes #N` when it closes
    an issue; the body is short and maintainer-facing — why and what, with breaking changes and new
    dependencies flagged. Watch the PRs you spawn while the session lives: react to a check going
-   red, a new review, or readiness newly holding (→ self-promote + merge), instead of leaving it for
-   the next run to discover.
+   red, a new review, or readiness newly holding. **Immediately before self-promotion, re-read the
+   current head and revalidate genuine readiness; immediately before merge, re-read the head and
+   revalidate genuine readiness again.** Then act instead of leaving it for the next run to discover.
 4. **Clean up:** remove the per-run working copy; leave no dirty state behind.
 
 ## 4. Report — update memory, then one consolidated report

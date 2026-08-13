@@ -20,6 +20,11 @@ work in draft and self-promote only on genuine readiness (programmatically teste
 the current head + tried and evaluated as a user), then drive your definition PR to merge yourself
 the same way as any other of your own PRs; never weaken a guardrail.**
 
+**Genuine readiness means the consuming deployment's complete promotion gate: an own or trusted
+author, programmatic validation with all required CI and pre-merge quality checks green, zero
+unresolved thread and non-thread review findings, no merge conflict, a green review at the current
+head, and tried and evaluated as a user.**
+
 This skill is authored against the consumer contract sections defined by the consuming deployment's
 `AGENTS.md` (per the agentic-engineering plugin's parameterization contract): **Memory** (where
 durable cross-run state lives), **Cadence** (how often the distil pass runs), **Trust gate** (who is

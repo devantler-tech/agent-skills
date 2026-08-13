@@ -21,6 +21,11 @@ before any PR, fix at the root cause, a **draft PR** with an AI-disclosure line 
 **self-promoted only on genuine readiness** then driven to merge per the **Trust gate**, one concern
 per PR, never weaken a safety/security guardrail, never hand-edit generated files.
 
+**Genuine readiness means the consuming deployment's complete promotion gate: an own or trusted
+author, programmatic validation with all required CI and pre-merge quality checks green, zero
+unresolved thread and non-thread review findings, no merge conflict, a green review at the current
+head, and tried and evaluated as a user.**
+
 This skill is authored against the consumer contract sections defined by the consuming deployment's
 `AGENTS.md` (per the agentic-engineering plugin's parameterization contract): the **Portfolio map**
 (which products exist, plus each product's `## Maintenance` card — validate commands, labels,
