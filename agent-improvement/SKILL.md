@@ -261,11 +261,15 @@ an unresolved safety or authority gate, or an exact active-work conflict; when o
 research too, name the blocker and retain `QUERY-UNKNOWN` rather than pretending the fallback ran.
 Use the consumer-declared research budget when one exists, but treat the **first** of 20 minutes
 elapsed, 12 search or tool calls, or **eight primary sources** assessed as hard maxima. The effective
-consumer budget may tighten but never exceed these hard maxima. Give every search or tool call a
-per-call deadline or cancellation timeout within the remaining wall-clock budget; do not launch a call
-that cannot honor it. If the runtime cannot enforce that bound, retain `QUERY-UNKNOWN` and leave the
-cursor unchanged. When a bound is reached, disposition the evidence already gathered; do not expand
-the search to manufacture a lead.
+consumer budget may tighten but never exceed these hard maxima. These hard maxima cover discovery,
+disposition, persistence, and cursor advancement. Reserve at least two minutes and two tool calls
+inside the effective budget for finalization; if the effective budget cannot hold that reserve, retain
+`QUERY-UNKNOWN` and leave the cursor unchanged. Do not launch a discovery call that would consume the
+finalization reserve. Give every search or tool call a per-call deadline or cancellation timeout within
+the remaining discovery allowance; do not launch a call that cannot honor it. If the runtime cannot
+enforce that bound, retain `QUERY-UNKNOWN` and leave the cursor unchanged. When a discovery bound is
+reached, disposition and persist the evidence already gathered inside the reserve; do not expand the
+search to manufacture a lead.
 
 Compare the **cursor-selected topic** with every pending hypothesis's tracked metric or signature.
 Research it only when the activity is **non-confounding**. If that topic overlaps a pending hypothesis,
@@ -291,13 +295,15 @@ Carry a monotonically unique **fencing token**. Persist ownership validation, th
 advance in **one transaction or compare-and-set operation** that validates the fencing token, records
 exactly one outcome, and advances the cursor. If the durable store cannot provide that atomic unit, use
 an **idempotency key stable for the claimed cursor value** and its **durable, never-reused transition
-ID**. Record the transition ID atomically with the cursor claim; every retry and stale-lease takeover
-inherits the same transition ID, while the next rotation gets a new one. Write the outcome under that
-key first, resume an interrupted transition with the same key, and use a compare-and-set that validates
-the fencing token on every write before advancing the cursor. Immediately before either form commits,
-compare-and-set verifies that token still owns the lease. If ownership was lost, discard the
-uncommitted outcome, retain `QUERY-UNKNOWN`, and make no cursor advance; a stale claimant never commits
-after a takeover.
+ID** only when both the outcome sink and cursor store support conditional fenced writes. Record the
+transition ID atomically with the cursor claim; every retry and stale-lease takeover inherits the same
+transition ID, while the next rotation gets a new one. The outcome sink conditionally accepts the write
+only when the current fencing token matches in that same operation. Write the outcome under the stable
+key first, resume an interrupted transition with the same key, and advance the cursor with a
+compare-and-set that validates the fencing token on every write. Each compare-and-set verifies that
+token still owns the lease. If either conditional write is unavailable, retain `QUERY-UNKNOWN`, write
+no outcome, and make no cursor advance. If ownership was lost, discard the uncommitted outcome, retain
+`QUERY-UNKNOWN`, and make no cursor advance; a stale claimant never commits after a takeover.
 
 Use **current primary sources**: official standards and runtime documentation or release notes,
 peer-reviewed papers or author-hosted preprints, and reproducible reference implementations or

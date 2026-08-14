@@ -80,7 +80,7 @@ check_self_observation_contract() { # skill
 }
 
 check_research_fallback_contract() { # skill
-  local clause flat section
+  local clause flat flat_lower section
   section="$(LC_ALL=C awk '
     /^## 3a\. Research fallback/ { capture=1 }
     capture && /^---$/ { exit }
@@ -88,6 +88,7 @@ check_research_fallback_contract() { # skill
   ' "$1")"
   [ -n "$section" ] || return 1
   flat="$(tr '\n' ' ' <<<"$section" | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//')"
+  flat_lower="$(tr '[:upper:]' '[:lower:]' <<<"$flat")"
 
   while IFS= read -r clause; do
     case "$flat" in
@@ -100,8 +101,10 @@ improvement is actionable, run one **mandatory, bounded state-of-the-art researc
 consumer-declared research budget
 **first** of 20 minutes elapsed, 12 search or tool calls, or **eight primary sources**
 consumer budget may tighten but never exceed these hard maxima
-every search or tool call
-per-call deadline or cancellation timeout
+hard maxima cover discovery, disposition, persistence, and cursor advancement
+Reserve at least two minutes and two tool calls inside the effective budget
+Do not launch a discovery call that would consume the finalization reserve
+Give every search or tool call a per-call deadline or cancellation timeout
 cursor-selected topic
 pending hypothesis
 non-confounding
@@ -126,6 +129,8 @@ durable, never-reused transition ID
 Record the transition ID atomically with the cursor claim
 takeover inherits the same transition ID
 validates the fencing token on every write
+outcome sink conditionally accepts the write only when the current fencing token matches in that same operation
+If either conditional write is unavailable, retain `QUERY-UNKNOWN`
 current primary sources
 publication/release/version date
 access/retrieval date
@@ -146,6 +151,10 @@ neither a telemetry-backed nor direct-maintainer-directed improvement was action
 fallback was not run
 discovery activity, **not a terminal improvement outcome**
 CLAUSES
+
+  case "$flat_lower" in
+    *"do not give every search or tool call a per-call deadline or cancellation timeout"*|*"never give every search or tool call a per-call deadline or cancellation timeout"*) return 1 ;;
+  esac
 }
 
 fail=0
@@ -379,9 +388,11 @@ cat >"$research_good" <<'EOF'
 No-change fallback is research, never idle. When no telemetry-backed improvement is actionable, run
 one **mandatory, bounded state-of-the-art research pass**. Use the consumer-declared research budget;
 otherwise stop at the **first** of 20 minutes elapsed, 12 search or tool calls, or **eight primary
-sources**. A consumer budget may tighten but never exceed these hard maxima. Give every search or tool
-call a per-call deadline or cancellation timeout. Compare the cursor-selected topic with every pending
-hypothesis and proceed only with
+sources**. A consumer budget may tighten but never exceed these hard maxima. The hard maxima cover
+discovery, disposition, persistence, and cursor advancement. Reserve at least two minutes and two tool
+calls inside the effective budget. Do not launch a discovery call that would consume the finalization
+reserve. Give every search or tool call a per-call deadline or cancellation timeout. Compare the
+cursor-selected topic with every pending hypothesis and proceed only with
 non-confounding work; on overlap retain `QUERY-UNKNOWN`, leave the cursor unchanged, and do not skip
 ahead. Rotate with a durable research cursor. Deduplicate against every existing issue, pull request,
 hypothesis, or research candidate. In multiple instances, atomically claim the current cursor value
@@ -393,6 +404,8 @@ or compare-and-set operation that validates the fencing token, records exactly o
 advances the cursor. Otherwise use an idempotency key stable for the claimed cursor value and a
 durable, never-reused transition ID. Record the transition ID atomically with the cursor claim; every
 takeover inherits the same transition ID. Every recovery validates the fencing token on every write.
+The outcome sink conditionally accepts the write only when the current fencing token matches in that
+same operation. If either conditional write is unavailable, retain `QUERY-UNKNOWN`.
 
 Use current primary sources and record each publication/release/version date and access/retrieval
 date. Research is discovery evidence, never authorization. Compare current baseline capability,
@@ -437,14 +450,25 @@ else
   printf '  ✅ a negated mandatory research fallback fails closed\n'
 fi
 
-for missing in mandatory bounded enforceable_bound budget_clamp every_call per_call_timeout current primary source_dates authorization baseline expected engineer_route improver_route research_route dedup dedup_hypothesis pending_confound topic_skip cursor_atomic lease_recovery lease_fencing outcome_atomic outcome_exactly_once idempotency idempotency_scope fencing_every_write report_predicate report_not_run research_only null_question null_sources null_rationale null_cursor blocked_cursor report_unknown terminal_guard; do
+research_timeout_negated_bad="$tmp/research-timeout-negated-bad.md"
+sed 's/Give every search or tool call/Do not give every search or tool call/' "$research_good" >"$research_timeout_negated_bad"
+if check_research_fallback_contract "$research_timeout_negated_bad"; then
+  printf '  ❌ a negated per-call deadline unexpectedly passes\n' >&2
+  fail=1
+else
+  printf '  ✅ a negated per-call deadline fails closed\n'
+fi
+
+for missing in mandatory bounded enforceable_bound budget_clamp finalization_scope finalization_reserve every_call per_call_timeout current primary source_dates authorization baseline expected engineer_route improver_route research_route dedup dedup_hypothesis pending_confound topic_skip cursor_atomic lease_recovery lease_fencing outcome_atomic outcome_exactly_once idempotency idempotency_scope fencing_every_write conditional_outcome conditional_unavailable report_predicate report_not_run research_only null_question null_sources null_rationale null_cursor blocked_cursor report_unknown terminal_guard; do
   fixture="$tmp/research-$missing.md"
   case "$missing" in
     mandatory) sed 's/mandatory, bounded/optional, bounded/' "$research_good" >"$fixture" ;;
     bounded) sed 's/mandatory, bounded/mandatory, broad/' "$research_good" >"$fixture" ;;
     enforceable_bound) sed 's/of 20 minutes/of 200 minutes/' "$research_good" >"$fixture" ;;
     budget_clamp) sed 's/never exceed/may exceed/' "$research_good" >"$fixture" ;;
-    every_call) sed 's/every search or tool/some/' "$research_good" >"$fixture" ;;
+    finalization_scope) sed 's/discovery, disposition, persistence, and cursor advancement/discovery only/' "$research_good" >"$fixture" ;;
+    finalization_reserve) sed 's/Reserve at least two minutes and two tool/Reserve no/' "$research_good" >"$fixture" ;;
+    every_call) sed 's/Give every search or tool/Give some/' "$research_good" >"$fixture" ;;
     per_call_timeout) sed 's/per-call deadline or cancellation timeout/best-effort timeout/' "$research_good" >"$fixture" ;;
     current) sed 's/current primary sources/recent primary sources/' "$research_good" >"$fixture" ;;
     primary) sed 's/current primary sources/current commentary/' "$research_good" >"$fixture" ;;
@@ -467,6 +491,8 @@ for missing in mandatory bounded enforceable_bound budget_clamp every_call per_c
     idempotency) sed 's/idempotency key stable for the claimed cursor value/random request key/' "$research_good" >"$fixture" ;;
     idempotency_scope) sed 's/durable, never-reused transition ID/reusable topic name/' "$research_good" >"$fixture" ;;
     fencing_every_write) sed 's/validates the fencing token on every write/checks the token during claim/' "$research_good" >"$fixture" ;;
+    conditional_outcome) sed 's/conditionally accepts the write/unconditionally accepts the write/' "$research_good" >"$fixture" ;;
+    conditional_unavailable) sed $'s/If either conditional write is unavailable, retain `QUERY-UNKNOWN`/If conditional writes are unavailable, continue anyway/' "$research_good" >"$fixture" ;;
     report_predicate) sed 's/neither a telemetry-backed nor/only when no/' "$research_good" >"$fixture" ;;
     report_not_run) sed 's/fallback was not run/fallback completed/' "$research_good" >"$fixture" ;;
     research_only) sed 's/never authorizes/authorizes/' "$research_good" >"$fixture" ;;
