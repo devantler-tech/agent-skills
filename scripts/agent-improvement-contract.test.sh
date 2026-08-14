@@ -46,17 +46,17 @@ check_outcome_throughput_contract() { # skill
   local throughput_contract flat
   grep -Fq '| **Outcome throughput** |' "$1" || return 1
   flat="$(LC_ALL=C awk '
-    /^\*\*Outcome throughput is a guarded rate, not an artifact contest\.\*\*/ { capture=1 }
+    /^\*\*Outcome throughput counts verified completions, not activity\.\*\*/ { capture=1 }
     capture && /^---$/ { exit }
     capture { print }
   ' "$1" | LC_ALL=C tr '\n' ' ' | LC_ALL=C tr '[:upper:]' '[:lower:]' | LC_ALL=C tr -d '*' | LC_ALL=C sed -E 's/[[:space:]]+/ /g; s/ $//')"
-  throughput_contract="outcome throughput is a guarded rate, not an artifact contest. for each short and long window, record the raw number of completed sessions, sessions with at least one value-bearing state transition, unique work items advanced, and terminal outcomes. "
-  throughput_contract+="report productive-session rate and terminal outcomes per completed session; keep intermediate transitions separate from terminal outcomes. count a work item once per session even if touched repeatedly. "
+  throughput_contract="outcome throughput counts verified completions, not activity. for each short and long window, record completed sessions, verified terminal outcomes, and terminal outcomes per completed session. "
+  throughput_contract+="track sessions with at least one value-bearing state transition, unique work items advanced, and intermediate transitions under a separately named execution flow heading. these are leading indicators for diagnosis, never outcome-throughput numerators and never evidence that an intervention worked. count each work item once per scoring window and report revisits separately. "
   throughput_contract+="terminal outcomes are deployment-defined completions that deliver the work, for example a merged change, resolved work item, shipped release, verified production repair, or recorded decision when the decision is the deliverable. "
   throughput_contract+="run reports, memory writes, status comments, review requests, duplicate artifacts, and waiting are not terminal outcomes. keep substantive-versus-filler mix visible. missing session-to-outcome attribution is unknown, never zero. "
-  throughput_contract+="throughput never outranks its floors. do not combine throughput, safety, and quality into a weighted or composite score. every throughput comparison carries companion safety and quality raw metrics. "
-  throughput_contract+="higher throughput counts as improvement only when every declared safety and quality floor is unchanged or better; any floor regression makes the hypothesis fail regardless of throughput and triggers the revert-first rule. "
-  throughput_contract+="a throughput hypothesis records its throughput baseline numerator, denominator, and observation volume plus companion floor baselines and thresholds under the same verification window."
+  throughput_contract+="throughput never outranks its floors. do not combine throughput or any companion parameter into a weighted or composite score. every throughput comparison carries companion raw metrics for every other applicable scorecard parameter. "
+  throughput_contract+="higher throughput counts as improvement only when every declared companion floor is unchanged or better; any parameter regression makes the hypothesis fail regardless of throughput and triggers the revert-first rule. "
+  throughput_contract+="a throughput hypothesis records its throughput baseline numerator, denominator, and observation volume plus companion floor baselines and thresholds for every applicable parameter under the same verification window."
 
   [ "$flat" = "$throughput_contract" ]
 }
@@ -70,10 +70,11 @@ check_self_observation_contract() { # skill
     capture { print }
   ' "$1" | LC_ALL=C tr '\n' ' ' | LC_ALL=C tr '[:upper:]' '[:lower:]' | LC_ALL=C tr -d '*' | LC_ALL=C sed -E 's/[[:space:]]+/ /g; s/ $//')"
   self_contract="the observer is one of its own measured subjects. keep two named scorecards: the execution plane (the agentic engineer) and the observation plane (every agent improver instance). never average them together or let improvement in one hide regression in the other. every required parameter reports separate raw numerators, denominators, observation volumes, attribution coverage, and unknowns per role and instance. "
-  self_contract+="for the observation plane, report at minimum: scorecard coverage; diagnostic calibration as confirmed, false-positive, and unknown findings; hypothesis discipline as eligible, overdue, working, not-working, and no-verdict hypotheses; intervention effectiveness as verified-working changes per eligible shipped change; observer reliability and efficiency; and self-improvement throughput as productive improver sessions and terminal verified rollouts. "
+  self_contract+="for the observation plane, report at minimum: scorecard coverage; diagnostic calibration as confirmed, false-positive, and unknown findings; hypothesis discipline as eligible, overdue, working, not-working, and no-verdict hypotheses; intervention effectiveness as verified-working changes per eligible shipped change; observer reliability and efficiency; and self-improvement outcome throughput as terminal verified rollouts. productive improver sessions and work advanced are execution-flow leading indicators, not improvement verdicts. "
+  self_contract+="observation-plane verdicts require evidence independent of the improver run being scored: deterministic recomputation from an immutable or read-only source, or verification by a separate eligible run or instance. when the same improver instance's assertion is the only evidence, record unknown, never success. "
   self_contract+="pull requests opened, metrics added, words changed, hypotheses opened, reports, and memory writes are activity, not observer improvement. a failed or null hypothesis is calibration evidence and is never erased or relabelled to make the observer look better. "
   self_contract+="metric evolution is allowed when measured behavior exposes a coverage gap. version the metric definition, source, inclusion and exclusion rules, known blind spots, and effective timestamp; preserve the prior series and its bad news. never delete, rename, rebase, or narrow a metric merely because it regressed. unavailable attribution remains unknown. "
-  self_contract+="a self-referential change cannot validate itself with only a metric it introduced or changed. it needs independent current-head review, unchanged safety and quality companions, and post-change evidence from the next eligible window; where possible keep one unchanged holdout measure. any self-improvement that weakens those checks fails regardless of its apparent observer score."
+  self_contract+="a self-referential change cannot validate itself with only a metric it introduced or changed. a version-controlled change needs an independent green current-head review with all findings resolved. a runtime-local change instead needs an independently performed post-dispatch read-back against the recorded pre-change baseline through the consumer's declared runtime verification mechanism; the writer's immediate read-back is not independent verification. both paths also require unchanged companion floors for every applicable scorecard parameter and post-change evidence from the next eligible window; where possible keep one unchanged holdout measure. any self-improvement that weakens those checks fails regardless of its apparent observer score."
 
   [ "$flat" = "$self_contract" ]
 }
@@ -155,24 +156,27 @@ done
 
 throughput_good="$tmp/throughput-good.md"
 cat >"$throughput_good" <<'EOF'
-| **Outcome throughput** | terminal outcomes and productive sessions | the agent completes too little |
+| **Outcome throughput** | verified terminal outcomes per completed session | the agent completes too little |
 
-**Outcome throughput is a guarded rate, not an artifact contest.** For each short and long window,
-record the raw number of completed sessions, sessions with at least one value-bearing state transition,
-unique work items advanced, and terminal outcomes. Report productive-session rate and terminal outcomes
-per completed session; keep intermediate transitions separate from terminal outcomes. Count a work item
-once per session even if touched repeatedly. Terminal outcomes are deployment-defined completions that
+**Outcome throughput counts verified completions, not activity.** For each short and long window,
+record completed sessions, verified terminal outcomes, and terminal outcomes per completed session.
+Track sessions with at least one value-bearing state transition, unique work items advanced, and
+intermediate transitions under a separately named **Execution flow** heading. These are leading
+indicators for diagnosis, never outcome-throughput numerators and never evidence that an intervention
+worked. Count each work item once per scoring window and report revisits separately. Terminal outcomes are
+deployment-defined completions that
 deliver the work, for example a merged change, resolved work item, shipped release, verified production
 repair, or recorded decision when the decision is the deliverable. Run reports, memory writes, status
 comments, review requests, duplicate artifacts, and waiting are not terminal outcomes. Keep
 substantive-versus-filler mix visible. Missing session-to-outcome attribution is UNKNOWN, never zero.
 
-**Throughput never outranks its floors.** Do not combine throughput, safety, and quality into a weighted
-or composite score. Every throughput comparison carries companion safety and quality raw metrics.
-Higher throughput counts as improvement only when every declared safety and quality floor is unchanged
-or better; any floor regression makes the hypothesis fail regardless of throughput and triggers the
-revert-first rule. A throughput hypothesis records its throughput baseline numerator, denominator, and
-observation volume plus companion floor baselines and thresholds under the same verification window.
+**Throughput never outranks its floors.** Do not combine throughput or any companion parameter into a
+weighted or composite score. Every throughput comparison carries companion raw metrics for every other
+applicable scorecard parameter. Higher throughput counts as improvement only when every declared
+companion floor is unchanged or better; any parameter regression makes the hypothesis fail regardless
+of throughput and triggers the revert-first rule. A throughput hypothesis records its throughput
+baseline numerator, denominator, and observation volume plus companion floor baselines and thresholds
+for every applicable parameter under the same verification window.
 
 ---
 EOF
@@ -184,21 +188,22 @@ else
   fail=1
 fi
 
-for missing in table short_window productive_rate terminal_separation dedup terminal_definition exclusions substantive_mix unknown_attribution composite_guard companion_metrics floor_veto hypothesis_floors; do
+for missing in table short_window verified_outcomes flow_separation no_flow_verdict dedup terminal_definition exclusions substantive_mix unknown_attribution composite_guard companion_metrics floor_veto hypothesis_floors; do
   fixture="$tmp/throughput-$missing.md"
   case "$missing" in
     table) sed '/| \*\*Outcome throughput\*\* |/d' "$throughput_good" >"$fixture" ;;
     short_window) sed 's/each short and long window/each available window/' "$throughput_good" >"$fixture" ;;
-    productive_rate) sed 's/Report productive-session rate/Report activity/' "$throughput_good" >"$fixture" ;;
-    terminal_separation) sed 's/keep intermediate transitions separate from terminal outcomes/treat intermediate transitions as terminal outcomes/' "$throughput_good" >"$fixture" ;;
-    dedup) sed 's/Count a work item/Count every touch of a work item/' "$throughput_good" >"$fixture" ;;
+    verified_outcomes) sed 's/verified terminal outcomes/terminal activity/g' "$throughput_good" >"$fixture" ;;
+    flow_separation) sed 's/separately named \*\*Execution flow\*\*/shared outcome throughput/' "$throughput_good" >"$fixture" ;;
+    no_flow_verdict) sed 's/never evidence that an intervention/and evidence that an intervention/' "$throughput_good" >"$fixture" ;;
+    dedup) sed 's/Count each work item once per scoring window/Count each work item once per session/' "$throughput_good" >"$fixture" ;;
     terminal_definition) sed 's/deployment-defined/activity-defined/' "$throughput_good" >"$fixture" ;;
     exclusions) sed 's/Run reports/Activity reports/' "$throughput_good" >"$fixture" ;;
     substantive_mix) sed 's/substantive-versus-filler/artifact-volume/' "$throughput_good" >"$fixture" ;;
     unknown_attribution) sed 's/Missing session-to-outcome attribution is UNKNOWN, never zero/Missing attribution is zero/' "$throughput_good" >"$fixture" ;;
     composite_guard) sed 's/weighted/single/' "$throughput_good" >"$fixture" ;;
-    companion_metrics) sed 's/Every throughput comparison carries companion safety and quality raw metrics/Throughput comparisons stand alone/' "$throughput_good" >"$fixture" ;;
-    floor_veto) sed 's/any floor regression makes the hypothesis fail regardless of throughput/a throughput gain offsets a floor regression/' "$throughput_good" >"$fixture" ;;
+    companion_metrics) sed 's/Every throughput comparison carries companion raw metrics for every other/Throughput comparisons ignore every other/' "$throughput_good" >"$fixture" ;;
+    floor_veto) sed 's/any parameter regression makes the hypothesis fail/a throughput gain offsets a parameter regression/' "$throughput_good" >"$fixture" ;;
     hypothesis_floors) sed 's/plus companion floor baselines and thresholds/without companion floor baselines/' "$throughput_good" >"$fixture" ;;
   esac
   if check_outcome_throughput_contract "$fixture"; then
@@ -222,8 +227,14 @@ and instance.
 For the observation plane, report at minimum: scorecard coverage; diagnostic calibration as confirmed,
 false-positive, and UNKNOWN findings; hypothesis discipline as eligible, overdue, WORKING, NOT-WORKING,
 and NO-VERDICT hypotheses; intervention effectiveness as verified-working changes per eligible shipped
-change; observer reliability and efficiency; and self-improvement throughput as productive Improver
-sessions and terminal verified rollouts.
+change; observer reliability and efficiency; and self-improvement outcome throughput as terminal verified
+rollouts. Productive Improver sessions and work advanced are execution-flow leading indicators, not
+improvement verdicts.
+
+Observation-plane verdicts require evidence independent of the Improver run being scored: deterministic
+recomputation from an immutable or read-only source, or verification by a separate eligible run or
+instance. When the same Improver instance's assertion is the only evidence, record UNKNOWN, never
+success.
 
 Pull requests opened, metrics added, words changed, hypotheses opened, reports, and memory writes are
 activity, not observer improvement. A failed or null hypothesis is calibration evidence and is never
@@ -234,9 +245,13 @@ definition, source, inclusion and exclusion rules, known blind spots, and effect
 the prior series and its bad news. Never delete, rename, rebase, or narrow a metric merely because it
 regressed. Unavailable attribution remains UNKNOWN.
 
-A self-referential change cannot validate itself with only a metric it introduced or changed. It needs
-independent current-head review, unchanged safety and quality companions, and post-change evidence from
-the next eligible window; where possible keep one unchanged holdout measure. Any self-improvement that
+A self-referential change cannot validate itself with only a metric it introduced or changed. A
+version-controlled change needs an independent green current-head review with all findings resolved. A runtime-local change instead needs
+an independently performed post-dispatch read-back against the recorded pre-change baseline through
+the consumer's declared runtime verification mechanism; the writer's immediate read-back is not
+independent verification. Both paths also require unchanged companion floors for every applicable scorecard parameter and
+post-change evidence from the next eligible window; where possible keep one unchanged holdout measure.
+Any self-improvement that
 weakens those checks fails regardless of its apparent observer score.
 
 ---
@@ -249,7 +264,7 @@ else
   fail=1
 fi
 
-for missing in table separate_planes no_average raw_evidence calibration hypothesis_discipline effectiveness anti_activity failed_hypothesis metric_version history_preservation unknown_attribution independent_review holdout floor_veto; do
+for missing in table separate_planes no_average raw_evidence calibration hypothesis_discipline effectiveness terminal_rollout_only independent_score unknown_self_score anti_activity failed_hypothesis metric_version history_preservation unknown_attribution independent_review runtime_readback immediate_readback holdout floor_veto; do
   fixture="$tmp/self-$missing.md"
   case "$missing" in
     table) sed '/| \*\*Observer effectiveness\*\* |/d' "$self_good" >"$fixture" ;;
@@ -259,12 +274,17 @@ for missing in table separate_planes no_average raw_evidence calibration hypothe
     calibration) sed 's/diagnostic calibration/diagnostic count/' "$self_good" >"$fixture" ;;
     hypothesis_discipline) sed 's/hypothesis discipline/hypothesis volume/' "$self_good" >"$fixture" ;;
     effectiveness) sed 's/intervention effectiveness as verified-working changes/intervention effectiveness as changes/' "$self_good" >"$fixture" ;;
+    terminal_rollout_only) sed 's/execution-flow leading indicators, not/execution-flow leading indicators and/' "$self_good" >"$fixture" ;;
+    independent_score) sed 's/require evidence independent of the Improver run being scored/use the Improver run being scored/' "$self_good" >"$fixture" ;;
+    unknown_self_score) sed 's/record UNKNOWN, never/record/' "$self_good" >"$fixture" ;;
     anti_activity) sed 's/activity, not observer improvement/observer improvement/' "$self_good" >"$fixture" ;;
     failed_hypothesis) sed 's/evidence and is never/evidence and may be/' "$self_good" >"$fixture" ;;
     metric_version) sed 's/Version the metric/Update the metric/' "$self_good" >"$fixture" ;;
     history_preservation) sed 's/effective timestamp; preserve/effective timestamp; replace/' "$self_good" >"$fixture" ;;
     unknown_attribution) sed 's/Unavailable attribution remains UNKNOWN/Unavailable attribution is zero/' "$self_good" >"$fixture" ;;
-    independent_review) sed 's/independent current-head review/self-review/' "$self_good" >"$fixture" ;;
+    independent_review) sed 's/an independent green current-head review with all findings resolved/self-review/' "$self_good" >"$fixture" ;;
+    runtime_readback) sed 's/an independently performed post-dispatch read-back/an immediate read-back/' "$self_good" >"$fixture" ;;
+    immediate_readback) sed "s/the writer's immediate read-back is not/the writer's immediate read-back is/" "$self_good" >"$fixture" ;;
     holdout) sed 's/keep one unchanged holdout measure/use the new metric/' "$self_good" >"$fixture" ;;
     floor_veto) sed 's/fails regardless of its apparent observer score/is offset by its observer score/' "$self_good" >"$fixture" ;;
   esac

@@ -80,7 +80,7 @@ Score every run against these. A change is worth making when it moves one and de
 | **Reliability** | tool-error rate, recurring error signatures, timeouts, stalled runs, retry loops | the agent *breaks* |
 | **Safety** | guard firings, blocked actions, near-misses, untrusted-code execution, credential-shaped strings in transcripts, injection attempts in the corpus | the agent does something *unsafe* |
 | **Efficiency** | idle wall-clock, busy-waiting, foreground blocking, redundant calls, cost per shipped artifact | the agent *wastes* the run |
-| **Outcome throughput** | terminal outcomes and productive sessions, with intermediate progress and substantive mix reported separately | the agent completes too little or games output volume |
+| **Outcome throughput** | verified terminal outcomes per completed session, with execution-flow indicators reported separately | the agent completes too little or games output volume |
 | **Observer effectiveness** | calibration, measurement coverage, hypothesis discipline, and verified interventions | the Improver optimizes itself blindly or manufactures progress |
 | **Quality** | post-merge reverts, review findings per change, CI failing after merge, rework rate, filler-over-substance drift | the agent ships *weak work* |
 | **Coordination** | two-writer races, duplicate artifacts across instances, push collisions, claim-protocol misses | instances *collide* |
@@ -157,22 +157,25 @@ or dirty local merge is reliability or local-state evidence, not a coordination 
 second-writer provenance is unavailable, keep the signal **UNKNOWN** or a candidate pending
 investigation; do not count it as a collision.
 
-**Outcome throughput is a guarded rate, not an artifact contest.** For each short and long window,
-record the raw number of completed sessions, sessions with at least one value-bearing state transition,
-unique work items advanced, and terminal outcomes. Report productive-session rate and terminal outcomes
-per completed session; keep intermediate transitions separate from terminal outcomes. Count a work item
-once per session even if touched repeatedly. Terminal outcomes are deployment-defined completions that
-deliver the work, for example a merged change, resolved work item, shipped release, verified production
-repair, or recorded decision when the decision is the deliverable. Run reports, memory writes, status
-comments, review requests, duplicate artifacts, and waiting are not terminal outcomes. Keep
-substantive-versus-filler mix visible. Missing session-to-outcome attribution is UNKNOWN, never zero.
+**Outcome throughput counts verified completions, not activity.** For each short and long window,
+record completed sessions, verified terminal outcomes, and terminal outcomes per completed session.
+Track sessions with at least one value-bearing state transition, unique work items advanced, and
+intermediate transitions under a separately named **Execution flow** heading. These are leading
+indicators for diagnosis, never outcome-throughput numerators and never evidence that an intervention
+worked. Count each work item once per scoring window and report revisits separately. Terminal outcomes are
+deployment-defined completions that deliver the work, for example a merged change, resolved work item,
+shipped release, verified production repair, or recorded decision when the decision is the deliverable.
+Run reports, memory writes, status comments, review requests, duplicate artifacts, and waiting are not
+terminal outcomes. Keep substantive-versus-filler mix visible. Missing session-to-outcome attribution
+is UNKNOWN, never zero.
 
-**Throughput never outranks its floors.** Do not combine throughput, safety, and quality into a weighted
-or composite score. Every throughput comparison carries companion safety and quality raw metrics.
-Higher throughput counts as improvement only when every declared safety and quality floor is unchanged
-or better; any floor regression makes the hypothesis fail regardless of throughput and triggers the
-revert-first rule. A throughput hypothesis records its throughput baseline numerator, denominator, and
-observation volume plus companion floor baselines and thresholds under the same verification window.
+**Throughput never outranks its floors.** Do not combine throughput or any companion parameter into a
+weighted or composite score. Every throughput comparison carries companion raw metrics for every other
+applicable scorecard parameter. Higher throughput counts as improvement only when every declared
+companion floor is unchanged or better; any parameter regression makes the hypothesis fail regardless
+of throughput and triggers the revert-first rule. A throughput hypothesis records its throughput
+baseline numerator, denominator, and observation volume plus companion floor baselines and thresholds
+for every applicable parameter under the same verification window.
 
 ---
 
@@ -185,8 +188,14 @@ and instance.
 For the observation plane, report at minimum: scorecard coverage; diagnostic calibration as confirmed,
 false-positive, and UNKNOWN findings; hypothesis discipline as eligible, overdue, WORKING, NOT-WORKING,
 and NO-VERDICT hypotheses; intervention effectiveness as verified-working changes per eligible shipped
-change; observer reliability and efficiency; and self-improvement throughput as productive Improver
-sessions and terminal verified rollouts.
+change; observer reliability and efficiency; and self-improvement outcome throughput as terminal
+verified rollouts. Productive Improver sessions and work advanced are execution-flow leading
+indicators, not improvement verdicts.
+
+Observation-plane verdicts require evidence independent of the Improver run being scored: deterministic
+recomputation from an immutable or read-only source, or verification by a separate eligible run or
+instance. When the same Improver instance's assertion is the only evidence, record UNKNOWN, never
+success.
 
 Pull requests opened, metrics added, words changed, hypotheses opened, reports, and memory writes are
 activity, not observer improvement. A failed or null hypothesis is calibration evidence and is never
@@ -197,10 +206,15 @@ definition, source, inclusion and exclusion rules, known blind spots, and effect
 the prior series and its bad news. Never delete, rename, rebase, or narrow a metric merely because it
 regressed. Unavailable attribution remains UNKNOWN.
 
-A self-referential change cannot validate itself with only a metric it introduced or changed. It needs
-independent current-head review, unchanged safety and quality companions, and post-change evidence from
-the next eligible window; where possible keep one unchanged holdout measure. Any self-improvement that
-weakens those checks fails regardless of its apparent observer score.
+A self-referential change cannot validate itself with only a metric it introduced or changed. A
+version-controlled change needs an independent green current-head review with all findings resolved. A
+runtime-local change instead needs
+an independently performed post-dispatch read-back against the recorded pre-change baseline through
+the consumer's declared runtime verification mechanism; the writer's immediate read-back is not
+independent verification. Both paths also require unchanged companion floors for every applicable
+scorecard parameter and
+post-change evidence from the next eligible window; where possible keep one unchanged holdout measure.
+Any self-improvement that weakens those checks fails regardless of its apparent observer score.
 
 ---
 
@@ -213,8 +227,9 @@ with safety first regardless of frequency:
    injection attempt in the corpus. Act on a single occurrence.
 2. **Reliability regression** — a new or growing error signature.
 3. **Quality regression** — reverts, rework, red post-merge state, or filler replacing substantive work.
-4. **Outcome-throughput regression** — productive-session rate or terminal outcomes per completed
-   session fell while its attribution and companion floors remained measurable.
+4. **Outcome-throughput regression** — verified terminal outcomes per completed session fell while its
+   attribution and companion floors remained measurable. Use execution-flow indicators only to locate
+   where completion is stalling, never to declare the intervention successful.
 5. **Recurring waste** — the same avoidable cost across many runs.
 6. **Drift and staleness** — loader versus contract, memory versus live state.
 
