@@ -79,6 +79,26 @@ check_self_observation_contract() { # skill
   [ "$flat" = "$self_contract" ]
 }
 
+check_research_fallback_contract() { # skill
+  local flat
+  flat="$(tr '\n' ' ' <"$1" | sed -E 's/[[:space:]]+/ /g')"
+
+  grep -Fqi 'No-change fallback is research, never idle' <<<"$flat" || return 1
+  grep -Eqi 'no (telemetry-backed|evidence-backed).{0,160}improvement is actionable.{0,240}mandatory.{0,160}research pass' <<<"$flat" || return 1
+  grep -Eqi 'primary sources.{0,240}(publication|release|version).{0,160}(access|retrieval) date' <<<"$flat" || return 1
+  grep -Eqi 'research is discovery evidence.{0,160}never authorization.{0,160}(current system|telemetry).{0,120}(failed|defect)' <<<"$flat" || return 1
+  grep -Eqi 'current baseline capability.{0,240}expected outcome.{0,240}(verification metric|falsifiable)' <<<"$flat" || return 1
+  # Literal Markdown code spans; command substitution is intentionally disabled.
+  # shellcheck disable=SC2016
+  grep -Fq '`ENGINEER-CANDIDATE`' <<<"$flat" || return 1
+  # shellcheck disable=SC2016
+  grep -Fq '`IMPROVER-CANDIDATE`' <<<"$flat" || return 1
+  grep -Eqi 'deduplicat.{0,200}(issue|pull request|candidate)' <<<"$flat" || return 1
+  grep -Eqi 'research alone.{0,160}(never|does not).{0,120}(ship|authorize).{0,120}(change|self-modification)' <<<"$flat" || return 1
+  grep -Eqi 'RESEARCH-NO-CANDIDATE.{0,240}(advance|rotate).{0,120}(cursor|topic)' <<<"$flat" || return 1
+  grep -Eqi 'research.{0,160}(candidate|pass|report).{0,200}not.{0,120}terminal.{0,120}(improvement|outcome)' <<<"$flat" || return 1
+}
+
 fail=0
 
 if check_contract "$skill"; then
@@ -106,6 +126,13 @@ if check_self_observation_contract "$skill"; then
   printf '  ✅ live skill measures the Agent Improver without self-scoring shortcuts\n'
 else
   printf '  ❌ live skill does not independently monitor the Agent Improver\n' >&2
+  fail=1
+fi
+
+if check_research_fallback_contract "$skill"; then
+  printf '  ✅ live skill turns an evidence-clean run into bounded research and routed candidates\n'
+else
+  printf '  ❌ live skill can stop idle when telemetry exposes no actionable improvement\n' >&2
   fail=1
 fi
 
@@ -293,6 +320,51 @@ for missing in table separate_planes no_average raw_evidence calibration hypothe
     fail=1
   else
     printf '  ✅ missing self-observation %s fails closed\n' "$missing"
+  fi
+done
+
+research_good="$tmp/research-good.md"
+cat >"$research_good" <<'EOF'
+**No-change fallback is research, never idle.** When no telemetry-backed improvement is actionable,
+run one mandatory bounded state-of-the-art research pass. Use current primary sources and record their
+publication or release version and access date. Research is discovery evidence, never authorization or
+proof that the current system failed. Compare the current baseline capability, expected outcome, and
+verification metric. Route product work as an `ENGINEER-CANDIDATE` and agent-process work as an
+`IMPROVER-CANDIDATE`. Deduplicate against an existing issue, pull request, or candidate. Research alone
+never authorizes or ships a change. A null pass is RESEARCH-NO-CANDIDATE; advance the topic cursor.
+A research candidate is activity, not a terminal improvement outcome.
+EOF
+
+if check_research_fallback_contract "$research_good"; then
+  printf '  ✅ complete research-fallback contract passes\n'
+else
+  printf '  ❌ complete research-fallback contract unexpectedly fails\n' >&2
+  fail=1
+fi
+
+for missing in mandatory primary source_dates authorization baseline expected engineer_route improver_route dedup research_only null_cursor terminal_guard; do
+  fixture="$tmp/research-$missing.md"
+  # Literal Markdown code spans in two substitutions; command substitution is intentionally disabled.
+  # shellcheck disable=SC2016
+  case "$missing" in
+    mandatory) sed 's/one mandatory bounded/one optional bounded/' "$research_good" >"$fixture" ;;
+    primary) sed 's/current primary sources/current commentary/' "$research_good" >"$fixture" ;;
+    source_dates) sed 's/publication or release version and access date/source date/' "$research_good" >"$fixture" ;;
+    authorization) sed 's/never authorization/sufficient authorization/' "$research_good" >"$fixture" ;;
+    baseline) sed 's/current baseline capability/current trend/' "$research_good" >"$fixture" ;;
+    expected) sed 's/expected outcome/general benefit/' "$research_good" >"$fixture" ;;
+    engineer_route) sed 's/`ENGINEER-CANDIDATE`/`PRODUCT-CANDIDATE`/' "$research_good" >"$fixture" ;;
+    improver_route) sed 's/`IMPROVER-CANDIDATE`/`PROCESS-CANDIDATE`/' "$research_good" >"$fixture" ;;
+    dedup) sed 's/Deduplicate against/Ignore/' "$research_good" >"$fixture" ;;
+    research_only) sed 's/never authorizes or ships/authorizes and ships/' "$research_good" >"$fixture" ;;
+    null_cursor) sed 's/advance the topic cursor/repeat the same topic/' "$research_good" >"$fixture" ;;
+    terminal_guard) sed 's/not a terminal improvement outcome/a terminal improvement outcome/' "$research_good" >"$fixture" ;;
+  esac
+  if check_research_fallback_contract "$fixture"; then
+    printf '  ❌ missing research-fallback %s unexpectedly passed\n' "$missing" >&2
+    fail=1
+  else
+    printf '  ✅ missing research-fallback %s fails closed\n' "$missing"
   fi
 done
 
