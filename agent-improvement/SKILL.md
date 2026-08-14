@@ -345,8 +345,8 @@ calibration and still prevents the next healthy run from paying for the same sea
 Report the fallback as one routed candidate, `RESEARCH-NO-CANDIDATE`, or `QUERY-UNKNOWN` with its
 blocker; never collapse a blocked pass into a completed null result.
 Emit that disposition only when neither a telemetry-backed nor direct-maintainer-directed improvement
-was actionable. If an actionable direct maintainer direction selected the work, say the fallback was
-not run instead of inventing a fallback outcome.
+was actionable. If either source selected actionable work, say the fallback was not run and name the
+telemetry-backed or direct-maintainer-directed action path instead of inventing a fallback outcome.
 
 ---
 
@@ -434,9 +434,9 @@ private operator notes outside the repository, never a public artifact.
 **Report honestly.** Only when neither a telemetry-backed nor direct-maintainer-directed improvement
 was actionable does the run report the bounded research fallback as a routed candidate,
 `RESEARCH-NO-CANDIDATE`, or `QUERY-UNKNOWN` with the blocker that prevented completion. When an
-actionable direct maintainer direction selected the work instead, state that the fallback was not run.
-Manufactured improvement corrupts the record every future run reasons from, making it worse than a
-calibrated null.
+actionable telemetry-backed or direct-maintainer-directed improvement selected the work instead, state
+that the fallback was not run and name that action path. Manufactured improvement corrupts the record
+every future run reasons from, making it worse than a calibrated null.
 
 ---
 

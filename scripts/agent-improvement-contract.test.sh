@@ -150,6 +150,8 @@ blocker prevents completion
 routed candidate, `RESEARCH-NO-CANDIDATE`, or `QUERY-UNKNOWN`
 neither a telemetry-backed nor direct-maintainer-directed improvement was actionable
 fallback was not run
+If either source selected actionable work
+name the telemetry-backed or direct-maintainer-directed action path
 discovery activity, **not a terminal improvement outcome**
 CLAUSES
 
@@ -417,8 +419,9 @@ result is `RESEARCH-NO-CANDIDATE` with the question, sources checked, and why ea
 completed pass must advance the topic cursor exactly once. If a blocker prevents completion, retain
 `QUERY-UNKNOWN` and leave the cursor unchanged. When neither a telemetry-backed nor
 direct-maintainer-directed improvement was actionable, report one routed candidate,
-`RESEARCH-NO-CANDIDATE`, or `QUERY-UNKNOWN`; otherwise say the fallback was not run. Research is
-discovery activity, **not a terminal improvement outcome**.
+`RESEARCH-NO-CANDIDATE`, or `QUERY-UNKNOWN`. If either source selected actionable work, say the
+fallback was not run and name the telemetry-backed or direct-maintainer-directed action path. Research
+is discovery activity, **not a terminal improvement outcome**.
 
 ---
 EOF
@@ -461,7 +464,7 @@ else
   printf '  ✅ a negated per-call deadline fails closed\n'
 fi
 
-for missing in mandatory bounded enforceable_bound budget_clamp finalization_scope finalization_reserve every_call per_call_timeout allowance_routing current primary source_dates authorization baseline expected engineer_route improver_route research_route dedup dedup_hypothesis pending_confound topic_skip cursor_atomic lease_recovery lease_fencing outcome_atomic outcome_exactly_once idempotency idempotency_scope fencing_every_write conditional_outcome conditional_unavailable report_predicate report_not_run research_only null_question null_sources null_rationale null_cursor blocked_cursor report_unknown terminal_guard; do
+for missing in mandatory bounded enforceable_bound budget_clamp finalization_scope finalization_reserve every_call per_call_timeout allowance_routing current primary source_dates authorization baseline expected engineer_route improver_route research_route dedup dedup_hypothesis pending_confound topic_skip cursor_atomic lease_recovery lease_fencing outcome_atomic outcome_exactly_once idempotency idempotency_scope fencing_every_write conditional_outcome conditional_unavailable report_predicate report_not_run unrun_scope research_only null_question null_sources null_rationale null_cursor blocked_cursor report_unknown terminal_guard; do
   fixture="$tmp/research-$missing.md"
   case "$missing" in
     mandatory) sed 's/mandatory, bounded/optional, bounded/' "$research_good" >"$fixture" ;;
@@ -498,6 +501,7 @@ for missing in mandatory bounded enforceable_bound budget_clamp finalization_sco
     conditional_unavailable) sed $'s/If either conditional write is unavailable, retain `QUERY-UNKNOWN`/If conditional writes are unavailable, continue anyway/' "$research_good" >"$fixture" ;;
     report_predicate) sed 's/neither a telemetry-backed nor/only when no/' "$research_good" >"$fixture" ;;
     report_not_run) sed 's/fallback was not run/fallback completed/' "$research_good" >"$fixture" ;;
+    unrun_scope) sed 's/If either source selected actionable work/If only direct maintainer direction selected actionable work/' "$research_good" >"$fixture" ;;
     research_only) sed 's/never authorizes/authorizes/' "$research_good" >"$fixture" ;;
     null_question) sed 's/question, sources checked/inquiry, sources checked/' "$research_good" >"$fixture" ;;
     null_sources) sed 's/sources checked/sources listed/' "$research_good" >"$fixture" ;;
