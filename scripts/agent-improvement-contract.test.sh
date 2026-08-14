@@ -79,6 +79,63 @@ check_self_observation_contract() { # skill
   [ "$flat" = "$self_contract" ]
 }
 
+check_research_fallback_contract() { # skill
+  local clause flat section
+  section="$(LC_ALL=C awk '
+    /^## 3a\. Research fallback/ { capture=1 }
+    capture && /^---$/ { exit }
+    capture { print }
+  ' "$1")"
+  [ -n "$section" ] || return 1
+  flat="$(tr '\n' ' ' <<<"$section" | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//')"
+
+  while IFS= read -r clause; do
+    case "$flat" in
+      *"$clause"*) ;;
+      *) return 1 ;;
+    esac
+  done <<'CLAUSES'
+No-change fallback is research, never idle
+improvement is actionable, run one **mandatory, bounded state-of-the-art research pass**
+consumer-declared research budget
+**first** of 20 minutes elapsed, 12 search or tool calls, or **eight primary sources**
+cursor-selected topic
+pending hypothesis
+non-confounding
+retain `QUERY-UNKNOWN`
+leave the cursor unchanged
+do not skip ahead
+durable research cursor
+Deduplicate against every existing issue, pull request, hypothesis, or research candidate
+atomically claim the current cursor value
+expiring lease
+compare-and-set
+stale claim
+takeover
+unexpired claim conflicts
+lease duration to cover the declared pass bound, or renew it with a heartbeat
+fencing token
+compare-and-set verifies that token still owns the lease
+current primary sources
+publication/release/version date
+access/retrieval date
+Research is discovery evidence, never authorization
+current baseline capability
+expected outcome
+verification metric
+`ENGINEER-CANDIDATE`
+`IMPROVER-CANDIDATE`
+`RESEARCH-CANDIDATE`
+Research alone never authorizes or ships a change or self-modification
+`RESEARCH-NO-CANDIDATE`
+question, sources checked, and why each lead failed
+advance the topic cursor exactly once
+blocker prevents completion
+routed candidate, `RESEARCH-NO-CANDIDATE`, or `QUERY-UNKNOWN`
+discovery activity, **not a terminal improvement outcome**
+CLAUSES
+}
+
 fail=0
 
 if check_contract "$skill"; then
@@ -106,6 +163,13 @@ if check_self_observation_contract "$skill"; then
   printf '  ✅ live skill measures the Agent Improver without self-scoring shortcuts\n'
 else
   printf '  ❌ live skill does not independently monitor the Agent Improver\n' >&2
+  fail=1
+fi
+
+if check_research_fallback_contract "$skill"; then
+  printf '  ✅ live skill turns an evidence-clean run into bounded research and routed candidates\n'
+else
+  printf '  ❌ live skill can stop idle when telemetry exposes no actionable improvement\n' >&2
   fail=1
 fi
 
@@ -295,6 +359,120 @@ for missing in table separate_planes no_average raw_evidence calibration hypothe
     printf '  ✅ missing self-observation %s fails closed\n' "$missing"
   fi
 done
+
+research_good="$tmp/research-good.md"
+cat >"$research_good" <<'EOF'
+## 3a. Research fallback — no idle no-op
+
+No-change fallback is research, never idle. When no telemetry-backed improvement is actionable, run
+one **mandatory, bounded state-of-the-art research pass**. Use the consumer-declared research budget;
+otherwise stop at the **first** of 20 minutes elapsed, 12 search or tool calls, or **eight primary
+sources**. Compare the cursor-selected topic with every pending hypothesis and proceed only with
+non-confounding work; on overlap retain `QUERY-UNKNOWN`, leave the cursor unchanged, and do not skip
+ahead. Rotate with a durable research cursor. Deduplicate against every existing issue, pull request,
+hypothesis, or research candidate. In multiple instances, atomically claim the current cursor value
+with an expiring lease and compare-and-set. Recover a stale claim only by compare-and-set takeover; if
+an unexpired claim conflicts, retain `QUERY-UNKNOWN` and leave the cursor unchanged. Set the lease
+duration to cover the declared pass bound, or renew it with a heartbeat. Carry a fencing token;
+compare-and-set verifies that token still owns the lease before commit.
+
+Use current primary sources and record each publication/release/version date and access/retrieval
+date. Research is discovery evidence, never authorization. Compare current baseline capability,
+expected outcome, and verification metric. Route `ENGINEER-CANDIDATE`, `IMPROVER-CANDIDATE`, or
+`RESEARCH-CANDIDATE`. Research alone never authorizes or ships a change or self-modification. A null
+result is `RESEARCH-NO-CANDIDATE` with the question, sources checked, and why each lead failed. Every
+completed pass must advance the topic cursor exactly once. If a blocker prevents completion, retain
+`QUERY-UNKNOWN` and leave the cursor unchanged. Report one routed candidate, `RESEARCH-NO-CANDIDATE`,
+or `QUERY-UNKNOWN`. Research is discovery activity, **not a terminal improvement outcome**.
+
+---
+EOF
+
+if check_research_fallback_contract "$research_good"; then
+  printf '  ✅ complete research-fallback contract passes\n'
+else
+  printf '  ❌ complete research-fallback contract unexpectedly fails\n' >&2
+  fail=1
+fi
+
+research_scope_bad="$tmp/research-scope-bad.md"
+{
+  printf '## 3a. Research fallback — no idle no-op\n\n'
+  printf '**No-change fallback is research, never idle.** This section is incomplete.\n\n---\n\n'
+  cat "$research_good"
+} >"$research_scope_bad"
+if check_research_fallback_contract "$research_scope_bad"; then
+  printf '  ❌ research contract can be satisfied by prose outside its canonical section\n' >&2
+  fail=1
+else
+  printf '  ✅ research contract is scoped to its canonical section\n'
+fi
+
+research_negated_bad="$tmp/research-negated-bad.md"
+sed 's/one \*\*mandatory/do not run one **mandatory/' "$research_good" >"$research_negated_bad"
+if check_research_fallback_contract "$research_negated_bad"; then
+  printf '  ❌ a negated mandatory research fallback unexpectedly passes\n' >&2
+  fail=1
+else
+  printf '  ✅ a negated mandatory research fallback fails closed\n'
+fi
+
+for missing in mandatory bounded enforceable_bound current primary source_dates authorization baseline expected engineer_route improver_route research_route dedup dedup_hypothesis pending_confound topic_skip cursor_atomic lease_recovery lease_fencing research_only null_question null_sources null_rationale null_cursor blocked_cursor report_unknown terminal_guard; do
+  fixture="$tmp/research-$missing.md"
+  case "$missing" in
+    mandatory) sed 's/mandatory, bounded/optional, bounded/' "$research_good" >"$fixture" ;;
+    bounded) sed 's/mandatory, bounded/mandatory, broad/' "$research_good" >"$fixture" ;;
+    enforceable_bound) sed 's/of 20 minutes/of 200 minutes/' "$research_good" >"$fixture" ;;
+    current) sed 's/current primary sources/recent primary sources/' "$research_good" >"$fixture" ;;
+    primary) sed 's/current primary sources/current commentary/' "$research_good" >"$fixture" ;;
+    source_dates) sed 's/publication\/release\/version date/source date/' "$research_good" >"$fixture" ;;
+    authorization) sed 's/never authorization/sufficient authorization/' "$research_good" >"$fixture" ;;
+    baseline) sed 's/current baseline capability/current trend/' "$research_good" >"$fixture" ;;
+    expected) sed 's/expected outcome/general benefit/' "$research_good" >"$fixture" ;;
+    engineer_route) sed $'s/`ENGINEER-CANDIDATE`/`PRODUCT-CANDIDATE`/' "$research_good" >"$fixture" ;;
+    improver_route) sed $'s/`IMPROVER-CANDIDATE`/`PROCESS-CANDIDATE`/' "$research_good" >"$fixture" ;;
+    research_route) sed $'s/`RESEARCH-CANDIDATE`/`UNOWNED-CANDIDATE`/' "$research_good" >"$fixture" ;;
+    dedup) sed 's/Deduplicate/Repeat/' "$research_good" >"$fixture" ;;
+    dedup_hypothesis) sed 's/hypothesis, or/hypothesis or/' "$research_good" >"$fixture" ;;
+    pending_confound) sed 's/non-confounding/confounding/' "$research_good" >"$fixture" ;;
+    topic_skip) sed 's/do not skip/skip/' "$research_good" >"$fixture" ;;
+    cursor_atomic) sed 's/atomically claim the current cursor/read the current cursor/' "$research_good" >"$fixture" ;;
+    lease_recovery) sed 's/expiring lease/permanent lock/' "$research_good" >"$fixture" ;;
+    lease_fencing) sed 's/fencing token/ordinary token/' "$research_good" >"$fixture" ;;
+    research_only) sed 's/never authorizes/authorizes/' "$research_good" >"$fixture" ;;
+    null_question) sed 's/question, sources checked/inquiry, sources checked/' "$research_good" >"$fixture" ;;
+    null_sources) sed 's/sources checked/sources listed/' "$research_good" >"$fixture" ;;
+    null_rationale) sed 's/each lead failed/lead disposition/' "$research_good" >"$fixture" ;;
+    null_cursor) sed 's/advance the topic cursor exactly once/repeat the same topic/' "$research_good" >"$fixture" ;;
+    blocked_cursor) sed 's/leave the cursor unchanged/advance the cursor/' "$research_good" >"$fixture" ;;
+    report_unknown) sed $'s/or `QUERY-UNKNOWN`/or UNKNOWN/' "$research_good" >"$fixture" ;;
+    terminal_guard) sed 's/discovery activity, \*\*not/discovery activity, **always/' "$research_good" >"$fixture" ;;
+  esac
+  if check_research_fallback_contract "$fixture"; then
+    printf '  ❌ missing research-fallback %s unexpectedly passed\n' "$missing" >&2
+    fail=1
+  else
+    printf '  ✅ missing research-fallback %s fails closed\n' "$missing"
+  fi
+done
+
+research_blocked_good="$tmp/research-blocked-good.md"
+cp "$research_good" "$research_blocked_good"
+if check_research_fallback_contract "$research_blocked_good"; then
+  printf '  ✅ blocked research preserves QUERY-UNKNOWN and the cursor\n'
+else
+  printf '  ❌ blocked research contract unexpectedly fails\n' >&2
+  fail=1
+fi
+
+research_blocked_bad="$tmp/research-blocked-bad.md"
+sed $'s/`QUERY-UNKNOWN`/`RESEARCH-NO-CANDIDATE`/g' "$research_blocked_good" >"$research_blocked_bad"
+if check_research_fallback_contract "$research_blocked_bad"; then
+  printf '  ❌ blocked research can masquerade as a completed null result\n' >&2
+  fail=1
+else
+  printf '  ✅ blocked research cannot masquerade as RESEARCH-NO-CANDIDATE\n'
+fi
 
 good="$tmp/good.md"
 cat >"$good" <<'EOF'
