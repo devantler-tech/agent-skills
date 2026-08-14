@@ -104,7 +104,11 @@ check_research_fallback_contract() { # skill
   grep -Eqi 'every completed bounded pass.{0,200}advance the topic cursor exactly once' <<<"$flat" || return 1
   grep -Eqi 'blocker prevents completion.{0,160}QUERY-UNKNOWN.{0,160}(leave|retain).{0,80}cursor unchanged' <<<"$flat" || return 1
   grep -Eqi 'pending hypothes.{0,200}(tracked metric|tracked signature).{0,240}non-confounding.{0,240}QUERY-UNKNOWN.{0,160}cursor unchanged' <<<"$flat" || return 1
-  grep -Eqi 'atomically claim.{0,120}cursor.{0,160}compare-and-set.{0,200}conflict.{0,200}QUERY-UNKNOWN.{0,160}cursor unchanged' <<<"$flat" || return 1
+  grep -Eqi 'atomically claim.{0,120}cursor.{0,160}expiring lease.{0,120}compare-and-set' <<<"$flat" || return 1
+  grep -Eqi 'unexpired claim conflicts.{0,200}QUERY-UNKNOWN.{0,160}cursor unchanged' <<<"$flat" || return 1
+  grep -Eqi 'stale claim.{0,120}compare-and-set.{0,120}takeover' <<<"$flat" || return 1
+  grep -Eqi 'cursor-selected topic.{0,200}pending hypothes.{0,200}QUERY-UNKNOWN.{0,160}cursor unchanged.{0,160}(do not|never) skip' <<<"$flat" || return 1
+  grep -Eqi 'consumer-declared research budget.{0,240}(absent|otherwise).{0,120}(first|whichever).{0,80}20 minutes.{0,160}12 (search|tool).{0,160}eight primary sources' <<<"$flat" || return 1
   grep -Eqi 'reports?.{0,200}(routed candidate|ENGINEER-CANDIDATE).{0,160}RESEARCH-NO-CANDIDATE.{0,120}QUERY-UNKNOWN' <<<"$flat" || return 1
   grep -Eqi 'research (candidate|pass|report).{0,120}activity,.{0,20}not a terminal improvement outcome' <<<"$flat" || return 1
 }
@@ -343,15 +347,18 @@ publication or release version and access date. Research is discovery evidence, 
 proof that the current system failed. Compare the current baseline capability, expected outcome, and
 verification metric. Route product work as an `ENGINEER-CANDIDATE`, agent-process work as an
 `IMPROVER-CANDIDATE`, and ambiguous ownership as a `RESEARCH-CANDIDATE`. Deduplicate against every
-existing issue, pull request, hypothesis, or research candidate. Before research, compare each pending
-hypothesis's tracked metric or tracked signature and choose only non-confounding work; otherwise retain
-QUERY-UNKNOWN and leave the cursor unchanged. Atomically claim the cursor with compare-and-set; if the
-claim conflicts, retain QUERY-UNKNOWN and leave the cursor unchanged. Research alone never authorizes
-or ships a change. A null pass is RESEARCH-NO-CANDIDATE with the question, sources checked, and why
-each lead failed. After every completed bounded pass, advance the topic cursor exactly once. If a
-blocker prevents completion, retain QUERY-UNKNOWN and leave the cursor unchanged. The report states a
-routed candidate, RESEARCH-NO-CANDIDATE, or QUERY-UNKNOWN. A research candidate is activity, not a
-terminal improvement outcome.
+existing issue, pull request, hypothesis, or research candidate. Use a consumer-declared research
+budget; absent one, stop at the first of 20 minutes, 12 search or tool calls, or eight primary sources.
+Before research, compare the cursor-selected topic with each pending hypothesis's tracked metric or
+tracked signature and choose only non-confounding work; otherwise retain QUERY-UNKNOWN, leave the cursor
+unchanged, and do not skip ahead. Atomically claim the cursor with an expiring lease and compare-and-set;
+recover a stale claim by compare-and-set takeover. If an unexpired claim conflicts, retain QUERY-UNKNOWN and
+leave the cursor unchanged. Research alone never authorizes or ships a change. A null pass is
+RESEARCH-NO-CANDIDATE with the question, sources checked, and why each lead failed. After every
+completed bounded pass, advance the topic cursor exactly once. If a blocker prevents completion,
+retain QUERY-UNKNOWN and leave the cursor unchanged. The report states a routed candidate,
+RESEARCH-NO-CANDIDATE, or QUERY-UNKNOWN. A research candidate is activity, not a terminal improvement
+outcome.
 
 ---
 EOF
@@ -376,11 +383,12 @@ else
   printf '  ✅ research contract is scoped to its canonical section\n'
 fi
 
-for missing in mandatory bounded current primary source_dates authorization baseline expected engineer_route improver_route research_route dedup dedup_hypothesis pending_confound cursor_atomic research_only null_question null_sources null_rationale null_cursor blocked_cursor report_unknown terminal_guard; do
+for missing in mandatory bounded enforceable_bound current primary source_dates authorization baseline expected engineer_route improver_route research_route dedup dedup_hypothesis pending_confound topic_skip cursor_atomic lease_recovery research_only null_question null_sources null_rationale null_cursor blocked_cursor report_unknown terminal_guard; do
   fixture="$tmp/research-$missing.md"
   case "$missing" in
     mandatory) sed 's/one mandatory bounded/one optional bounded/' "$research_good" >"$fixture" ;;
     bounded) sed 's/mandatory bounded/mandatory broad/' "$research_good" >"$fixture" ;;
+    enforceable_bound) sed 's/20 minutes/while useful/' "$research_good" >"$fixture" ;;
     current) sed 's/current primary sources/recent primary sources/' "$research_good" >"$fixture" ;;
     primary) sed 's/current primary sources/current commentary/' "$research_good" >"$fixture" ;;
     source_dates) sed 's/publication or release version and access date/source date/' "$research_good" >"$fixture" ;;
@@ -393,7 +401,9 @@ for missing in mandatory bounded current primary source_dates authorization base
     dedup) sed 's/Deduplicate/Repeat/' "$research_good" >"$fixture" ;;
     dedup_hypothesis) sed 's/, hypothesis//' "$research_good" >"$fixture" ;;
     pending_confound) sed 's/only non-confounding work/overlapping work/' "$research_good" >"$fixture" ;;
+    topic_skip) sed 's/do not skip ahead/skip ahead/' "$research_good" >"$fixture" ;;
     cursor_atomic) sed 's/Atomically claim the cursor/Read the cursor/' "$research_good" >"$fixture" ;;
+    lease_recovery) sed 's/an expiring lease/a durable lock/; s/recover a stale claim by compare-and-set takeover/leave a stale claim in place/' "$research_good" >"$fixture" ;;
     research_only) sed 's/never authorizes/authorizes/' "$research_good" >"$fixture" ;;
     null_question) sed 's/the question/the inquiry/' "$research_good" >"$fixture" ;;
     null_sources) sed 's/sources checked/sources listed/' "$research_good" >"$fixture" ;;
