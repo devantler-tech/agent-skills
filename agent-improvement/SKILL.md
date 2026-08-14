@@ -282,6 +282,11 @@ expiry. Recover a **stale claim** only through compare-and-set **takeover** afte
 claim conflicts, retain `QUERY-UNKNOWN`, record the conflict, and leave the cursor unchanged. Only the
 successful claimant researches and advances that cursor value; release its lease after recording the
 outcome, while a crashed claimant becomes recoverable at expiry.
+Set the lease duration to cover the declared pass bound, or renew it with a heartbeat before expiry
+when the consumer permits a longer pass. Carry a monotonically unique **fencing token**. Immediately
+before recording the outcome or advancing the cursor, compare-and-set verifies that token still owns
+the lease. If ownership was lost, discard the uncommitted outcome, retain `QUERY-UNKNOWN`, and make no
+cursor advance; a stale claimant never commits after a takeover.
 
 Use **current primary sources**: official standards and runtime documentation or release notes,
 peer-reviewed papers or author-hosted preprints, and reproducible reference implementations or
