@@ -122,6 +122,9 @@ compare-and-set verifies that token still owns the lease
 one transaction or compare-and-set operation
 validates the fencing token, records exactly one outcome, and advances the cursor
 idempotency key stable for the claimed cursor value
+durable, never-reused transition ID
+Record the transition ID atomically with the cursor claim
+takeover inherits the same transition ID
 validates the fencing token on every write
 current primary sources
 publication/release/version date
@@ -387,8 +390,9 @@ an unexpired claim conflicts, retain `QUERY-UNKNOWN` and leave the cursor unchan
 duration to cover the declared pass bound, or renew it with a heartbeat. Carry a fencing token;
 compare-and-set verifies that token still owns the lease before commit. Persist with one transaction
 or compare-and-set operation that validates the fencing token, records exactly one outcome, and
-advances the cursor. Otherwise use an idempotency key stable for the claimed cursor value that
-validates the fencing token on every write.
+advances the cursor. Otherwise use an idempotency key stable for the claimed cursor value and a
+durable, never-reused transition ID. Record the transition ID atomically with the cursor claim; every
+takeover inherits the same transition ID. Every recovery validates the fencing token on every write.
 
 Use current primary sources and record each publication/release/version date and access/retrieval
 date. Research is discovery evidence, never authorization. Compare current baseline capability,
@@ -433,7 +437,7 @@ else
   printf '  ✅ a negated mandatory research fallback fails closed\n'
 fi
 
-for missing in mandatory bounded enforceable_bound budget_clamp every_call per_call_timeout current primary source_dates authorization baseline expected engineer_route improver_route research_route dedup dedup_hypothesis pending_confound topic_skip cursor_atomic lease_recovery lease_fencing outcome_atomic outcome_exactly_once idempotency fencing_every_write report_predicate report_not_run research_only null_question null_sources null_rationale null_cursor blocked_cursor report_unknown terminal_guard; do
+for missing in mandatory bounded enforceable_bound budget_clamp every_call per_call_timeout current primary source_dates authorization baseline expected engineer_route improver_route research_route dedup dedup_hypothesis pending_confound topic_skip cursor_atomic lease_recovery lease_fencing outcome_atomic outcome_exactly_once idempotency idempotency_scope fencing_every_write report_predicate report_not_run research_only null_question null_sources null_rationale null_cursor blocked_cursor report_unknown terminal_guard; do
   fixture="$tmp/research-$missing.md"
   case "$missing" in
     mandatory) sed 's/mandatory, bounded/optional, bounded/' "$research_good" >"$fixture" ;;
@@ -461,6 +465,7 @@ for missing in mandatory bounded enforceable_bound budget_clamp every_call per_c
     outcome_atomic) sed 's/one transaction/separate operations/' "$research_good" >"$fixture" ;;
     outcome_exactly_once) sed 's/records exactly one outcome/records an outcome/' "$research_good" >"$fixture" ;;
     idempotency) sed 's/idempotency key stable for the claimed cursor value/random request key/' "$research_good" >"$fixture" ;;
+    idempotency_scope) sed 's/durable, never-reused transition ID/reusable topic name/' "$research_good" >"$fixture" ;;
     fencing_every_write) sed 's/validates the fencing token on every write/checks the token during claim/' "$research_good" >"$fixture" ;;
     report_predicate) sed 's/neither a telemetry-backed nor/only when no/' "$research_good" >"$fixture" ;;
     report_not_run) sed 's/fallback was not run/fallback completed/' "$research_good" >"$fixture" ;;

@@ -290,9 +290,11 @@ Set the lease duration to cover the declared pass bound, or renew it with a hear
 Carry a monotonically unique **fencing token**. Persist ownership validation, the outcome, and cursor
 advance in **one transaction or compare-and-set operation** that validates the fencing token, records
 exactly one outcome, and advances the cursor. If the durable store cannot provide that atomic unit, use
-an **idempotency key stable for the claimed cursor value**: write the outcome under that key first,
-resume an interrupted transition with the same key, and use a compare-and-set that validates the
-fencing token on every write before advancing the cursor. Immediately before either form commits,
+an **idempotency key stable for the claimed cursor value** and its **durable, never-reused transition
+ID**. Record the transition ID atomically with the cursor claim; every retry and stale-lease takeover
+inherits the same transition ID, while the next rotation gets a new one. Write the outcome under that
+key first, resume an interrupted transition with the same key, and use a compare-and-set that validates
+the fencing token on every write before advancing the cursor. Immediately before either form commits,
 compare-and-set verifies that token still owns the lease. If ownership was lost, discard the
 uncommitted outcome, retain `QUERY-UNKNOWN`, and make no cursor advance; a stale claimant never commits
 after a takeover.
