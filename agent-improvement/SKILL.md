@@ -259,9 +259,13 @@ improvement is actionable, run one **mandatory, bounded state-of-the-art researc
 reporting. This is the healthy-system continuation path, not permission to skip a failed pre-flight,
 an unresolved safety or authority gate, or an exact active-work conflict; when one of those prevents
 research too, name the blocker and retain `QUERY-UNKNOWN` rather than pretending the fallback ran.
-Use the consumer-declared research budget when one exists. Absent that, stop at the **first** of 20
-minutes elapsed, 12 search or tool calls, or **eight primary sources** assessed. When a bound is
-reached, disposition the evidence already gathered; do not expand the search to manufacture a lead.
+Use the consumer-declared research budget when one exists, but treat the **first** of 20 minutes
+elapsed, 12 search or tool calls, or **eight primary sources** assessed as hard maxima. The effective
+consumer budget may tighten but never exceed these hard maxima. Give every search or tool call a
+per-call deadline or cancellation timeout within the remaining wall-clock budget; do not launch a call
+that cannot honor it. If the runtime cannot enforce that bound, retain `QUERY-UNKNOWN` and leave the
+cursor unchanged. When a bound is reached, disposition the evidence already gathered; do not expand
+the search to manufacture a lead.
 
 Compare the **cursor-selected topic** with every pending hypothesis's tracked metric or signature.
 Research it only when the activity is **non-confounding**. If that topic overlaps a pending hypothesis,
@@ -282,11 +286,16 @@ expiry. Recover a **stale claim** only through compare-and-set **takeover** afte
 claim conflicts, retain `QUERY-UNKNOWN`, record the conflict, and leave the cursor unchanged. Only the
 successful claimant researches and advances that cursor value; release its lease after recording the
 outcome, while a crashed claimant becomes recoverable at expiry.
-Set the lease duration to cover the declared pass bound, or renew it with a heartbeat before expiry
-when the consumer permits a longer pass. Carry a monotonically unique **fencing token**. Immediately
-before recording the outcome or advancing the cursor, compare-and-set verifies that token still owns
-the lease. If ownership was lost, discard the uncommitted outcome, retain `QUERY-UNKNOWN`, and make no
-cursor advance; a stale claimant never commits after a takeover.
+Set the lease duration to cover the declared pass bound, or renew it with a heartbeat before expiry.
+Carry a monotonically unique **fencing token**. Persist ownership validation, the outcome, and cursor
+advance in **one transaction or compare-and-set operation** that validates the fencing token, records
+exactly one outcome, and advances the cursor. If the durable store cannot provide that atomic unit, use
+an **idempotency key stable for the claimed cursor value**: write the outcome under that key first,
+resume an interrupted transition with the same key, and use a compare-and-set that validates the
+fencing token on every write before advancing the cursor. Immediately before either form commits,
+compare-and-set verifies that token still owns the lease. If ownership was lost, discard the
+uncommitted outcome, retain `QUERY-UNKNOWN`, and make no cursor advance; a stale claimant never commits
+after a takeover.
 
 Use **current primary sources**: official standards and runtime documentation or release notes,
 peer-reviewed papers or author-hosted preprints, and reproducible reference implementations or
@@ -326,6 +335,9 @@ terminal improvement outcome** and not proof that the observer improved. This nu
 calibration and still prevents the next healthy run from paying for the same search again.
 Report the fallback as one routed candidate, `RESEARCH-NO-CANDIDATE`, or `QUERY-UNKNOWN` with its
 blocker; never collapse a blocked pass into a completed null result.
+Emit that disposition only when neither a telemetry-backed nor direct-maintainer-directed improvement
+was actionable. If an actionable direct maintainer direction selected the work, say the fallback was
+not run instead of inventing a fallback outcome.
 
 ---
 
@@ -410,10 +422,12 @@ sessions and terminal outcomes), changes shipped with their evidence, hypotheses
 needing the maintainer. Sensitive specifics — credentials, private topology, host detail — belong in
 private operator notes outside the repository, never a public artifact.
 
-**Report honestly.** A run whose telemetry found nothing worth changing says exactly that, then reports
-the bounded research fallback as a routed candidate, `RESEARCH-NO-CANDIDATE`, or `QUERY-UNKNOWN` with
-the blocker that prevented completion. Manufactured improvement corrupts the record every future run
-reasons from, making it worse than a calibrated null.
+**Report honestly.** Only when neither a telemetry-backed nor direct-maintainer-directed improvement
+was actionable does the run report the bounded research fallback as a routed candidate,
+`RESEARCH-NO-CANDIDATE`, or `QUERY-UNKNOWN` with the blocker that prevented completion. When an
+actionable direct maintainer direction selected the work instead, state that the fallback was not run.
+Manufactured improvement corrupts the record every future run reasons from, making it worse than a
+calibrated null.
 
 ---
 

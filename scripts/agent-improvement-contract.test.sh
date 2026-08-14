@@ -99,6 +99,9 @@ No-change fallback is research, never idle
 improvement is actionable, run one **mandatory, bounded state-of-the-art research pass**
 consumer-declared research budget
 **first** of 20 minutes elapsed, 12 search or tool calls, or **eight primary sources**
+consumer budget may tighten but never exceed these hard maxima
+every search or tool call
+per-call deadline or cancellation timeout
 cursor-selected topic
 pending hypothesis
 non-confounding
@@ -116,6 +119,10 @@ unexpired claim conflicts
 lease duration to cover the declared pass bound, or renew it with a heartbeat
 fencing token
 compare-and-set verifies that token still owns the lease
+one transaction or compare-and-set operation
+validates the fencing token, records exactly one outcome, and advances the cursor
+idempotency key stable for the claimed cursor value
+validates the fencing token on every write
 current primary sources
 publication/release/version date
 access/retrieval date
@@ -132,6 +139,8 @@ question, sources checked, and why each lead failed
 advance the topic cursor exactly once
 blocker prevents completion
 routed candidate, `RESEARCH-NO-CANDIDATE`, or `QUERY-UNKNOWN`
+neither a telemetry-backed nor direct-maintainer-directed improvement was actionable
+fallback was not run
 discovery activity, **not a terminal improvement outcome**
 CLAUSES
 }
@@ -367,14 +376,19 @@ cat >"$research_good" <<'EOF'
 No-change fallback is research, never idle. When no telemetry-backed improvement is actionable, run
 one **mandatory, bounded state-of-the-art research pass**. Use the consumer-declared research budget;
 otherwise stop at the **first** of 20 minutes elapsed, 12 search or tool calls, or **eight primary
-sources**. Compare the cursor-selected topic with every pending hypothesis and proceed only with
+sources**. A consumer budget may tighten but never exceed these hard maxima. Give every search or tool
+call a per-call deadline or cancellation timeout. Compare the cursor-selected topic with every pending
+hypothesis and proceed only with
 non-confounding work; on overlap retain `QUERY-UNKNOWN`, leave the cursor unchanged, and do not skip
 ahead. Rotate with a durable research cursor. Deduplicate against every existing issue, pull request,
 hypothesis, or research candidate. In multiple instances, atomically claim the current cursor value
 with an expiring lease and compare-and-set. Recover a stale claim only by compare-and-set takeover; if
 an unexpired claim conflicts, retain `QUERY-UNKNOWN` and leave the cursor unchanged. Set the lease
 duration to cover the declared pass bound, or renew it with a heartbeat. Carry a fencing token;
-compare-and-set verifies that token still owns the lease before commit.
+compare-and-set verifies that token still owns the lease before commit. Persist with one transaction
+or compare-and-set operation that validates the fencing token, records exactly one outcome, and
+advances the cursor. Otherwise use an idempotency key stable for the claimed cursor value that
+validates the fencing token on every write.
 
 Use current primary sources and record each publication/release/version date and access/retrieval
 date. Research is discovery evidence, never authorization. Compare current baseline capability,
@@ -382,8 +396,10 @@ expected outcome, and verification metric. Route `ENGINEER-CANDIDATE`, `IMPROVER
 `RESEARCH-CANDIDATE`. Research alone never authorizes or ships a change or self-modification. A null
 result is `RESEARCH-NO-CANDIDATE` with the question, sources checked, and why each lead failed. Every
 completed pass must advance the topic cursor exactly once. If a blocker prevents completion, retain
-`QUERY-UNKNOWN` and leave the cursor unchanged. Report one routed candidate, `RESEARCH-NO-CANDIDATE`,
-or `QUERY-UNKNOWN`. Research is discovery activity, **not a terminal improvement outcome**.
+`QUERY-UNKNOWN` and leave the cursor unchanged. When neither a telemetry-backed nor
+direct-maintainer-directed improvement was actionable, report one routed candidate,
+`RESEARCH-NO-CANDIDATE`, or `QUERY-UNKNOWN`; otherwise say the fallback was not run. Research is
+discovery activity, **not a terminal improvement outcome**.
 
 ---
 EOF
@@ -417,12 +433,15 @@ else
   printf '  ✅ a negated mandatory research fallback fails closed\n'
 fi
 
-for missing in mandatory bounded enforceable_bound current primary source_dates authorization baseline expected engineer_route improver_route research_route dedup dedup_hypothesis pending_confound topic_skip cursor_atomic lease_recovery lease_fencing research_only null_question null_sources null_rationale null_cursor blocked_cursor report_unknown terminal_guard; do
+for missing in mandatory bounded enforceable_bound budget_clamp every_call per_call_timeout current primary source_dates authorization baseline expected engineer_route improver_route research_route dedup dedup_hypothesis pending_confound topic_skip cursor_atomic lease_recovery lease_fencing outcome_atomic outcome_exactly_once idempotency fencing_every_write report_predicate report_not_run research_only null_question null_sources null_rationale null_cursor blocked_cursor report_unknown terminal_guard; do
   fixture="$tmp/research-$missing.md"
   case "$missing" in
     mandatory) sed 's/mandatory, bounded/optional, bounded/' "$research_good" >"$fixture" ;;
     bounded) sed 's/mandatory, bounded/mandatory, broad/' "$research_good" >"$fixture" ;;
     enforceable_bound) sed 's/of 20 minutes/of 200 minutes/' "$research_good" >"$fixture" ;;
+    budget_clamp) sed 's/never exceed/may exceed/' "$research_good" >"$fixture" ;;
+    every_call) sed 's/every search or tool/some/' "$research_good" >"$fixture" ;;
+    per_call_timeout) sed 's/per-call deadline or cancellation timeout/best-effort timeout/' "$research_good" >"$fixture" ;;
     current) sed 's/current primary sources/recent primary sources/' "$research_good" >"$fixture" ;;
     primary) sed 's/current primary sources/current commentary/' "$research_good" >"$fixture" ;;
     source_dates) sed 's/publication\/release\/version date/source date/' "$research_good" >"$fixture" ;;
@@ -439,6 +458,12 @@ for missing in mandatory bounded enforceable_bound current primary source_dates 
     cursor_atomic) sed 's/atomically claim the current cursor/read the current cursor/' "$research_good" >"$fixture" ;;
     lease_recovery) sed 's/expiring lease/permanent lock/' "$research_good" >"$fixture" ;;
     lease_fencing) sed 's/fencing token/ordinary token/' "$research_good" >"$fixture" ;;
+    outcome_atomic) sed 's/one transaction/separate operations/' "$research_good" >"$fixture" ;;
+    outcome_exactly_once) sed 's/records exactly one outcome/records an outcome/' "$research_good" >"$fixture" ;;
+    idempotency) sed 's/idempotency key stable for the claimed cursor value/random request key/' "$research_good" >"$fixture" ;;
+    fencing_every_write) sed 's/validates the fencing token on every write/checks the token during claim/' "$research_good" >"$fixture" ;;
+    report_predicate) sed 's/neither a telemetry-backed nor/only when no/' "$research_good" >"$fixture" ;;
+    report_not_run) sed 's/fallback was not run/fallback completed/' "$research_good" >"$fixture" ;;
     research_only) sed 's/never authorizes/authorizes/' "$research_good" >"$fixture" ;;
     null_question) sed 's/question, sources checked/inquiry, sources checked/' "$research_good" >"$fixture" ;;
     null_sources) sed 's/sources checked/sources listed/' "$research_good" >"$fixture" ;;
