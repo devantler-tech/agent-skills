@@ -394,7 +394,7 @@ otherwise stop at the **first** of 20 minutes elapsed, 12 search or tool calls, 
 sources**. A consumer budget may tighten but never exceed these hard maxima. The hard maxima cover
 discovery, disposition, persistence, and cursor advancement. Reserve at least two minutes and two tool
 calls inside the effective budget. Do not launch a discovery call that would consume the finalization
-reserve. Give every search or tool call a per-call deadline or cancellation timeout. Compare the
+reserve. Give every search or tool call a per-call deadline or cancellation timeout:
 discovery calls use the remaining discovery allowance and finalization calls use the reserved remaining
 pass allowance. Compare the cursor-selected topic with every pending hypothesis and proceed only with
 non-confounding work; on overlap retain `QUERY-UNKNOWN`, leave the cursor unchanged, and do not skip
