@@ -260,12 +260,21 @@ reporting. This is the healthy-system continuation path, not permission to skip 
 an unresolved safety or authority gate, or an exact active-work conflict; when one of those prevents
 research too, name the blocker and retain `QUERY-UNKNOWN` rather than pretending the fallback ran.
 
+Before selecting a topic, compare every pending hypothesis's tracked metric or signature with the
+research activity. Choose only a **non-confounding** topic. If no topic can avoid affecting a pending
+hypothesis, retain `QUERY-UNKNOWN`, record the overlap, and leave the cursor unchanged; research must
+not corrupt the verification window it is meant to improve.
+
 Rotate one topic per no-change run using a durable research cursor, so repeated healthy runs widen
 coverage instead of repeating the same search: agent planning/execution; evaluation and observability;
 safety and security; multi-instance coordination; runtime and developer-tool capabilities; then the
 consumer's product and operations surfaces. Check the research register and existing issues, pull
 requests, hypotheses, and candidates first. **Deduplicate against every existing issue, pull request,
 hypothesis, or research candidate**; enrich a still-current item rather than opening a synonym.
+In a multi-instance deployment, **atomically claim the current cursor value** with compare-and-set in
+the consumer's durable store, or use a consumer-declared single cursor writer when atomic claims are
+unavailable. If the claim conflicts, retain `QUERY-UNKNOWN`, record the conflict, and leave the cursor
+unchanged. Only the successful claimant researches and advances that cursor value.
 
 Use **current primary sources**: official standards and runtime documentation or release notes,
 peer-reviewed papers or author-hosted preprints, and reproducible reference implementations or
@@ -303,6 +312,8 @@ candidate was routed. If a blocker prevents completion, retain **`QUERY-UNKNOWN`
 and leave the cursor unchanged. A research candidate, pass, or report is discovery activity, **not a
 terminal improvement outcome** and not proof that the observer improved. This null result preserves
 calibration and still prevents the next healthy run from paying for the same search again.
+Report the fallback as one routed candidate, `RESEARCH-NO-CANDIDATE`, or `QUERY-UNKNOWN` with its
+blocker; never collapse a blocked pass into a completed null result.
 
 ---
 
