@@ -265,7 +265,7 @@ coverage instead of repeating the same search: agent planning/execution; evaluat
 safety and security; multi-instance coordination; runtime and developer-tool capabilities; then the
 consumer's product and operations surfaces. Check the research register and existing issues, pull
 requests, hypotheses, and candidates first. **Deduplicate against every existing issue, pull request,
-or research candidate**; enrich a still-current item rather than opening a synonym.
+hypothesis, or research candidate**; enrich a still-current item rather than opening a synonym.
 
 Use **current primary sources**: official standards and runtime documentation or release notes,
 peer-reviewed papers or author-hosted preprints, and reproducible reference implementations or
@@ -297,10 +297,12 @@ Route a substantiated, deduplicated candidate by subject:
   with the uncertainty named; do not force it into either delivery queue.
 
 When the bounded pass finds no substantiated candidate, record **`RESEARCH-NO-CANDIDATE`** with the
-question, sources checked, and why each lead failed, then **advance the topic cursor**. A research
-candidate, pass, or report is discovery activity, **not a terminal improvement outcome** and not proof
-that the observer improved. This null result preserves calibration and still prevents the next healthy
-run from paying for the same search again.
+question, sources checked, and why each lead failed. After **every completed bounded pass**, record
+exactly one routed or null outcome and **advance the topic cursor exactly once**, including when a
+candidate was routed. If a blocker prevents completion, retain **`QUERY-UNKNOWN`**, record the blocker,
+and leave the cursor unchanged. A research candidate, pass, or report is discovery activity, **not a
+terminal improvement outcome** and not proof that the observer improved. This null result preserves
+calibration and still prevents the next healthy run from paying for the same search again.
 
 ---
 
@@ -386,8 +388,9 @@ needing the maintainer. Sensitive specifics — credentials, private topology, h
 private operator notes outside the repository, never a public artifact.
 
 **Report honestly.** A run whose telemetry found nothing worth changing says exactly that, then reports
-the bounded research fallback as a routed candidate or `RESEARCH-NO-CANDIDATE`. Manufactured
-improvement corrupts the record every future run reasons from, making it worse than a calibrated null.
+the bounded research fallback as a routed candidate, `RESEARCH-NO-CANDIDATE`, or `QUERY-UNKNOWN` with
+the blocker that prevented completion. Manufactured improvement corrupts the record every future run
+reasons from, making it worse than a calibrated null.
 
 ---
 
