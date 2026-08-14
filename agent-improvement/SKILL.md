@@ -266,10 +266,11 @@ disposition, persistence, and cursor advancement. Reserve at least two minutes a
 inside the effective budget for finalization; if the effective budget cannot hold that reserve, retain
 `QUERY-UNKNOWN` and leave the cursor unchanged. Do not launch a discovery call that would consume the
 finalization reserve. Give every search or tool call a per-call deadline or cancellation timeout within
-the remaining discovery allowance; do not launch a call that cannot honor it. If the runtime cannot
-enforce that bound, retain `QUERY-UNKNOWN` and leave the cursor unchanged. When a discovery bound is
-reached, disposition and persist the evidence already gathered inside the reserve; do not expand the
-search to manufacture a lead.
+its applicable budget: discovery calls use the remaining discovery allowance and finalization calls
+use the reserved remaining pass allowance. Do not launch a call that cannot honor its applicable
+allowance. If the runtime cannot enforce that bound, retain `QUERY-UNKNOWN` and leave the cursor
+unchanged. When a discovery bound is reached, disposition and persist the evidence already gathered
+inside the reserve; do not expand the search to manufacture a lead.
 
 Compare the **cursor-selected topic** with every pending hypothesis's tracked metric or signature.
 Research it only when the activity is **non-confounding**. If that topic overlaps a pending hypothesis,

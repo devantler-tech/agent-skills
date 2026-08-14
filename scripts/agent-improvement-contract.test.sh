@@ -105,6 +105,7 @@ hard maxima cover discovery, disposition, persistence, and cursor advancement
 Reserve at least two minutes and two tool calls inside the effective budget
 Do not launch a discovery call that would consume the finalization reserve
 Give every search or tool call a per-call deadline or cancellation timeout
+discovery calls use the remaining discovery allowance and finalization calls use the reserved remaining pass allowance
 cursor-selected topic
 pending hypothesis
 non-confounding
@@ -392,7 +393,8 @@ sources**. A consumer budget may tighten but never exceed these hard maxima. The
 discovery, disposition, persistence, and cursor advancement. Reserve at least two minutes and two tool
 calls inside the effective budget. Do not launch a discovery call that would consume the finalization
 reserve. Give every search or tool call a per-call deadline or cancellation timeout. Compare the
-cursor-selected topic with every pending hypothesis and proceed only with
+discovery calls use the remaining discovery allowance and finalization calls use the reserved remaining
+pass allowance. Compare the cursor-selected topic with every pending hypothesis and proceed only with
 non-confounding work; on overlap retain `QUERY-UNKNOWN`, leave the cursor unchanged, and do not skip
 ahead. Rotate with a durable research cursor. Deduplicate against every existing issue, pull request,
 hypothesis, or research candidate. In multiple instances, atomically claim the current cursor value
@@ -459,7 +461,7 @@ else
   printf '  ✅ a negated per-call deadline fails closed\n'
 fi
 
-for missing in mandatory bounded enforceable_bound budget_clamp finalization_scope finalization_reserve every_call per_call_timeout current primary source_dates authorization baseline expected engineer_route improver_route research_route dedup dedup_hypothesis pending_confound topic_skip cursor_atomic lease_recovery lease_fencing outcome_atomic outcome_exactly_once idempotency idempotency_scope fencing_every_write conditional_outcome conditional_unavailable report_predicate report_not_run research_only null_question null_sources null_rationale null_cursor blocked_cursor report_unknown terminal_guard; do
+for missing in mandatory bounded enforceable_bound budget_clamp finalization_scope finalization_reserve every_call per_call_timeout allowance_routing current primary source_dates authorization baseline expected engineer_route improver_route research_route dedup dedup_hypothesis pending_confound topic_skip cursor_atomic lease_recovery lease_fencing outcome_atomic outcome_exactly_once idempotency idempotency_scope fencing_every_write conditional_outcome conditional_unavailable report_predicate report_not_run research_only null_question null_sources null_rationale null_cursor blocked_cursor report_unknown terminal_guard; do
   fixture="$tmp/research-$missing.md"
   case "$missing" in
     mandatory) sed 's/mandatory, bounded/optional, bounded/' "$research_good" >"$fixture" ;;
@@ -470,6 +472,7 @@ for missing in mandatory bounded enforceable_bound budget_clamp finalization_sco
     finalization_reserve) sed 's/Reserve at least two minutes and two tool/Reserve no/' "$research_good" >"$fixture" ;;
     every_call) sed 's/Give every search or tool/Give some/' "$research_good" >"$fixture" ;;
     per_call_timeout) sed 's/per-call deadline or cancellation timeout/best-effort timeout/' "$research_good" >"$fixture" ;;
+    allowance_routing) sed 's/finalization calls use the reserved remaining/finalization calls use the exhausted discovery/' "$research_good" >"$fixture" ;;
     current) sed 's/current primary sources/recent primary sources/' "$research_good" >"$fixture" ;;
     primary) sed 's/current primary sources/current commentary/' "$research_good" >"$fixture" ;;
     source_dates) sed 's/publication\/release\/version date/source date/' "$research_good" >"$fixture" ;;
