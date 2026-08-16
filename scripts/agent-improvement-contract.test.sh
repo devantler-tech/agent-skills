@@ -55,6 +55,7 @@ check_diagnosis_contract() { # skill
   grep -Eqi 'guard wrong.{0,120}agent wrong.{0,120}prescription wrong' <<<"$flat" || return 1
   grep -Eqi '(definition|prompt|skill|durable memory).{0,240}(prescribed|told|instructed)' <<<"$flat" || return 1
   grep -Eqi '(trace|identify).{0,200}(definition|prompt|skill|durable memory).{0,240}before.{0,160}(changing|weakening).{0,80}guard' <<<"$flat" || return 1
+  grep -Eqi 'guard.{0,80}blocks.{0,120}forbid.{0,180}agent.{0,40}followed.{0,80}(stale|conflicting).{0,80}prescription' <<<"$flat" || return 1
   grep -Eqi 'prescription.{0,240}(fix|repair).{0,160}(definition|prompt|skill|memory).{0,160}never.{0,80}guard' <<<"$flat" || return 1
 }
 
@@ -246,6 +247,25 @@ if check_diagnosis_contract "$diagnosis_bad"; then
   fail=1
 else
   printf '  ✅ missing prescription diagnosis fails closed\n'
+fi
+
+diagnosis_no_stale="$tmp/diagnosis-no-stale.md"
+sed 's/from a stale prescription/from a prescription/' "$diagnosis_good" >"$diagnosis_no_stale"
+if check_diagnosis_contract "$diagnosis_no_stale"; then
+  printf '  ❌ prescription without stale provenance unexpectedly passes\n' >&2
+  fail=1
+else
+  printf '  ✅ prescription without stale provenance fails closed\n'
+fi
+
+diagnosis_no_followed="$tmp/diagnosis-no-followed.md"
+sed 's/that the agent followed from a stale prescription/while a stale prescription existed/' \
+  "$diagnosis_good" >"$diagnosis_no_followed"
+if check_diagnosis_contract "$diagnosis_no_followed"; then
+  printf '  ❌ stale prescription without agent-followed causality unexpectedly passes\n' >&2
+  fail=1
+else
+  printf '  ✅ stale prescription without agent-followed causality fails closed\n'
 fi
 
 coordination_good="$tmp/coordination-good.md"
