@@ -43,20 +43,19 @@ check_coordination_contract() { # skill
 }
 
 check_diagnosis_contract() { # skill
-  local section flat
-  section="$(LC_ALL=C awk '
-    /^## 3\. Diagnose/ { capture=1 }
-    capture && /^---$/ { exit }
+  local diagnosis_contract flat
+  flat="$(LC_ALL=C awk '
+    /^- \*\*Is the guard wrong, is the agent wrong, or is the prescription wrong\?\*\*/ { capture=1 }
+    capture && (/^- \*\*One instance or all of them\?\*\*/ || /^---$/) { exit }
     capture { print }
-  ' "$1")"
-  [ -n "$section" ] || return 1
-  flat="$(LC_ALL=C tr '\n' ' ' <<<"$section" | LC_ALL=C tr '[:upper:]' '[:lower:]' | LC_ALL=C tr -d '*' | LC_ALL=C sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//')"
+  ' "$1" | LC_ALL=C tr '\n' ' ' | LC_ALL=C tr '[:upper:]' '[:lower:]' | LC_ALL=C tr -d '*' | LC_ALL=C sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//')"
+  diagnosis_contract="- is the guard wrong, is the agent wrong, or is the prescription wrong? they look identical in telemetry — all appear as a blocked action. "
+  diagnosis_contract+="trace which definition, prompt, skill, loader, or durable memory prescribed the behaviour before changing the guard or faulting the executing agent: "
+  diagnosis_contract+="- the guard blocks something the contract already forbids, but the agent followed a stale or conflicting prescription → the guard is right and the root defect is the prescription; repair the canonical upstream definition, prompt, skill, loader, or memory and its stale projection, never the guard; "
+  diagnosis_contract+="- the guard blocks something the contract already forbids, and the current prescription is clear → the guard is right and the agent's behaviour is the defect; fix the executable guidance or validation that failed to produce compliance, never the guard; "
+  diagnosis_contract+="- the guard blocks mandated work → the guard is a gap; narrow it to the minimum that unblocks the real work."
 
-  grep -Eqi 'guard wrong.{0,120}agent wrong.{0,120}prescription wrong' <<<"$flat" || return 1
-  grep -Eqi '(definition|prompt|skill|durable memory).{0,240}(prescribed|told|instructed)' <<<"$flat" || return 1
-  grep -Eqi '(trace|identify).{0,200}(definition|prompt|skill|durable memory).{0,240}before.{0,160}(changing|weakening).{0,80}guard' <<<"$flat" || return 1
-  grep -Eqi 'guard.{0,80}blocks.{0,120}forbid.{0,180}agent.{0,40}followed.{0,80}(stale|conflicting).{0,80}prescription' <<<"$flat" || return 1
-  grep -Eqi 'prescription.{0,240}(fix|repair).{0,160}(definition|prompt|skill|memory).{0,160}never.{0,80}guard' <<<"$flat" || return 1
+  [ "$flat" = "$diagnosis_contract" ]
 }
 
 check_outcome_throughput_contract() { # skill
@@ -225,10 +224,18 @@ diagnosis_good="$tmp/diagnosis-good.md"
 cat >"$diagnosis_good" <<'EOF'
 ## 3. Diagnose
 
-- **Is the guard wrong, is the agent wrong, or is the prescription wrong?** Trace which definition,
-  prompt, skill, or durable memory instructed the behavior before changing the guard. If the guard
-  correctly blocks forbidden behavior that the agent followed from a stale prescription, repair the
-  upstream definition, prompt, skill, or memory; never weaken the guard.
+- **Is the guard wrong, is the agent wrong, or is the prescription wrong?** They look identical in
+  telemetry — all appear as a blocked action. Trace which definition, prompt, skill, loader, or durable
+  memory prescribed the behaviour before changing the guard or faulting the executing agent:
+  - the guard blocks something the contract **already forbids**, but the agent followed a stale or
+    conflicting prescription → the guard is right and the root defect is the prescription; repair the
+    canonical upstream definition, prompt, skill, loader, or memory and its stale projection, never the
+    guard;
+  - the guard blocks something the contract **already forbids**, and the current prescription is clear
+    → the guard is right and **the agent's behaviour is the defect**; fix the executable guidance or
+    validation that failed to produce compliance, never the guard;
+  - the guard blocks **mandated work** → the guard is a **gap**; narrow it to the minimum that unblocks
+    the real work.
 
 ---
 EOF
@@ -250,7 +257,7 @@ else
 fi
 
 diagnosis_no_stale="$tmp/diagnosis-no-stale.md"
-sed 's/from a stale prescription/from a prescription/' "$diagnosis_good" >"$diagnosis_no_stale"
+sed 's/a stale or/a/' "$diagnosis_good" >"$diagnosis_no_stale"
 if check_diagnosis_contract "$diagnosis_no_stale"; then
   printf '  ❌ prescription without stale provenance unexpectedly passes\n' >&2
   fail=1
@@ -259,13 +266,42 @@ else
 fi
 
 diagnosis_no_followed="$tmp/diagnosis-no-followed.md"
-sed 's/that the agent followed from a stale prescription/while a stale prescription existed/' \
+sed 's/the agent followed a stale or/a stale or/' \
   "$diagnosis_good" >"$diagnosis_no_followed"
 if check_diagnosis_contract "$diagnosis_no_followed"; then
   printf '  ❌ stale prescription without agent-followed causality unexpectedly passes\n' >&2
   fail=1
 else
   printf '  ✅ stale prescription without agent-followed causality fails closed\n'
+fi
+
+diagnosis_negated_trace="$tmp/diagnosis-negated-trace.md"
+sed 's/Trace which/Do not trace which/' "$diagnosis_good" >"$diagnosis_negated_trace"
+if check_diagnosis_contract "$diagnosis_negated_trace"; then
+  printf '  ❌ negated instruction-source trace unexpectedly passes\n' >&2
+  fail=1
+else
+  printf '  ✅ negated instruction-source trace fails closed\n'
+fi
+
+diagnosis_negated_repair="$tmp/diagnosis-negated-repair.md"
+sed 's/repair the/do not repair the/' \
+  "$diagnosis_good" >"$diagnosis_negated_repair"
+if check_diagnosis_contract "$diagnosis_negated_repair"; then
+  printf '  ❌ negated prescription repair unexpectedly passes\n' >&2
+  fail=1
+else
+  printf '  ✅ negated prescription repair fails closed\n'
+fi
+
+diagnosis_weaken_guard="$tmp/diagnosis-weaken-guard.md"
+sed 's/never the guard/always weaken the guard/' \
+  "$diagnosis_good" >"$diagnosis_weaken_guard"
+if check_diagnosis_contract "$diagnosis_weaken_guard"; then
+  printf '  ❌ guard-weakening reversal unexpectedly passes\n' >&2
+  fail=1
+else
+  printf '  ✅ guard-weakening reversal fails closed\n'
 fi
 
 coordination_good="$tmp/coordination-good.md"
