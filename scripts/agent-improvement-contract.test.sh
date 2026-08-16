@@ -42,6 +42,22 @@ check_coordination_contract() { # skill
   [ "$flat" = "$coordination_contract" ]
 }
 
+check_diagnosis_contract() { # skill
+  local section flat
+  section="$(LC_ALL=C awk '
+    /^## 3\. Diagnose/ { capture=1 }
+    capture && /^---$/ { exit }
+    capture { print }
+  ' "$1")"
+  [ -n "$section" ] || return 1
+  flat="$(LC_ALL=C tr '\n' ' ' <<<"$section" | LC_ALL=C tr '[:upper:]' '[:lower:]' | LC_ALL=C tr -d '*' | LC_ALL=C sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//')"
+
+  grep -Eqi 'guard wrong.{0,120}agent wrong.{0,120}prescription wrong' <<<"$flat" || return 1
+  grep -Eqi '(definition|prompt|skill|durable memory).{0,240}(prescribed|told|instructed)' <<<"$flat" || return 1
+  grep -Eqi '(trace|identify).{0,200}(definition|prompt|skill|durable memory).{0,240}before.{0,160}(changing|weakening).{0,80}guard' <<<"$flat" || return 1
+  grep -Eqi 'prescription.{0,240}(fix|repair).{0,160}(definition|prompt|skill|memory).{0,160}never.{0,80}guard' <<<"$flat" || return 1
+}
+
 check_outcome_throughput_contract() { # skill
   local throughput_contract flat
   grep -Fq '| **Outcome throughput** |' "$1" || return 1
@@ -176,6 +192,13 @@ else
   fail=1
 fi
 
+if check_diagnosis_contract "$skill"; then
+  printf '  ✅ live skill distinguishes guard, agent, and prescription defects\n'
+else
+  printf '  ❌ live skill can blame a guard or agent for a stale prescription\n' >&2
+  fail=1
+fi
+
 if check_outcome_throughput_contract "$skill"; then
   printf '  ✅ live skill guards outcome throughput with quality floors\n'
 else
@@ -195,6 +218,34 @@ if check_research_fallback_contract "$skill"; then
 else
   printf '  ❌ live skill can stop idle when telemetry exposes no actionable improvement\n' >&2
   fail=1
+fi
+
+diagnosis_good="$tmp/diagnosis-good.md"
+cat >"$diagnosis_good" <<'EOF'
+## 3. Diagnose
+
+- **Is the guard wrong, is the agent wrong, or is the prescription wrong?** Trace which definition,
+  prompt, skill, or durable memory instructed the behavior before changing the guard. If the guard
+  correctly blocks forbidden behavior that the agent followed from a stale prescription, repair the
+  upstream definition, prompt, skill, or memory; never weaken the guard.
+
+---
+EOF
+
+if check_diagnosis_contract "$diagnosis_good"; then
+  printf '  ✅ complete three-way diagnosis contract passes\n'
+else
+  printf '  ❌ complete three-way diagnosis contract unexpectedly fails\n' >&2
+  fail=1
+fi
+
+diagnosis_bad="$tmp/diagnosis-bad.md"
+sed 's/, or is the prescription wrong//' "$diagnosis_good" >"$diagnosis_bad"
+if check_diagnosis_contract "$diagnosis_bad"; then
+  printf '  ❌ missing prescription diagnosis unexpectedly passes\n' >&2
+  fail=1
+else
+  printf '  ✅ missing prescription diagnosis fails closed\n'
 fi
 
 coordination_good="$tmp/coordination-good.md"
