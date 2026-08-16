@@ -237,10 +237,16 @@ For each candidate, ask in order:
 
 - **What is the root cause?** A command that keeps failing on a missing required argument is not "a
   flaky call" — it is a definition that never states the argument is required. Fix the definition.
-- **Is the guard wrong, or is the agent wrong?** They look identical in telemetry — both appear as a
-  blocked action — and confusing them is how a working control gets deleted to silence a symptom:
-  - the guard blocks something the contract **already forbids** → the guard is right and **the agent's
-    behaviour is the defect**; fix the definition, never the guard;
+- **Is the guard wrong, is the agent wrong, or is the prescription wrong?** They look identical in
+  telemetry — all appear as a blocked action. Trace which definition, prompt, skill, loader, or durable
+  memory prescribed the behaviour before changing the guard or faulting the executing agent:
+  - the guard blocks something the contract **already forbids**, but the agent followed a stale or
+    conflicting prescription → the guard is right and the root defect is the prescription; repair the
+    canonical upstream definition, prompt, skill, loader, or memory and its stale projection, never the
+    guard;
+  - the guard blocks something the contract **already forbids**, and the current prescription is clear
+    → the guard is right and **the agent's behaviour is the defect**; fix the executable guidance or
+    validation that failed to produce compliance, never the guard;
   - the guard blocks **mandated work** → the guard is a **gap**; narrow it to the minimum that unblocks
     the real work.
 - **One instance or all of them?** A defect in one is usually drift; a defect in all is usually the
