@@ -241,8 +241,9 @@ For each candidate, ask in order:
   telemetry — all appear as a blocked action. Trace which definition, prompt, skill, loader, or durable
   memory prescribed the behaviour before changing the guard or faulting the executing agent:
   - the guard blocks something the contract **already forbids**, but the agent followed a stale or
-    conflicting prescription → the guard and executor are right; repair the canonical upstream
-    definition, prompt, skill, or memory and its stale projection, never the guard;
+    conflicting prescription → the guard is right and the root defect is the prescription; repair the
+    canonical upstream definition, prompt, skill, loader, or memory and its stale projection, never the
+    guard;
   - the guard blocks something the contract **already forbids**, and the current prescription is clear
     → the guard is right and **the agent's behaviour is the defect**; fix the executable guidance or
     validation that failed to produce compliance, never the guard;
