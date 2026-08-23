@@ -101,10 +101,13 @@ every run, resumed or not:
 - **every breakage signal, not just the default branch** — a broken deployed site or release
   pipeline is breakage too, and can be broken while default-branch CI is green, so checking only the
   branch would postpone a production failure for the whole staleness window;
-- an **enumeration of open own/trusted PRs and what makes each actionable** — red, merge-ready, **or
-  carrying unresolved review threads or out-of-thread findings**. A draft with review findings and
-  green CI is neither red nor merge-ready, so a red/merge-ready-only listing reports nothing while
-  hygiene work sits waiting;
+- an **enumeration of open own/trusted PRs and what makes each actionable** — **the complete hygiene
+  pentad, not an abbreviation of it**: failing required checks, unresolved review threads, non-thread
+  review findings, a conflict with or lag behind the base, and a missing or stale current-head green
+  review. The last three are invisible to a red/merge-ready reading: a draft with green checks, no
+  threads and no findings can still be conflicted, or simply never reviewed at the commit it now
+  carries, and is then neither red nor merge-ready — so an abbreviated listing reports nothing while
+  exactly the work that blocks promotion sits waiting;
 - a **scan of the maintainer control channel across those PRs and the run's own open issues**, not
   only the resumed artifact — an authenticated maintainer comment is an instruction to act on this
   run, and it does not stop being one because it landed on a different PR, or on an issue rather than

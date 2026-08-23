@@ -14,6 +14,7 @@ readiness_contract="genuine readiness means the consuming deployment's complete 
 session_contract="immediately before self-promotion, re-read the current head and revalidate genuine readiness; immediately before merge, re-read the head and revalidate genuine readiness again."
 trusted_merge_contract="immediately before every merge in this path, re-read the current head and revalidate genuine readiness; abort if any condition changed."
 partial_shorthand="genuine readiness (programmatically tested + green review at the current head + tried and evaluated as a user)"
+resume_pentad_contract="the complete hygiene pentad, not an abbreviation of it: failing required checks, unresolved review threads, non-thread review findings, a conflict with or lag behind the base, and a missing or stale current-head green review."
 
 normalize() {
   LC_ALL=C tr '\n' ' ' <"$1" |
@@ -46,6 +47,17 @@ check_trusted_merge_contract() { # skill
   grep -Fq "$trusted_merge_contract" <<<"$flat"
 }
 
+# The resume gate skips the survey, so its PR enumeration is the only thing that
+# surfaces hygiene work on a resumed run. An abbreviated list silently drops the
+# pentad members that a red/merge-ready reading cannot see -- a draft with green
+# checks, no threads and no findings can still be conflicted or simply unreviewed
+# at its current head, and is then neither red nor merge-ready.
+check_resume_pentad_contract() { # skill
+  local flat
+  flat="$(normalize "$1")"
+  grep -Fq "$resume_pentad_contract" <<<"$flat"
+}
+
 fail=0
 for skill in portfolio-maintenance product-engineering self-improvement; do
   skill_file="$repo_root/$skill/SKILL.md"
@@ -76,11 +88,19 @@ else
   fail=1
 fi
 
+if check_resume_pentad_contract "$repo_root/portfolio-maintenance/SKILL.md"; then
+  printf '  ✅ resume gate enumerates the complete hygiene pentad\n'
+else
+  printf '  ❌ resume gate enumerates an abbreviated pentad\n' >&2
+  fail=1
+fi
+
 complete_fixture="$tmp/complete.md"
-printf '%s\n%s\n%s\n' "$readiness_contract" "$session_contract" "$trusted_merge_contract" >"$complete_fixture"
+printf '%s\n%s\n%s\n%s\n' "$readiness_contract" "$session_contract" "$trusted_merge_contract" "$resume_pentad_contract" >"$complete_fixture"
 if check_readiness_contract "$complete_fixture" &&
   check_no_partial_shorthand "$complete_fixture" &&
   check_session_contract "$complete_fixture" &&
+  check_resume_pentad_contract "$complete_fixture" &&
   check_trusted_merge_contract "$complete_fixture"; then
   printf '  ✅ complete fixture passes\n'
 else
@@ -122,6 +142,15 @@ if check_trusted_merge_contract "$missing_trusted_merge_fixture"; then
   fail=1
 else
   printf '  ✅ missing existing-PR merge rule fails closed\n'
+fi
+
+abbreviated_pentad_fixture="$tmp/abbreviated-pentad.md"
+sed 's/, a conflict with or lag behind the base//' "$complete_fixture" >"$abbreviated_pentad_fixture"
+if check_resume_pentad_contract "$abbreviated_pentad_fixture"; then
+  printf '  ❌ abbreviated pentad unexpectedly passes\n' >&2
+  fail=1
+else
+  printf '  ✅ abbreviated pentad fails closed\n'
 fi
 
 if [ "$fail" -ne 0 ]; then
