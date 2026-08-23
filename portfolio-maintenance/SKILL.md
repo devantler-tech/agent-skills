@@ -101,15 +101,23 @@ every run, resumed or not:
 - **every breakage signal, not just the default branch** — a broken deployed site or release
   pipeline is breakage too, and can be broken while default-branch CI is green, so checking only the
   branch would postpone a production failure for the whole staleness window;
-- an **enumeration of open own/trusted PRs and their red / merge-ready state**, so nothing at that
-  rung is passed over;
-- a **scan of the maintainer control channel across those PRs**, not only the resumed one — a
-  maintainer comment is an instruction to act on this run, and it does not stop being one because it
-  landed on a different PR than the carry-forward names;
+- an **enumeration of open own/trusted PRs and what makes each actionable** — red, merge-ready, **or
+  carrying unresolved review threads or out-of-thread findings**. A draft with review findings and
+  green CI is neither red nor merge-ready, so a red/merge-ready-only listing reports nothing while
+  hygiene work sits waiting;
+- a **scan of the maintainer control channel across those PRs and the run's own open issues**, not
+  only the resumed artifact — an authenticated maintainer comment is an instruction to act on this
+  run, and it does not stop being one because it landed on a different PR, or on an issue rather than
+  a PR;
 - **re-verifying the resumed artifact against live state**, because memory goes stale and another
   instance may have advanced or finished it.
 
-These are direct queries — a listing, not a per-PR deepening — so they cost a fraction of a dispatch.
+These are direct queries against a handful of own PRs — a listing plus one review-state read each, not
+a portfolio-wide deepening — so they cost a fraction of a dispatch.
+🔴 **Every prerequisite this gate reads must have something that WRITES it.** The carry-forward and the
+last-full-survey timestamp are both produced by the write-back step below; a prerequisite with no
+producer is not a condition, it is a permanent false, and the optimisation silently never engages.
+Anything added to the predicate later needs a writer added with it.
 **What resuming actually skips is the broad survey**: deepening every candidate, and the issue,
 roadmap and triage state that the ladder forbids descending to while higher work is open. If a
 preemption check surfaces something outranking the resumed artifact, that becomes the run's work and
@@ -252,7 +260,10 @@ runs in a short window be more selective — dedupe against what earlier runs al
 
 ## 4. Report — update memory, then one consolidated report
 
-- **Memory write-back** (per the **Memory** section): record a **last-full-survey timestamp**
+- **Memory write-back** (per the **Memory** section): record the **carry-forward** — the specific
+  in-flight artifact this run leaves unfinished, its identity and what it still needs — because the
+  resume gate's first prerequisite reads exactly that, and nothing else writes it; record a
+  **last-full-survey timestamp**
   whenever a full survey completes — the resume predicate's freshness prerequisite is unevaluable
   without it, leaving a later run to survey every time or to guess and risk breaking the bound — then
   update the rotation cursor, each touched
