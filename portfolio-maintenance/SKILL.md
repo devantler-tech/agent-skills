@@ -79,12 +79,22 @@ full before a single query runs. **Trimming what the survey reports therefore sa
 only not dispatching it saves anything.** That is why this gate is placed before the survey rather than
 inside it.
 
-**Two things still happen on EVERY run, because they are cheap and they are what the survey was
-protecting:**
-- the **default-branch breakage check** — one direct query, no subagent, since breakage preempts
-  everything;
+🔴 **Resuming skips the SURVEY, never the PREEMPTION CHECKS.** Everything the operate ladder ranks at
+or above the resumed work still runs first, because a carry-forward names *one* artifact while those
+rules range over *all* of them — so a red PR in another repository, or a trusted-author PR that has
+become merge-ready, would otherwise sit untreated while the run advanced something lower down. On
+every run, resumed or not:
+- the **default-branch breakage check**, since breakage is the one queue-jump;
+- an **enumeration of open own/trusted PRs and their red / merge-ready state**, so nothing at that
+  rung is passed over;
 - **re-verifying the resumed artifact against live state**, because memory goes stale and another
   instance may have advanced or finished it.
+
+These are direct queries — a listing, not a per-PR deepening — so they cost a fraction of a dispatch.
+**What resuming actually skips is the broad survey**: deepening every candidate, and the issue,
+roadmap and triage state that the ladder forbids descending to while higher work is open. If a
+preemption check surfaces something outranking the resumed artifact, that becomes the run's work and
+the carry-forward waits.
 
 **Dispatch the full survey when** there is no such carry-forward, **or** the artifact is terminal,
 **or** no full survey has run within the staleness bound — **4 hours** unless the deployment's
