@@ -63,14 +63,30 @@ check_trusted_merge_contract() { # skill
 # the regression this helper exists to catch would have passed it. Explicit markers
 # make the region the document actually enacts, and a rename of either heading can no
 # longer silently widen it.
+#
+# AN UNTERMINATED BLOCK IS NOT AN OPEN BLOCK, IT IS A BROKEN ONE. Streaming from the
+# begin marker to EOF would make every later line count as operative -- exactly the
+# whole-file search this helper replaced, reachable by deleting one marker. Require
+# EXACTLY ONE ordered pair and fail closed otherwise, so a dropped, duplicated or
+# swapped marker is a contract failure rather than a silently widened region.
 resume_block() { # skill
+  local begin_n end_n
+  begin_n="$(grep -c '^<!-- resume-preemption:begin -->' "$1" || true)"
+  end_n="$(grep -c '^<!-- resume-preemption:end -->' "$1" || true)"
+  [ "$begin_n" -eq 1 ] && [ "$end_n" -eq 1 ] || return 1
+  # Ordered: a file whose end marker precedes its begin marker has one of each and no
+  # region at all.
+  local begin_at end_at
+  begin_at="$(grep -n '^<!-- resume-preemption:begin -->' "$1" | cut -d: -f1)"
+  end_at="$(grep -n '^<!-- resume-preemption:end -->' "$1" | cut -d: -f1)"
+  [ "$begin_at" -lt "$end_at" ] || return 1
   awk '/^<!-- resume-preemption:begin -->/{inblock=1; next} /^<!-- resume-preemption:end -->/{inblock=0} inblock' "$1"
 }
 
 check_resume_pentad_contract() { # skill
   local block flat
   block="$(mktemp)"
-  resume_block "$1" >"$block"
+  resume_block "$1" >"$block" || { rm -f "$block"; return 1; }
   # An empty region means the headings moved; fail closed rather than report a pass
   # from a search over nothing.
   [ -s "$block" ] || { rm -f "$block"; return 1; }
@@ -189,6 +205,40 @@ if check_resume_pentad_contract "$full_survey_half_fixture"; then
   fail=1
 else
   printf '  ✅ pentad sentence demoted to the full-survey half fails closed\n'
+fi
+
+# An UNTERMINATED block must fail closed too: streaming from the begin marker to EOF
+# would restore the whole-file search by deleting a single line.
+unterminated_fixture="$tmp/pentad-unterminated.md"
+printf '%s\n%s\n%s\n## 1. Survey\n<!-- resume-preemption:begin -->\n- preemption checks\n## 2. Select\n%s\n' \
+  "$readiness_contract" "$session_contract" "$trusted_merge_contract" "$resume_pentad_contract" >"$unterminated_fixture"
+if check_resume_pentad_contract "$unterminated_fixture"; then
+  printf '  ❌ unterminated preemption block unexpectedly passes\n' >&2
+  fail=1
+else
+  printf '  ✅ unterminated preemption block fails closed\n'
+fi
+
+# Two begin markers are ambiguous about which region governs; reject rather than pick.
+duplicate_marker_fixture="$tmp/pentad-duplicate-marker.md"
+printf '%s\n%s\n%s\n## 1. Survey\n<!-- resume-preemption:begin -->\n- preemption checks\n<!-- resume-preemption:end -->\n<!-- resume-preemption:begin -->\n%s\n<!-- resume-preemption:end -->\n## 2. Select\n' \
+  "$readiness_contract" "$session_contract" "$trusted_merge_contract" "$resume_pentad_contract" >"$duplicate_marker_fixture"
+if check_resume_pentad_contract "$duplicate_marker_fixture"; then
+  printf '  ❌ duplicated preemption markers unexpectedly pass\n' >&2
+  fail=1
+else
+  printf '  ✅ duplicated preemption markers fail closed\n'
+fi
+
+# A pair in the wrong ORDER bounds no region at all.
+swapped_marker_fixture="$tmp/pentad-swapped-markers.md"
+printf '%s\n%s\n%s\n## 1. Survey\n<!-- resume-preemption:end -->\n%s\n<!-- resume-preemption:begin -->\n## 2. Select\n' \
+  "$readiness_contract" "$session_contract" "$trusted_merge_contract" "$resume_pentad_contract" >"$swapped_marker_fixture"
+if check_resume_pentad_contract "$swapped_marker_fixture"; then
+  printf '  ❌ swapped preemption markers unexpectedly pass\n' >&2
+  fail=1
+else
+  printf '  ✅ swapped preemption markers fail closed\n'
 fi
 
 # A missing marker pair must fail closed rather than search the whole file.
