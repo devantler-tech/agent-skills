@@ -66,8 +66,10 @@ action before any survey returns, because the selection ladder forbids descendin
 the rest of the digest cannot change the decision. Check for work in hand **first**, with a direct read
 rather than a subagent:
 
-**Resume, and skip the full survey, only when ALL THREE hold:**
+**Resume, and skip the full survey, only when ALL FOUR hold:**
 - durable memory carries a carry-forward naming a specific in-flight artifact, **and**
+- that artifact is at a rung the direct checks below actually cover — breakage, or an open
+  own/trusted PR — **never** advance work, **and**
 - one direct read confirms it is still non-terminal and still yours to advance, **and**
 - a full survey has run within the staleness bound below.
 
@@ -78,12 +80,11 @@ its own clause it would contradict this one whenever a live carry-forward met a 
 whichever instruction won, the bound could be bypassed indefinitely, which removes the guarantee that
 makes skipping safe at all.
 
-🔴 **Resume only when the carry-forward is at a rung the cheap checks actually cover** — breakage or an
-open own/trusted PR. When it is *advance* work (an issue implementation, a roadmap pass, research),
-the ladder ranks contributor triage, security posture and upkeep **above** it, and the abbreviated
-checks below do not look at any of those. Skipping the survey there would let a run continue
-lower-priority work while something that outranks it went undiscovered, which is the same inversion
-this gate exists to prevent. Advance work therefore takes the survey.
+🔴 **Why the rung conjunct is there:** when the carry-forward is *advance* work (an issue
+implementation, a roadmap pass, research), the ladder ranks contributor triage, security posture and
+upkeep **above** it, and the direct checks below do not look at any of those. Skipping the survey
+there would let a run continue lower-priority work while something outranking it went undiscovered —
+the same inversion this gate exists to prevent. Advance work therefore takes the survey.
 
 🔴 **Why this is worth a rule: the cost of a survey is the DISPATCH, not the queries.** Where the survey
 runs as a subagent it re-sends the whole agent definition on every dispatch, and where the runtime's
@@ -97,9 +98,14 @@ or above the resumed work still runs first, because a carry-forward names *one* 
 rules range over *all* of them — so a red PR in another repository, or a trusted-author PR that has
 become merge-ready, would otherwise sit untreated while the run advanced something lower down. On
 every run, resumed or not:
-- the **default-branch breakage check**, since breakage is the one queue-jump;
+- **every breakage signal, not just the default branch** — a broken deployed site or release
+  pipeline is breakage too, and can be broken while default-branch CI is green, so checking only the
+  branch would postpone a production failure for the whole staleness window;
 - an **enumeration of open own/trusted PRs and their red / merge-ready state**, so nothing at that
   rung is passed over;
+- a **scan of the maintainer control channel across those PRs**, not only the resumed one — a
+  maintainer comment is an instruction to act on this run, and it does not stop being one because it
+  landed on a different PR than the carry-forward names;
 - **re-verifying the resumed artifact against live state**, because memory goes stale and another
   instance may have advanced or finished it.
 
@@ -246,7 +252,10 @@ runs in a short window be more selective — dedupe against what earlier runs al
 
 ## 4. Report — update memory, then one consolidated report
 
-- **Memory write-back** (per the **Memory** section): update the rotation cursor, each touched
+- **Memory write-back** (per the **Memory** section): record a **last-full-survey timestamp**
+  whenever a full survey completes — the resume predicate's freshness prerequisite is unevaluable
+  without it, leaving a later run to survey every time or to guess and risk breaking the bound — then
+  update the rotation cursor, each touched
   product's cursors, needs-attention notes, caches, and learnings. Keep the store coherent — edit in
   place, prune stale entries, bound the recent-run history so the start-of-run read stays small, and
   **never duplicate live tracker/CI state into memory** (live state is re-derived each run; memory
