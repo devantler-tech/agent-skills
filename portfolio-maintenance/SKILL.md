@@ -2,7 +2,8 @@
 name: portfolio-maintenance
 description: >-
   The run loop for an autonomous AI engineer acting as a portfolio's primary
-  engineer — pre-flight, survey every product's live state, select the
+  engineer — pre-flight, resume in-flight work or survey every product's live
+  state, select the
   highest-value work (operate before advance), act through isolated per-run
   working copies and draft PRs self-promoted on genuine readiness (driving
   trusted-author PRs to merge), then report and bank learnings. Use when
@@ -15,7 +16,7 @@ license: Apache-2.0
 
 This is the run procedure for an autonomous engineer that both **operates** a portfolio of products
 (keeps CI, dependencies, and PRs healthy) and **advances** it (strategy, features, coverage,
-performance, quality). Each run follows the same four movements — **survey → select → act → report**
+performance, quality). Each run follows the same four movements — **survey (or resume) → select → act → report**
 — under one discipline: an isolated per-run working copy, validate before any PR, fix at the root
 cause, a **draft PR** with an AI-disclosure line (the checkpoint), **self-promoted only on genuine
 readiness as defined below**, then driven to merge per the **Trust gate**, one concern per PR, never
@@ -58,7 +59,116 @@ skill says "per the *X* section", the consuming repo supplies the concrete fact.
    needs-attention notes, investigation caches, learnings). Treat it as your own notes: it may be
    stale, so **verify against live state before acting on it**.
 
-## 1. Survey — the whole portfolio, cheaply
+## 1. Survey — but only when you do not already know your next move
+
+🔴 **RESUME BEFORE YOU SURVEY.** A run that already has an in-flight artifact usually knows its next
+action before any survey returns, because the selection ladder forbids descending past open work — so
+the rest of the digest cannot change the decision. Check for work in hand **first**, with a direct read
+rather than a subagent:
+
+**Resume, and skip the full survey, only when ALL FOUR hold:**
+- durable memory carries a carry-forward naming a specific in-flight artifact, **and**
+- that artifact is at a rung the direct checks below actually cover — breakage, or an open
+  own/trusted PR — **never** advance work, **and**
+- one direct read confirms it is still non-terminal and **still yours to advance — decided from
+  live evidence, never from the carry-forward itself**, **and**
+- a full survey has run within the staleness bound below.
+
+🔴 **A carry-forward records what WAS yours; it cannot establish that it still is.** It is written by
+one run and read by another, so two runs that both trust it resume the same artifact and duplicate its
+commits and comments — and the second one has no way to notice, because nothing it reads contradicts
+what it remembers. Ownership is therefore re-derived from live state on every resume: the artifact
+carries no newer activity from another writer, and whatever ownership token the deployment defines —
+a claim ref, a lease with an expiry, a writer namespace — still resolves to **this** run.
+
+🔴 **THAT TOKEN FENCES EVERY RESUMED MUTATION, NOT THE FIRST ONE.** A resumed operation routinely
+outlives the lease it started under — a build, a review wait, a slow check — so a run that verifies
+ownership once and then keeps writing has fenced only its opening commit. Another run acquires the
+expired lease and both write on, which is precisely the duplicate-writer corruption the token exists
+to prevent, and neither notices. So **renew the token on the same beat as the work** — immediately
+before each mutation, and again after any pause the run did not control — and condition that
+mutation on the renewal succeeding. A renewal that fails means ownership is gone or unknowable:
+**stand down without writing**, rather than completing "just this one" already-prepared push.
+Where the deployment's token is a compare-and-swap, the renewal is also the proof; where it is a
+plain expiry, re-read it and treat any ambiguity as lost.
+
+Then read that artifact's own state and go to **Select**. Do not dispatch the survey.
+
+🔴 **Freshness is a PREREQUISITE of resuming, not a separate rule that competes with it.** Stated as
+its own clause it would contradict this one whenever a live carry-forward met a stale survey — and
+whichever instruction won, the bound could be bypassed indefinitely, which removes the guarantee that
+makes skipping safe at all.
+
+🔴 **Why the rung conjunct is there:** when the carry-forward is *advance* work (an issue
+implementation, a roadmap pass, research), the ladder ranks contributor triage, security posture and
+upkeep **above** it, and the direct checks below do not look at any of those. Skipping the survey
+there would let a run continue lower-priority work while something outranking it went undiscovered —
+the same inversion this gate exists to prevent. Advance work therefore takes the survey.
+
+🔴 **Why this is worth a rule: the cost of a survey is the DISPATCH, not the queries.** Where the survey
+runs as a subagent it re-sends the whole agent definition on every dispatch, and where the runtime's
+prompt cache expires faster than the schedule fires, none of that is reused — so each dispatch pays in
+full before a single query runs. **Trimming what the survey reports therefore saves almost nothing;
+only not dispatching it saves anything.** That is why this gate is placed before the survey rather than
+inside it.
+
+🔴 **Resuming skips the SURVEY, never the PREEMPTION CHECKS.** Everything the operate ladder ranks at
+or above the resumed work still runs first, because a carry-forward names *one* artifact while those
+rules range over *all* of them — so a red PR in another repository, or a trusted-author PR that has
+become merge-ready, would otherwise sit untreated while the run advanced something lower down. On
+every run, resumed or not:
+
+<!-- resume-preemption:begin -->
+- **every breakage signal, not just the default branch** — a broken deployed site or release
+  pipeline is breakage too, and can be broken while default-branch CI is green, so checking only the
+  branch would postpone a production failure for the whole staleness window;
+- an **enumeration of open own/trusted PRs and what makes each actionable** — **the complete hygiene
+  pentad, not an abbreviation of it**: failing required checks, unresolved review threads, non-thread
+  review findings, a conflict with or lag behind the base, any pre-merge quality checks the review
+  tooling publishes separately from CI, and a missing or stale current-head green review. **This is
+  the same five the full survey below enumerates, deliberately spelled out rather than referenced**,
+  because the resume path skips that survey — so any member missing here is a member nothing reads
+  on a resumed run. The later ones are invisible to a red/merge-ready reading: a draft with green
+  checks, no threads and no findings can still be conflicted, or carry a separately-published
+  quality failure, or simply never have been reviewed at the commit it now carries, and is then
+  neither red nor merge-ready — so an abbreviated listing reports nothing while exactly the work
+  that blocks promotion sits waiting;
+- a **scan of the maintainer control channel across the PRs and issues this run can verify it
+  created**, not only the resumed artifact — an authenticated maintainer comment is an instruction to
+  act on this run, and it does not stop being one because it landed on a different own PR, or on an
+  issue rather than a PR. **Enumerate every trusted PR for hygiene, but read the control channel only
+  on verified own work**: the instruction carve-out is what lets otherwise-untrusted PR text steer
+  this run, so extending it to a bot's or another author's PR would widen it well past the work whose
+  provenance the run can actually establish;
+- **re-verifying the resumed artifact against live state**, because memory goes stale and another
+  instance may have advanced or finished it.
+
+<!-- resume-preemption:end -->
+
+These are direct queries against a handful of own PRs — a listing plus one review-state read each, not
+a portfolio-wide deepening — so they cost a fraction of a dispatch.
+
+🔴 **The markers around that list are load-bearing, not decoration.** The contract test reads the
+region between them, so this is the only place a preemption check counts as operative. Prose about
+these checks elsewhere in the section documents them; it does not enact them — and a check that
+drifts out of this region silently stops governing anything while still reading as present.
+🔴 **Every prerequisite this gate reads must have something that WRITES it.** The carry-forward and the
+last-full-survey timestamp are both produced by the write-back step below; a prerequisite with no
+producer is not a condition, it is a permanent false, and the optimisation silently never engages.
+Anything added to the predicate later needs a writer added with it.
+**What resuming actually skips is the broad survey**: deepening every candidate, and the issue,
+roadmap and triage state that the ladder forbids descending to while higher work is open. If a
+preemption check surfaces something outranking the resumed artifact, that becomes the run's work and
+the carry-forward waits.
+
+**Dispatch the full survey whenever any resume prerequisite fails** — no carry-forward, a terminal
+artifact, advance-level work, or no full survey within the staleness bound of **4 hours** unless the
+deployment's **Cadence** names another. The bound is what keeps this from becoming *never survey*: discovery of new
+issues is delayed by at most that interval, never dropped, while breakage stays checked every run.
+
+⚠️ **Never let a resumed run become a stalled one.** If the resumed artifact turns out terminal,
+blocked, or owned by another instance, fall through to the full survey in the same run rather than
+exiting — "I had work in hand" is a reason to skip the survey, never a reason to ship nothing.
 
 Build one compact picture of the portfolio's live state. Where your runtime supports subagents,
 **delegate the survey to a read-only subagent** that returns a digest, so the raw query output stays
@@ -188,7 +298,13 @@ runs in a short window be more selective — dedupe against what earlier runs al
 
 ## 4. Report — update memory, then one consolidated report
 
-- **Memory write-back** (per the **Memory** section): update the rotation cursor, each touched
+- **Memory write-back** (per the **Memory** section): record the **carry-forward** — the specific
+  in-flight artifact this run leaves unfinished, its identity and what it still needs — because the
+  resume gate's first prerequisite reads exactly that, and nothing else writes it; record a
+  **last-full-survey timestamp**
+  whenever a full survey completes — the resume predicate's freshness prerequisite is unevaluable
+  without it, leaving a later run to survey every time or to guess and risk breaking the bound — then
+  update the rotation cursor, each touched
   product's cursors, needs-attention notes, caches, and learnings. Keep the store coherent — edit in
   place, prune stale entries, bound the recent-run history so the start-of-run read stays small, and
   **never duplicate live tracker/CI state into memory** (live state is re-derived each run; memory
