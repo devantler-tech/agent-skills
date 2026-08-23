@@ -14,7 +14,7 @@ readiness_contract="genuine readiness means the consuming deployment's complete 
 session_contract="immediately before self-promotion, re-read the current head and revalidate genuine readiness; immediately before merge, re-read the head and revalidate genuine readiness again."
 trusted_merge_contract="immediately before every merge in this path, re-read the current head and revalidate genuine readiness; abort if any condition changed."
 partial_shorthand="genuine readiness (programmatically tested + green review at the current head + tried and evaluated as a user)"
-resume_pentad_contract="the complete hygiene pentad, not an abbreviation of it: failing required checks, unresolved review threads, non-thread review findings, a conflict with or lag behind the base, and a missing or stale current-head green review."
+resume_pentad_contract="the complete hygiene pentad, not an abbreviation of it: failing required checks, unresolved review threads, non-thread review findings, a conflict with or lag behind the base, any pre-merge quality checks the review tooling publishes separately from ci, and a missing or stale current-head green review."
 
 normalize() {
   LC_ALL=C tr '\n' ' ' <"$1" |
@@ -56,8 +56,15 @@ check_trusted_merge_contract() { # skill
 # the file: if a later edit moved it into explanatory prose and dropped the operative
 # check, a whole-file search would still pass and the contract would be satisfied by
 # text that no longer governs anything.
+#
+# DELIMIT THE PREEMPTION LIST ITSELF, NOT THE WHOLE SECTION. Bounding this by the
+# `## 1. Survey` .. `## 2. Select` headings spanned the full-survey prose as well, so
+# moving the sentence out of the operative checks and into that half still matched --
+# the regression this helper exists to catch would have passed it. Explicit markers
+# make the region the document actually enacts, and a rename of either heading can no
+# longer silently widen it.
 resume_block() { # skill
-  awk '/^## 1\. Survey/{inblock=1} /^## 2\. Select/{inblock=0} inblock' "$1"
+  awk '/^<!-- resume-preemption:begin -->/{inblock=1; next} /^<!-- resume-preemption:end -->/{inblock=0} inblock' "$1"
 }
 
 check_resume_pentad_contract() { # skill
@@ -112,7 +119,7 @@ fi
 complete_fixture="$tmp/complete.md"
 # The pentad sentence is placed inside the resume block, because that is where the
 # contract requires it -- the fixture models the real document structure.
-printf '%s\n%s\n%s\n## 1. Survey\n%s\n## 2. Select\n' \
+printf '%s\n%s\n%s\n## 1. Survey\n<!-- resume-preemption:begin -->\n%s\n<!-- resume-preemption:end -->\n## 2. Select\n' \
   "$readiness_contract" "$session_contract" "$trusted_merge_contract" "$resume_pentad_contract" >"$complete_fixture"
 if check_readiness_contract "$complete_fixture" &&
   check_no_partial_shorthand "$complete_fixture" &&
@@ -162,13 +169,37 @@ else
 fi
 
 misplaced_pentad_fixture="$tmp/misplaced-pentad.md"
-printf '%s\n%s\n%s\n## 1. Survey\n## 2. Select\n%s\n' \
+printf '%s\n%s\n%s\n## 1. Survey\n<!-- resume-preemption:begin -->\n<!-- resume-preemption:end -->\n## 2. Select\n%s\n' \
   "$readiness_contract" "$session_contract" "$trusted_merge_contract" "$resume_pentad_contract" >"$misplaced_pentad_fixture"
 if check_resume_pentad_contract "$misplaced_pentad_fixture"; then
   printf '  ❌ pentad sentence outside the resume block unexpectedly passes\n' >&2
   fail=1
 else
   printf '  ✅ pentad sentence outside the resume block fails closed\n'
+fi
+
+# THE REGRESSION THIS HELPER NAMES: the sentence demoted out of the operative checks
+# and into the full-survey prose, still inside `## 1. Survey`. A heading-bounded region
+# matched it and reported a pass over a contract that no longer governed anything.
+full_survey_half_fixture="$tmp/pentad-in-full-survey-half.md"
+printf '%s\n%s\n%s\n## 1. Survey\n<!-- resume-preemption:begin -->\n- preemption checks\n<!-- resume-preemption:end -->\nFor reference, the full survey reports %s\n## 2. Select\n' \
+  "$readiness_contract" "$session_contract" "$trusted_merge_contract" "$resume_pentad_contract" >"$full_survey_half_fixture"
+if check_resume_pentad_contract "$full_survey_half_fixture"; then
+  printf '  ❌ pentad sentence demoted to the full-survey half unexpectedly passes\n' >&2
+  fail=1
+else
+  printf '  ✅ pentad sentence demoted to the full-survey half fails closed\n'
+fi
+
+# A missing marker pair must fail closed rather than search the whole file.
+unmarked_fixture="$tmp/pentad-unmarked.md"
+printf '%s\n%s\n%s\n## 1. Survey\n%s\n## 2. Select\n' \
+  "$readiness_contract" "$session_contract" "$trusted_merge_contract" "$resume_pentad_contract" >"$unmarked_fixture"
+if check_resume_pentad_contract "$unmarked_fixture"; then
+  printf '  ❌ pentad sentence with no preemption markers unexpectedly passes\n' >&2
+  fail=1
+else
+  printf '  ✅ missing preemption markers fail closed\n'
 fi
 
 abbreviated_pentad_fixture="$tmp/abbreviated-pentad.md"
