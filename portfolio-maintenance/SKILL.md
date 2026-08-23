@@ -2,7 +2,8 @@
 name: portfolio-maintenance
 description: >-
   The run loop for an autonomous AI engineer acting as a portfolio's primary
-  engineer — pre-flight, survey every product's live state, select the
+  engineer — pre-flight, resume in-flight work or survey every product's live
+  state, select the
   highest-value work (operate before advance), act through isolated per-run
   working copies and draft PRs self-promoted on genuine readiness (driving
   trusted-author PRs to merge), then report and bank learnings. Use when
@@ -15,7 +16,7 @@ license: Apache-2.0
 
 This is the run procedure for an autonomous engineer that both **operates** a portfolio of products
 (keeps CI, dependencies, and PRs healthy) and **advances** it (strategy, features, coverage,
-performance, quality). Each run follows the same four movements — **survey → select → act → report**
+performance, quality). Each run follows the same four movements — **survey (or resume) → select → act → report**
 — under one discipline: an isolated per-run working copy, validate before any PR, fix at the root
 cause, a **draft PR** with an AI-disclosure line (the checkpoint), **self-promoted only on genuine
 readiness as defined below**, then driven to merge per the **Trust gate**, one concern per PR, never
@@ -58,7 +59,41 @@ skill says "per the *X* section", the consuming repo supplies the concrete fact.
    needs-attention notes, investigation caches, learnings). Treat it as your own notes: it may be
    stale, so **verify against live state before acting on it**.
 
-## 1. Survey — the whole portfolio, cheaply
+## 1. Survey — but only when you do not already know your next move
+
+🔴 **RESUME BEFORE YOU SURVEY.** A run that already has an in-flight artifact usually knows its next
+action before any survey returns, because the selection ladder forbids descending past open work — so
+the rest of the digest cannot change the decision. Check for work in hand **first**, with a direct read
+rather than a subagent:
+
+**Resume, and skip the full survey, when BOTH hold:**
+- durable memory carries a carry-forward naming a specific in-flight artifact, **and**
+- one direct read confirms it is still non-terminal and still yours to advance.
+
+Then read that artifact's own state and go to **Select**. Do not dispatch the survey.
+
+🔴 **Why this is worth a rule: the cost of a survey is the DISPATCH, not the queries.** Where the survey
+runs as a subagent it re-sends the whole agent definition on every dispatch, and where the runtime's
+prompt cache expires faster than the schedule fires, none of that is reused — so each dispatch pays in
+full before a single query runs. **Trimming what the survey reports therefore saves almost nothing;
+only not dispatching it saves anything.** That is why this gate is placed before the survey rather than
+inside it.
+
+**Two things still happen on EVERY run, because they are cheap and they are what the survey was
+protecting:**
+- the **default-branch breakage check** — one direct query, no subagent, since breakage preempts
+  everything;
+- **re-verifying the resumed artifact against live state**, because memory goes stale and another
+  instance may have advanced or finished it.
+
+**Dispatch the full survey when** there is no such carry-forward, **or** the artifact is terminal,
+**or** no full survey has run within the staleness bound — **4 hours** unless the deployment's
+**Cadence** names another. The bound is what keeps this from becoming *never survey*: discovery of new
+issues is delayed by at most that interval, never dropped, while breakage stays checked every run.
+
+⚠️ **Never let a resumed run become a stalled one.** If the resumed artifact turns out terminal,
+blocked, or owned by another instance, fall through to the full survey in the same run rather than
+exiting — "I had work in hand" is a reason to skip the survey, never a reason to ship nothing.
 
 Build one compact picture of the portfolio's live state. Where your runtime supports subagents,
 **delegate the survey to a read-only subagent** that returns a digest, so the raw query output stays
