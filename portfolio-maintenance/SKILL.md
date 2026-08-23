@@ -66,11 +66,24 @@ action before any survey returns, because the selection ladder forbids descendin
 the rest of the digest cannot change the decision. Check for work in hand **first**, with a direct read
 rather than a subagent:
 
-**Resume, and skip the full survey, when BOTH hold:**
+**Resume, and skip the full survey, only when ALL THREE hold:**
 - durable memory carries a carry-forward naming a specific in-flight artifact, **and**
-- one direct read confirms it is still non-terminal and still yours to advance.
+- one direct read confirms it is still non-terminal and still yours to advance, **and**
+- a full survey has run within the staleness bound below.
 
 Then read that artifact's own state and go to **Select**. Do not dispatch the survey.
+
+🔴 **Freshness is a PREREQUISITE of resuming, not a separate rule that competes with it.** Stated as
+its own clause it would contradict this one whenever a live carry-forward met a stale survey — and
+whichever instruction won, the bound could be bypassed indefinitely, which removes the guarantee that
+makes skipping safe at all.
+
+🔴 **Resume only when the carry-forward is at a rung the cheap checks actually cover** — breakage or an
+open own/trusted PR. When it is *advance* work (an issue implementation, a roadmap pass, research),
+the ladder ranks contributor triage, security posture and upkeep **above** it, and the abbreviated
+checks below do not look at any of those. Skipping the survey there would let a run continue
+lower-priority work while something that outranks it went undiscovered, which is the same inversion
+this gate exists to prevent. Advance work therefore takes the survey.
 
 🔴 **Why this is worth a rule: the cost of a survey is the DISPATCH, not the queries.** Where the survey
 runs as a subagent it re-sends the whole agent definition on every dispatch, and where the runtime's
@@ -96,9 +109,9 @@ roadmap and triage state that the ladder forbids descending to while higher work
 preemption check surfaces something outranking the resumed artifact, that becomes the run's work and
 the carry-forward waits.
 
-**Dispatch the full survey when** there is no such carry-forward, **or** the artifact is terminal,
-**or** no full survey has run within the staleness bound — **4 hours** unless the deployment's
-**Cadence** names another. The bound is what keeps this from becoming *never survey*: discovery of new
+**Dispatch the full survey whenever any resume prerequisite fails** — no carry-forward, a terminal
+artifact, advance-level work, or no full survey within the staleness bound of **4 hours** unless the
+deployment's **Cadence** names another. The bound is what keeps this from becoming *never survey*: discovery of new
 issues is delayed by at most that interval, never dropped, while breakage stays checked every run.
 
 ⚠️ **Never let a resumed run become a stalled one.** If the resumed artifact turns out terminal,
