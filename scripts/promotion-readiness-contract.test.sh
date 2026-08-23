@@ -52,9 +52,23 @@ check_trusted_merge_contract() { # skill
 # pentad members that a red/merge-ready reading cannot see -- a draft with green
 # checks, no threads and no findings can still be conflicted or simply unreviewed
 # at its current head, and is then neither red nor merge-ready.
+# The sentence must sit INSIDE the resume preemption block, not merely somewhere in
+# the file: if a later edit moved it into explanatory prose and dropped the operative
+# check, a whole-file search would still pass and the contract would be satisfied by
+# text that no longer governs anything.
+resume_block() { # skill
+  awk '/^## 1\. Survey/{inblock=1} /^## 2\. Select/{inblock=0} inblock' "$1"
+}
+
 check_resume_pentad_contract() { # skill
-  local flat
-  flat="$(normalize "$1")"
+  local block flat
+  block="$(mktemp)"
+  resume_block "$1" >"$block"
+  # An empty region means the headings moved; fail closed rather than report a pass
+  # from a search over nothing.
+  [ -s "$block" ] || { rm -f "$block"; return 1; }
+  flat="$(normalize "$block")"
+  rm -f "$block"
   grep -Fq "$resume_pentad_contract" <<<"$flat"
 }
 
@@ -96,7 +110,10 @@ else
 fi
 
 complete_fixture="$tmp/complete.md"
-printf '%s\n%s\n%s\n%s\n' "$readiness_contract" "$session_contract" "$trusted_merge_contract" "$resume_pentad_contract" >"$complete_fixture"
+# The pentad sentence is placed inside the resume block, because that is where the
+# contract requires it -- the fixture models the real document structure.
+printf '%s\n%s\n%s\n## 1. Survey\n%s\n## 2. Select\n' \
+  "$readiness_contract" "$session_contract" "$trusted_merge_contract" "$resume_pentad_contract" >"$complete_fixture"
 if check_readiness_contract "$complete_fixture" &&
   check_no_partial_shorthand "$complete_fixture" &&
   check_session_contract "$complete_fixture" &&
@@ -142,6 +159,16 @@ if check_trusted_merge_contract "$missing_trusted_merge_fixture"; then
   fail=1
 else
   printf '  ✅ missing existing-PR merge rule fails closed\n'
+fi
+
+misplaced_pentad_fixture="$tmp/misplaced-pentad.md"
+printf '%s\n%s\n%s\n## 1. Survey\n## 2. Select\n%s\n' \
+  "$readiness_contract" "$session_contract" "$trusted_merge_contract" "$resume_pentad_contract" >"$misplaced_pentad_fixture"
+if check_resume_pentad_contract "$misplaced_pentad_fixture"; then
+  printf '  ❌ pentad sentence outside the resume block unexpectedly passes\n' >&2
+  fail=1
+else
+  printf '  ✅ pentad sentence outside the resume block fails closed\n'
 fi
 
 abbreviated_pentad_fixture="$tmp/abbreviated-pentad.md"

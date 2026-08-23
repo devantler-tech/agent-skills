@@ -70,8 +70,18 @@ rather than a subagent:
 - durable memory carries a carry-forward naming a specific in-flight artifact, **and**
 - that artifact is at a rung the direct checks below actually cover — breakage, or an open
   own/trusted PR — **never** advance work, **and**
-- one direct read confirms it is still non-terminal and still yours to advance, **and**
+- one direct read confirms it is still non-terminal and **still yours to advance — decided from
+  live evidence, never from the carry-forward itself**, **and**
 - a full survey has run within the staleness bound below.
+
+🔴 **A carry-forward records what WAS yours; it cannot establish that it still is.** It is written by
+one run and read by another, so two runs that both trust it resume the same artifact and duplicate its
+commits and comments — and the second one has no way to notice, because nothing it reads contradicts
+what it remembers. Ownership is therefore re-derived from live state on every resume: the artifact
+carries no newer activity from another writer, and whatever ownership token the deployment defines —
+a claim ref, a lease with an expiry, a writer namespace — still resolves to **this** run. Re-check that
+token immediately before the first resumed mutation as well, because a resume that took time to decide
+may have lost it in the meantime; if it no longer resolves, stand down and survey instead of writing.
 
 Then read that artifact's own state and go to **Select**. Do not dispatch the survey.
 
