@@ -32,7 +32,6 @@ This repo is a **pointer list** and publisher of in-house skills. Each row below
 | Skill | Upstream | Install |
 |-------|----------|---------|
 | `gh-stack` | [`github/gh-stack`](https://github.com/github/gh-stack/tree/main/skills/gh-stack) | `gh skill install github/gh-stack gh-stack` |
-| `github-actions-docs` | [`xixu-me/skills`](https://github.com/xixu-me/skills/tree/main/skills/github-actions-docs) | `gh skill install xixu-me/skills github-actions-docs` |
 | `github-issues` | [`github/awesome-copilot`](https://github.com/github/awesome-copilot/tree/main/skills/github-issues) | `gh skill install github/awesome-copilot github-issues` |
 
 </details>
