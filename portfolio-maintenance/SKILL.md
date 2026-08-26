@@ -61,18 +61,30 @@ skill says "per the *X* section", the consuming repo supplies the concrete fact.
 
 ## 1. Survey — but only when you do not already know your next move
 
-🔴 **RESUME BEFORE YOU SURVEY.** A run that already has an in-flight artifact usually knows its next
-action before any survey returns, because the selection ladder forbids descending past open work — so
-the rest of the digest cannot change the decision. Check for work in hand **first**, with a direct read
-rather than a subagent:
+🔴 **PREEMPT BEFORE YOU SURVEY.** The direct checks below run first on every run. They can establish
+the selection ladder's next action before a broad survey returns even when memory carries no
+in-flight artifact: lower-rung issue and roadmap state cannot change a decision already fixed by
+live breakage or trusted-PR work. Run those checks directly rather than dispatching a subagent.
 
-**Resume, and skip the full survey, only when ALL FOUR hold:**
-- durable memory carries a carry-forward naming a specific in-flight artifact, **and**
-- that artifact is at a rung the direct checks below actually cover — breakage, or an open
-  own/trusted PR — **never** advance work, **and**
-- one direct read confirms it is still non-terminal and **still yours to advance — decided from
-  live evidence, never from the carry-forward itself**, **and**
-- a full survey has run within the staleness bound below.
+<!-- survey-dispatch-gate:begin -->
+**Fresh** means the last full survey is still within the consuming deployment's staleness bound.
+**Higher-rung result** means the complete direct preemption checks establish either the next action
+or a live stop condition that forbids descending below breakage and trusted-PR work.
+**A carry-forward may narrow the direct read, but it is neither evidence of current ownership nor a
+prerequisite to skipping the survey.**
+An empty, incomplete, or **QUERY-UNKNOWN** direct preemption result is not a higher-rung result and
+therefore dispatches the full survey. Advance-level work by itself is not a higher-rung result.
+
+| Fresh | Higher-rung result | Full survey |
+| --- | --- | --- |
+| Yes | Yes | Skip |
+| Yes | No | Dispatch |
+| No | Either | Dispatch |
+<!-- survey-dispatch-gate:end -->
+
+When the table says **Skip**, use the direct result and go to **Select**. When it says **Dispatch**,
+build the full live picture below. This decision is about whether more discovery can change the
+current selection; it is not permission to mutate an artifact whose ownership is unknown.
 
 🔴 **A carry-forward records what WAS yours; it cannot establish that it still is.** It is written by
 one run and read by another, so two runs that both trust it resume the same artifact and duplicate its
@@ -92,18 +104,12 @@ mutation on the renewal succeeding. A renewal that fails means ownership is gone
 Where the deployment's token is a compare-and-swap, the renewal is also the proof; where it is a
 plain expiry, re-read it and treat any ambiguity as lost.
 
-Then read that artifact's own state and go to **Select**. Do not dispatch the survey.
-
-🔴 **Freshness is a PREREQUISITE of resuming, not a separate rule that competes with it.** Stated as
-its own clause it would contradict this one whenever a live carry-forward met a stale survey — and
-whichever instruction won, the bound could be bypassed indefinitely, which removes the guarantee that
-makes skipping safe at all.
-
-🔴 **Why the rung conjunct is there:** when the carry-forward is *advance* work (an issue
+🔴 **Why the higher-rung result is required:** when the only known work is *advance* work (an issue
 implementation, a roadmap pass, research), the ladder ranks contributor triage, security posture and
 upkeep **above** it, and the direct checks below do not look at any of those. Skipping the survey
 there would let a run continue lower-priority work while something outranking it went undiscovered —
-the same inversion this gate exists to prevent. Advance work therefore takes the survey.
+the same inversion this gate exists to prevent. With no live breakage or trusted-PR result, advance
+work therefore takes the survey.
 
 🔴 **Why this is worth a rule: the cost of a survey is the DISPATCH, not the queries.** Where the survey
 runs as a subagent it re-sends the whole agent definition on every dispatch, and where the runtime's
@@ -112,11 +118,10 @@ full before a single query runs. **Trimming what the survey reports therefore sa
 only not dispatching it saves anything.** That is why this gate is placed before the survey rather than
 inside it.
 
-🔴 **Resuming skips the SURVEY, never the PREEMPTION CHECKS.** Everything the operate ladder ranks at
-or above the resumed work still runs first, because a carry-forward names *one* artifact while those
-rules range over *all* of them — so a red PR in another repository, or a trusted-author PR that has
-become merge-ready, would otherwise sit untreated while the run advanced something lower down. On
-every run, resumed or not:
+🔴 **The short-circuit skips the SURVEY, never the PREEMPTION CHECKS.** A carry-forward names at most
+one artifact while these rules range over all higher-rung work — so a red PR in another repository,
+or a trusted-author PR that has become merge-ready, would otherwise sit untreated while the run
+advanced something lower down. On every run:
 
 <!-- resume-preemption:begin -->
 - **every breakage signal, not just the default branch** — a broken deployed site or release
@@ -152,23 +157,24 @@ a portfolio-wide deepening — so they cost a fraction of a dispatch.
 region between them, so this is the only place a preemption check counts as operative. Prose about
 these checks elsewhere in the section documents them; it does not enact them — and a check that
 drifts out of this region silently stops governing anything while still reading as present.
-🔴 **Every prerequisite this gate reads must have something that WRITES it.** The carry-forward and the
-last-full-survey timestamp are both produced by the write-back step below; a prerequisite with no
-producer is not a condition, it is a permanent false, and the optimisation silently never engages.
-Anything added to the predicate later needs a writer added with it.
-**What resuming actually skips is the broad survey**: deepening every candidate, and the issue,
+🔴 **Every prerequisite this gate reads must have something that WRITES it.** The last-full-survey
+timestamp is produced by the write-back step below; a prerequisite with no producer is not a
+condition, it is a permanent false, and the optimisation silently never engages. Anything added to
+the predicate later needs a writer added with it. A carry-forward is still written when work remains,
+but it is an optional targeting hint rather than part of the dispatch predicate.
+**What the short-circuit actually skips is the broad survey**: deepening every candidate, and the issue,
 roadmap and triage state that the ladder forbids descending to while higher work is open. If a
-preemption check surfaces something outranking the resumed artifact, that becomes the run's work and
-the carry-forward waits.
+preemption check surfaces something outranking a carried artifact, that result becomes the run's work
+and the carry-forward waits.
 
-**Dispatch the full survey whenever any resume prerequisite fails** — no carry-forward, a terminal
-artifact, advance-level work, or no full survey within the staleness bound of **4 hours** unless the
-deployment's **Cadence** names another. The bound is what keeps this from becoming *never survey*: discovery of new
-issues is delayed by at most that interval, never dropped, while breakage stays checked every run.
+The default staleness bound is **4 hours** unless the deployment's **Cadence** names another. The
+bound is what keeps this from becoming *never survey*: discovery of new issues is delayed by at most
+that interval, never dropped, while breakage stays checked every run.
 
-⚠️ **Never let a resumed run become a stalled one.** If the resumed artifact turns out terminal,
-blocked, or owned by another instance, fall through to the full survey in the same run rather than
-exiting — "I had work in hand" is a reason to skip the survey, never a reason to ship nothing.
+⚠️ **Never let a carry-forward become a stalled run.** A terminal artifact or ownership token lost to
+another instance cannot by itself satisfy the higher-rung-result row: continue the direct checks and
+apply the table. A live blocked artifact is a stop condition only when the selection rules genuinely
+forbid descent; name that blocker rather than treating remembered ownership as a reason to exit.
 
 Build one compact picture of the portfolio's live state. Where your runtime supports subagents,
 **delegate the survey to a read-only subagent** that returns a digest, so the raw query output stays

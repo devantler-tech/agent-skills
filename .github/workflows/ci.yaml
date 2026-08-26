@@ -164,6 +164,11 @@ jobs:
         # promotion and merge rather than reuse an earlier observation.
         run: ./scripts/promotion-readiness-contract.test.sh
 
+      - name: 🧪 Verify portfolio survey dispatch gate
+        # A complete fresh higher-rung preemption result makes broad discovery
+        # decision-irrelevant, while stale or incomplete evidence still surveys.
+        run: ./scripts/portfolio-maintenance-survey-gate.test.sh
+
       - name: 🧪 Self-test the installer
         # Pins install.sh's own contracts the index guard doesn't assert: --list
         # (and -l) print sorted, de-duplicated `<repo> <skill>` parsed only from
