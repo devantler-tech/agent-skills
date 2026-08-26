@@ -14,27 +14,60 @@ selection_contract="higher-rung result means the complete direct preemption chec
 carry_forward_contract="a carry-forward may narrow the direct read, but it is neither evidence of current ownership nor a prerequisite to skipping the survey."
 unknown_contract="an empty, incomplete, or query-unknown direct preemption result is not a higher-rung result and therefore dispatches the full survey."
 advance_contract="advance-level work by itself is not a higher-rung result."
+breakage_contract="every breakage signal, not just the default branch"
+pentad_contract="the complete hygiene pentad, not an abbreviation of it: failing required checks, unresolved review threads, non-thread review findings, a conflict with or lag behind the base, any pre-merge quality checks the review tooling publishes separately from ci, and a missing or stale current-head green review."
+control_contract="a scan of the maintainer control channel across the prs and issues this run can verify it created"
+ownership_contract="re-verifying the resumed artifact against live state"
+renewal_contract="renew the token on the same beat as the work — immediately before each mutation, and again after any pause the run did not control — and condition that mutation on the renewal succeeding."
+completion_contract="a full survey completes only when every mandatory survey query and the closing exact-head recheck succeed; skipped, failed, incomplete, or query-unknown survey evidence does not advance the timestamp, and a missing or malformed timestamp is stale."
 expected_table='fresh:higher-rung result=full survey
 yes:yes=skip
 yes:no=dispatch
 no:either=dispatch'
 
 normalize() {
-  LC_ALL=C tr '\n' ' ' <"$1" |
-    LC_ALL=C tr '[:upper:]' '[:lower:]' |
-    LC_ALL=C tr -d '*' |
-    LC_ALL=C sed -E 's/[[:space:]]+/ /g'
+  LC_ALL=C awk '{
+    line=tolower($0)
+    gsub(/\*/, "", line)
+    gsub(/[[:space:]]+/, " ", line)
+    gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
+    if (line != "") printf "%s ", line
+  }' "$1"
+}
+
+bounded_block() { # file, begin pattern, end pattern
+  local file="$1" begin="$2" end="$3"
+  LC_ALL=C awk -v begin="$begin" -v end="$end" '
+    $0 ~ begin {
+      begin_n++
+      if (begin_n == 1) {
+        begin_at=NR
+        in_block=1
+      }
+      next
+    }
+    $0 ~ end {
+      end_n++
+      if (end_n == 1) {
+        end_at=NR
+        in_block=0
+      }
+      next
+    }
+    in_block { block=block $0 ORS }
+    END {
+      if (begin_n != 1 || end_n != 1 || begin_at >= end_at || block == "") exit 1
+      printf "%s", block
+    }
+  ' "$file"
 }
 
 decision_block() { # skill
-  local begin_n end_n begin_at end_at
-  begin_n="$(grep -c '^<!-- survey-dispatch-gate:begin -->' "$1" || true)"
-  end_n="$(grep -c '^<!-- survey-dispatch-gate:end -->' "$1" || true)"
-  [ "$begin_n" -eq 1 ] && [ "$end_n" -eq 1 ] || return 1
-  begin_at="$(grep -n '^<!-- survey-dispatch-gate:begin -->' "$1" | cut -d: -f1)"
-  end_at="$(grep -n '^<!-- survey-dispatch-gate:end -->' "$1" | cut -d: -f1)"
-  [ "$begin_at" -lt "$end_at" ] || return 1
-  awk '/^<!-- survey-dispatch-gate:begin -->/{inblock=1; next} /^<!-- survey-dispatch-gate:end -->/{inblock=0} inblock' "$1"
+  bounded_block "$1" '^### Survey dispatch decision$' '^### Survey dispatch procedure$'
+}
+
+preemption_block() { # skill
+  bounded_block "$1" '^<!-- resume-preemption:begin -->$' '^<!-- resume-preemption:end -->$'
 }
 
 decision_table() { # skill
@@ -54,20 +87,37 @@ decision_table() { # skill
     '
 }
 
+check_preemption_contract() { # skill
+  local block flat
+  block="$(mktemp)"
+  preemption_block "$1" >"$block" || { rm -f "$block"; return 1; }
+  [ -s "$block" ] || { rm -f "$block"; return 1; }
+  flat="$(normalize "$block")"
+  rm -f "$block"
+  grep -Fq "$breakage_contract" <<<"$flat" &&
+    grep -Fq "$pentad_contract" <<<"$flat" &&
+    grep -Fq "$control_contract" <<<"$flat" &&
+    grep -Fq "$ownership_contract" <<<"$flat"
+}
+
 check_gate_contract() { # skill
-  local block flat actual_table
+  local block flat actual_table skill_flat
   block="$(mktemp)"
   decision_block "$1" >"$block" || { rm -f "$block"; return 1; }
   [ -s "$block" ] || { rm -f "$block"; return 1; }
   flat="$(normalize "$block")"
   actual_table="$(decision_table "$1")"
   rm -f "$block"
+  skill_flat="$(normalize "$1")"
   grep -Fq "$freshness_contract" <<<"$flat" &&
     grep -Fq "$selection_contract" <<<"$flat" &&
     grep -Fq "$carry_forward_contract" <<<"$flat" &&
     grep -Fq "$unknown_contract" <<<"$flat" &&
     grep -Fq "$advance_contract" <<<"$flat" &&
-    [ "$actual_table" = "$expected_table" ]
+    [ "$actual_table" = "$expected_table" ] &&
+    check_preemption_contract "$1" &&
+    grep -Fq "$renewal_contract" <<<"$skill_flat" &&
+    grep -Fq "$completion_contract" <<<"$skill_flat"
 }
 
 fail=0
@@ -80,9 +130,11 @@ else
 fi
 
 complete_fixture="$tmp/complete.md"
-printf '<!-- survey-dispatch-gate:begin -->\n%s\n%s\n%s\n%s\n%s\n\n| Fresh | Higher-rung result | Full survey |\n| --- | --- | --- |\n| Yes | Yes | Skip |\n| Yes | No | Dispatch |\n| No | Either | Dispatch |\n<!-- survey-dispatch-gate:end -->\n' \
+printf '### Survey dispatch decision\n%s\n%s\n%s\n%s\n%s\n\n| Fresh | Higher-rung result | Full survey |\n| --- | --- | --- |\n| Yes | Yes | Skip |\n| Yes | No | Dispatch |\n| No | Either | Dispatch |\n### Survey dispatch procedure\n%s\n%s\n<!-- resume-preemption:begin -->\n%s\n%s\n%s\n%s\n<!-- resume-preemption:end -->\n' \
   "$freshness_contract" "$selection_contract" "$carry_forward_contract" \
-  "$unknown_contract" "$advance_contract" >"$complete_fixture"
+  "$unknown_contract" "$advance_contract" "$renewal_contract" "$completion_contract" \
+  "$breakage_contract" "$pentad_contract" "$control_contract" \
+  "$ownership_contract" >"$complete_fixture"
 if check_gate_contract "$complete_fixture"; then
   printf '  ✅ complete dispatch table passes\n'
 else
@@ -139,12 +191,59 @@ else
 fi
 
 unterminated_fixture="$tmp/unterminated.md"
-sed '/survey-dispatch-gate:end/d' "$complete_fixture" >"$unterminated_fixture"
+sed '/^### Survey dispatch procedure$/d' "$complete_fixture" >"$unterminated_fixture"
 if check_gate_contract "$unterminated_fixture"; then
   printf '  ❌ unterminated dispatch gate unexpectedly passes\n' >&2
   fail=1
 else
   printf '  ✅ unterminated dispatch gate fails closed\n'
+fi
+
+for check_spec in \
+  "breakage|$breakage_contract" \
+  "pentad|$pentad_contract" \
+  "control channel|$control_contract" \
+  "live ownership|$ownership_contract"; do
+  check_name="${check_spec%%|*}"
+  check_text="${check_spec#*|}"
+  missing_preemption_check_fixture="$tmp/missing-preemption-${check_name// /-}.md"
+  LC_ALL=C awk -v check_text="$check_text" '$0 != check_text' \
+    "$complete_fixture" >"$missing_preemption_check_fixture"
+  if check_gate_contract "$missing_preemption_check_fixture"; then
+    printf '  ❌ missing operative %s check unexpectedly passes\n' "$check_name" >&2
+    fail=1
+  else
+    printf '  ✅ missing operative %s check fails closed\n' "$check_name"
+  fi
+done
+
+missing_preemption_marker_fixture="$tmp/missing-preemption-marker.md"
+sed '/^<!-- resume-preemption:begin -->$/d' "$complete_fixture" \
+  >"$missing_preemption_marker_fixture"
+if check_gate_contract "$missing_preemption_marker_fixture"; then
+  printf '  ❌ missing preemption marker unexpectedly passes\n' >&2
+  fail=1
+else
+  printf '  ✅ missing preemption marker fails closed\n'
+fi
+
+missing_renewal_fixture="$tmp/missing-renewal.md"
+sed "/renew the token on the same beat/d" "$complete_fixture" >"$missing_renewal_fixture"
+if check_gate_contract "$missing_renewal_fixture"; then
+  printf '  ❌ missing per-mutation ownership renewal unexpectedly passes\n' >&2
+  fail=1
+else
+  printf '  ✅ missing per-mutation ownership renewal fails closed\n'
+fi
+
+missing_completion_fixture="$tmp/missing-survey-completion.md"
+LC_ALL=C awk -v completion="$completion_contract" '$0 != completion' \
+  "$complete_fixture" >"$missing_completion_fixture"
+if check_gate_contract "$missing_completion_fixture"; then
+  printf '  ❌ incomplete survey evidence can unexpectedly refresh the cursor\n' >&2
+  fail=1
+else
+  printf '  ✅ incomplete survey evidence cannot refresh the cursor\n'
 fi
 
 if [ "$fail" -ne 0 ]; then

@@ -66,7 +66,8 @@ the selection ladder's next action before a broad survey returns even when memor
 in-flight artifact: lower-rung issue and roadmap state cannot change a decision already fixed by
 live breakage or trusted-PR work. Run those checks directly rather than dispatching a subagent.
 
-<!-- survey-dispatch-gate:begin -->
+### Survey dispatch decision
+
 **Fresh** means the last full survey is still within the consuming deployment's staleness bound.
 **Higher-rung result** means the complete direct preemption checks establish either the next action
 or a live stop condition that forbids descending below breakage and trusted-PR work.
@@ -80,7 +81,8 @@ therefore dispatches the full survey. Advance-level work by itself is not a high
 | Yes | Yes | Skip |
 | Yes | No | Dispatch |
 | No | Either | Dispatch |
-<!-- survey-dispatch-gate:end -->
+
+### Survey dispatch procedure
 
 When the table says **Skip**, use the direct result and go to **Select**. When it says **Dispatch**,
 build the full live picture below. This decision is about whether more discovery can change the
@@ -305,11 +307,13 @@ runs in a short window be more selective — dedupe against what earlier runs al
 ## 4. Report — update memory, then one consolidated report
 
 - **Memory write-back** (per the **Memory** section): record the **carry-forward** — the specific
-  in-flight artifact this run leaves unfinished, its identity and what it still needs — because the
-  resume gate's first prerequisite reads exactly that, and nothing else writes it; record a
-  **last-full-survey timestamp**
-  whenever a full survey completes — the resume predicate's freshness prerequisite is unevaluable
-  without it, leaving a later run to survey every time or to guess and risk breaking the bound — then
+  in-flight artifact this run leaves unfinished, its identity and what it still needs — because it
+  narrows the next run's direct read even though live evidence still decides ownership and dispatch;
+  record a **last-full-survey timestamp** whenever a full survey completes — the dispatch predicate's
+  freshness prerequisite is unevaluable without it, leaving a later run to survey every time or to
+  guess and risk breaking the bound. **A full survey completes only when every mandatory survey query
+  and the closing exact-head recheck succeed; skipped, failed, incomplete, or QUERY-UNKNOWN survey
+  evidence does not advance the timestamp, and a missing or malformed timestamp is stale.** Then
   update the rotation cursor, each touched
   product's cursors, needs-attention notes, caches, and learnings. Keep the store coherent — edit in
   place, prune stale entries, bound the recent-run history so the start-of-run read stays small, and
