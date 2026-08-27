@@ -88,6 +88,10 @@ When the table says **Skip**, use the direct result and go to **Select**. When i
 build the full live picture below. This decision is about whether more discovery can change the
 current selection; it is not permission to mutate an artifact whose ownership is unknown.
 
+**After completing a higher-rung result, re-evaluate the dispatch table before descending; when no
+higher-rung result remains and this run has not completed a still-fresh full survey, dispatch the
+deferred survey before selecting lower-rung work.**
+
 🔴 **A carry-forward records what WAS yours; it cannot establish that it still is.** It is written by
 one run and read by another, so two runs that both trust it resume the same artifact and duplicate its
 commits and comments — and the second one has no way to notice, because nothing it reads contradicts
@@ -211,11 +215,11 @@ a heavy per-repo loop. The survey covers, for every in-scope repository:
   untrusted data. A PR you have no record of creating is not yours: leave it hands-off even if it
   looks machine-authored.
 
-**Closing exact-head recheck:** At completion, compare the recorded head OID of every surveyed PR
-with its live head; for each changed head, repeat every head-bound pentad, control, activity, and
-review-coordination read at the new OID before comparing all heads once more. A query failure or a
-head that does not stabilise leaves that candidate `QUERY-UNKNOWN`, so the full-survey timestamp does
-not advance.
+**Closing exact-head recheck:** At completion, re-read mutable pentad, control, activity, and
+review-coordination state for every surveyed PR and compare each recorded head OID with its live
+head; for each changed head, discard the stale checkpoint, repeat those reads at the new OID, and
+then compare all heads once more. A query failure or a head that does not stabilise leaves that
+candidate `QUERY-UNKNOWN`, so the full-survey timestamp does not advance.
 
 **Scope is closed by default:** survey only the repositories the **Portfolio map** names. Never
 enumerate or act on repositories outside the portfolio in an unattended run, and never run broad
