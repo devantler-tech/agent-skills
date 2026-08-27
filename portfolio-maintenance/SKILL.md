@@ -95,6 +95,7 @@ what it remembers. Ownership is therefore re-derived from live state on every re
 carries no newer activity from another writer, and whatever ownership token the deployment defines —
 a claim ref, a lease with an expiry, a writer namespace — still resolves to **this** run.
 
+<!-- resume-mutation-renewal:begin -->
 🔴 **THAT TOKEN FENCES EVERY RESUMED MUTATION, NOT THE FIRST ONE.** A resumed operation routinely
 outlives the lease it started under — a build, a review wait, a slow check — so a run that verifies
 ownership once and then keeps writing has fenced only its opening commit. Another run acquires the
@@ -105,6 +106,7 @@ mutation on the renewal succeeding. A renewal that fails means ownership is gone
 **stand down without writing**, rather than completing "just this one" already-prepared push.
 Where the deployment's token is a compare-and-swap, the renewal is also the proof; where it is a
 plain expiry, re-read it and treat any ambiguity as lost.
+<!-- resume-mutation-renewal:end -->
 
 🔴 **Why the higher-rung result is required:** when the only known work is *advance* work (an issue
 implementation, a roadmap pass, research), the ladder ranks contributor triage, security posture and
@@ -307,6 +309,7 @@ runs in a short window be more selective — dedupe against what earlier runs al
 
 ## 4. Report — update memory, then one consolidated report
 
+<!-- survey-write-back:begin -->
 - **Memory write-back** (per the **Memory** section): record the **carry-forward** — the specific
   in-flight artifact this run leaves unfinished, its identity and what it still needs — because it
   narrows the next run's direct read even though live evidence still decides ownership and dispatch;
@@ -322,6 +325,7 @@ runs in a short window be more selective — dedupe against what earlier runs al
   holds cursors and durable notes). Never park a "maintainer decision needed" note in memory as if
   filing it reached anyone — reach the human actively per the **Maintainer channels** section, or
   ship the decision as a draft PR.
+<!-- survey-write-back:end -->
 - **Report:** end with a concise maintainer report — what was surveyed, what shipped (with PR
   links), and what still needs attention (own drafts missing a readiness condition, genuine
   blockers). The report is a record, not an attention channel: anything needing action goes via the

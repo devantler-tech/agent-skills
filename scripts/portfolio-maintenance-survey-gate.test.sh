@@ -93,6 +93,15 @@ preemption_precedes_full_survey() { # skill
   ' "$1"
 }
 
+contract_in_block() { # skill, begin pattern, end pattern, normalized contract
+  local block flat
+  block="$(mktemp)"
+  bounded_block "$1" "$2" "$3" >"$block" || { rm -f "$block"; return 1; }
+  flat="$(normalize "$block")"
+  rm -f "$block"
+  grep -Fq "$4" <<<"$flat"
+}
+
 decision_table() { # skill
   decision_block "$1" |
     awk -F '|' '
@@ -125,14 +134,13 @@ check_preemption_contract() { # skill
 }
 
 check_gate_contract() { # skill
-  local block flat actual_table skill_flat
+  local block flat actual_table
   block="$(mktemp)"
   decision_block "$1" >"$block" || { rm -f "$block"; return 1; }
   [ -s "$block" ] || { rm -f "$block"; return 1; }
   flat="$(normalize "$block")"
   actual_table="$(decision_table "$1")"
   rm -f "$block"
-  skill_flat="$(normalize "$1")"
   grep -Fq "$freshness_contract" <<<"$flat" &&
     grep -Fq "$selection_contract" <<<"$flat" &&
     grep -Fq "$carry_forward_contract" <<<"$flat" &&
@@ -141,8 +149,10 @@ check_gate_contract() { # skill
     [ "$actual_table" = "$expected_table" ] &&
     check_preemption_contract "$1" &&
     preemption_precedes_full_survey "$1" &&
-    grep -Fq "$renewal_contract" <<<"$skill_flat" &&
-    grep -Fq "$completion_contract" <<<"$skill_flat"
+    contract_in_block "$1" '^<!-- resume-mutation-renewal:begin -->$' \
+      '^<!-- resume-mutation-renewal:end -->$' "$renewal_contract" &&
+    contract_in_block "$1" '^<!-- survey-write-back:begin -->$' \
+      '^<!-- survey-write-back:end -->$' "$completion_contract"
 }
 
 fail=0
@@ -161,7 +171,7 @@ preemption_body=""
 for check_spec in "${preemption_checks[@]}"; do
 	preemption_body+="${check_spec#*|}"$'\n'
 done
-printf '### Survey dispatch decision\n%s\n%s\n%s\n%s\n%s\n\n| Fresh | Higher-rung result | Full survey |\n| --- | --- | --- |\n| Yes | Yes | Skip |\n| Yes | No | Dispatch |\n| No | Either | Dispatch |\n### Survey dispatch procedure\n%s\n%s\n<!-- resume-preemption:begin -->\n%s<!-- resume-preemption:end -->\n<!-- full-survey:begin -->\n' \
+printf '### Survey dispatch decision\n%s\n%s\n%s\n%s\n%s\n\n| Fresh | Higher-rung result | Full survey |\n| --- | --- | --- |\n| Yes | Yes | Skip |\n| Yes | No | Dispatch |\n| No | Either | Dispatch |\n### Survey dispatch procedure\n<!-- resume-mutation-renewal:begin -->\n%s\n<!-- resume-mutation-renewal:end -->\n<!-- survey-write-back:begin -->\n%s\n<!-- survey-write-back:end -->\n<!-- resume-preemption:begin -->\n%s<!-- resume-preemption:end -->\n<!-- full-survey:begin -->\n' \
   "$freshness_contract" "$selection_contract" "$carry_forward_contract" \
   "$unknown_contract" "$advance_contract" "$renewal_contract" "$completion_contract" \
   "$preemption_body" >"$complete_fixture"
@@ -288,6 +298,32 @@ if check_gate_contract "$missing_completion_fixture"; then
   fail=1
 else
   printf '  ✅ incomplete survey evidence cannot refresh the cursor\n'
+fi
+
+relocated_renewal_fixture="$tmp/relocated-renewal.md"
+LC_ALL=C awk -v contract="$renewal_contract" '
+  $0 == contract { moved=$0; next }
+  { print }
+  $0 == "<!-- resume-mutation-renewal:end -->" { print moved }
+' "$complete_fixture" >"$relocated_renewal_fixture"
+if check_gate_contract "$relocated_renewal_fixture"; then
+  printf '  ❌ renewal outside resumed-mutation procedure unexpectedly passes\n' >&2
+  fail=1
+else
+  printf '  ✅ renewal outside resumed-mutation procedure fails closed\n'
+fi
+
+relocated_completion_fixture="$tmp/relocated-completion.md"
+LC_ALL=C awk -v contract="$completion_contract" '
+  $0 == contract { moved=$0; next }
+  { print }
+  $0 == "<!-- survey-write-back:end -->" { print moved }
+' "$complete_fixture" >"$relocated_completion_fixture"
+if check_gate_contract "$relocated_completion_fixture"; then
+  printf '  ❌ completion outside survey write-back unexpectedly passes\n' >&2
+  fail=1
+else
+  printf '  ✅ completion outside survey write-back fails closed\n'
 fi
 
 if [ "$fail" -ne 0 ]; then
