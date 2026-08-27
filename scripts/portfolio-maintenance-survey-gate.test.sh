@@ -82,6 +82,17 @@ preemption_block() { # skill
   bounded_block "$1" '^<!-- resume-preemption:begin -->$' '^<!-- resume-preemption:end -->$'
 }
 
+preemption_precedes_full_survey() { # skill
+  LC_ALL=C awk '
+    $0 == "<!-- resume-preemption:end -->" { preemption_end_n++; preemption_end_at=NR }
+    $0 == "<!-- full-survey:begin -->" { full_survey_n++; full_survey_at=NR }
+    END {
+      exit !(preemption_end_n == 1 && full_survey_n == 1 &&
+             preemption_end_at < full_survey_at)
+    }
+  ' "$1"
+}
+
 decision_table() { # skill
   decision_block "$1" |
     awk -F '|' '
@@ -129,6 +140,7 @@ check_gate_contract() { # skill
     grep -Fq "$advance_contract" <<<"$flat" &&
     [ "$actual_table" = "$expected_table" ] &&
     check_preemption_contract "$1" &&
+    preemption_precedes_full_survey "$1" &&
     grep -Fq "$renewal_contract" <<<"$skill_flat" &&
     grep -Fq "$completion_contract" <<<"$skill_flat"
 }
@@ -149,7 +161,7 @@ preemption_body=""
 for check_spec in "${preemption_checks[@]}"; do
 	preemption_body+="${check_spec#*|}"$'\n'
 done
-printf '### Survey dispatch decision\n%s\n%s\n%s\n%s\n%s\n\n| Fresh | Higher-rung result | Full survey |\n| --- | --- | --- |\n| Yes | Yes | Skip |\n| Yes | No | Dispatch |\n| No | Either | Dispatch |\n### Survey dispatch procedure\n%s\n%s\n<!-- resume-preemption:begin -->\n%s<!-- resume-preemption:end -->\n' \
+printf '### Survey dispatch decision\n%s\n%s\n%s\n%s\n%s\n\n| Fresh | Higher-rung result | Full survey |\n| --- | --- | --- |\n| Yes | Yes | Skip |\n| Yes | No | Dispatch |\n| No | Either | Dispatch |\n### Survey dispatch procedure\n%s\n%s\n<!-- resume-preemption:begin -->\n%s<!-- resume-preemption:end -->\n<!-- full-survey:begin -->\n' \
   "$freshness_contract" "$selection_contract" "$carry_forward_contract" \
   "$unknown_contract" "$advance_contract" "$renewal_contract" "$completion_contract" \
   "$preemption_body" >"$complete_fixture"
@@ -239,6 +251,24 @@ if check_gate_contract "$missing_preemption_marker_fixture"; then
   fail=1
 else
   printf '  ✅ missing preemption marker fails closed\n'
+fi
+
+relocated_preemption_fixture="$tmp/relocated-preemption.md"
+LC_ALL=C awk '
+  /^<!-- resume-preemption:begin -->$/ { moving=1; block=$0 ORS; next }
+  moving {
+    block=block $0 ORS
+    if ($0 == "<!-- resume-preemption:end -->") moving=0
+    next
+  }
+  { print }
+  /^<!-- full-survey:begin -->$/ { printf "%s", block }
+' "$complete_fixture" >"$relocated_preemption_fixture"
+if check_gate_contract "$relocated_preemption_fixture"; then
+  printf '  ❌ preemption region below full survey unexpectedly passes\n' >&2
+  fail=1
+else
+  printf '  ✅ preemption region below full survey fails closed\n'
 fi
 
 missing_renewal_fixture="$tmp/missing-renewal.md"

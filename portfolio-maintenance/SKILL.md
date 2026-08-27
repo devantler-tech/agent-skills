@@ -178,6 +178,7 @@ another instance cannot by itself satisfy the higher-rung-result row: continue t
 apply the table. A live blocked artifact is a stop condition only when the selection rules genuinely
 forbid descent; name that blocker rather than treating remembered ownership as a reason to exit.
 
+<!-- full-survey:begin -->
 Build one compact picture of the portfolio's live state. Where your runtime supports subagents,
 **delegate the survey to a read-only subagent** that returns a digest, so the raw query output stays
 out of your context; otherwise run the same leaned survey inline. Either way, keep the cheap
