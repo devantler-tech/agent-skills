@@ -20,6 +20,18 @@ control_contract="a scan of the maintainer control channel across the prs and is
 ownership_contract="re-verifying the resumed artifact against live state"
 renewal_contract="renew the token on the same beat as the work — immediately before each mutation, and again after any pause the run did not control — and condition that mutation on the renewal succeeding."
 completion_contract="a full survey completes only when every mandatory survey query and the closing exact-head recheck succeed; skipped, failed, incomplete, or query-unknown survey evidence does not advance the timestamp, and a missing or malformed timestamp is stale."
+
+# ONE registry of the operative preemption checks, in `label|contract` form.
+# Validation, fixture construction and mutation-case generation all read this
+# list, so a fifth check cannot be added to one site and silently omitted from
+# another — which would leave the fixture suite passing over a check nothing
+# asserts. (Repo principle: never hand-maintain a parallel list.)
+preemption_checks=(
+	"breakage|$breakage_contract"
+	"pentad|$pentad_contract"
+	"control channel|$control_contract"
+	"live ownership|$ownership_contract"
+)
 expected_table='fresh:higher-rung result=full survey
 yes:yes=skip
 yes:no=dispatch
@@ -94,10 +106,11 @@ check_preemption_contract() { # skill
   [ -s "$block" ] || { rm -f "$block"; return 1; }
   flat="$(normalize "$block")"
   rm -f "$block"
-  grep -Fq "$breakage_contract" <<<"$flat" &&
-    grep -Fq "$pentad_contract" <<<"$flat" &&
-    grep -Fq "$control_contract" <<<"$flat" &&
-    grep -Fq "$ownership_contract" <<<"$flat"
+  local spec
+  for spec in "${preemption_checks[@]}"; do
+    grep -Fq "${spec#*|}" <<<"$flat" || return 1
+  done
+  return 0
 }
 
 check_gate_contract() { # skill
@@ -130,11 +143,16 @@ else
 fi
 
 complete_fixture="$tmp/complete.md"
-printf '### Survey dispatch decision\n%s\n%s\n%s\n%s\n%s\n\n| Fresh | Higher-rung result | Full survey |\n| --- | --- | --- |\n| Yes | Yes | Skip |\n| Yes | No | Dispatch |\n| No | Either | Dispatch |\n### Survey dispatch procedure\n%s\n%s\n<!-- resume-preemption:begin -->\n%s\n%s\n%s\n%s\n<!-- resume-preemption:end -->\n' \
+# The preemption body is GENERATED from the registry rather than restated, so a
+# check added there appears in the fixture without a second edit.
+preemption_body=""
+for check_spec in "${preemption_checks[@]}"; do
+	preemption_body+="${check_spec#*|}"$'\n'
+done
+printf '### Survey dispatch decision\n%s\n%s\n%s\n%s\n%s\n\n| Fresh | Higher-rung result | Full survey |\n| --- | --- | --- |\n| Yes | Yes | Skip |\n| Yes | No | Dispatch |\n| No | Either | Dispatch |\n### Survey dispatch procedure\n%s\n%s\n<!-- resume-preemption:begin -->\n%s<!-- resume-preemption:end -->\n' \
   "$freshness_contract" "$selection_contract" "$carry_forward_contract" \
   "$unknown_contract" "$advance_contract" "$renewal_contract" "$completion_contract" \
-  "$breakage_contract" "$pentad_contract" "$control_contract" \
-  "$ownership_contract" >"$complete_fixture"
+  "$preemption_body" >"$complete_fixture"
 if check_gate_contract "$complete_fixture"; then
   printf '  ✅ complete dispatch table passes\n'
 else
@@ -199,11 +217,7 @@ else
   printf '  ✅ unterminated dispatch gate fails closed\n'
 fi
 
-for check_spec in \
-  "breakage|$breakage_contract" \
-  "pentad|$pentad_contract" \
-  "control channel|$control_contract" \
-  "live ownership|$ownership_contract"; do
+for check_spec in "${preemption_checks[@]}"; do
   check_name="${check_spec%%|*}"
   check_text="${check_spec#*|}"
   missing_preemption_check_fixture="$tmp/missing-preemption-${check_name// /-}.md"
