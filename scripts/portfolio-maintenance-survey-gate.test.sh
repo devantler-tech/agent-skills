@@ -20,6 +20,8 @@ control_contract="a scan of the maintainer control channel across the prs and is
 ownership_contract="re-verifying the resumed artifact against live state"
 renewal_contract="renew the token on the same beat as the work — immediately before each mutation, and again after any pause the run did not control — and condition that mutation on the renewal succeeding."
 completion_contract="a full survey completes only when every mandatory survey query and the closing exact-head recheck succeed; skipped, failed, incomplete, or query-unknown survey evidence does not advance the timestamp, and a missing or malformed timestamp is stale."
+closing_recheck_contract="at completion, compare the recorded head oid of every surveyed pr with its live head; for each changed head, repeat every head-bound pentad, control, activity, and review-coordination read at the new oid before comparing all heads once more."
+expected_preemption_labels=$'breakage\npentad\ncontrol channel\nlive ownership'
 
 # ONE registry of the operative preemption checks, in `label|contract` form.
 # Validation, fixture construction and mutation-case generation all read this
@@ -82,13 +84,26 @@ preemption_block() { # skill
   bounded_block "$1" '^<!-- resume-preemption:begin -->$' '^<!-- resume-preemption:end -->$'
 }
 
-preemption_precedes_full_survey() { # skill
+operative_markers_in_order() { # skill
   LC_ALL=C awk '
+    $0 == "### Survey dispatch procedure" { dispatch_n++; dispatch_at=NR }
+    $0 == "<!-- resume-mutation-renewal:begin -->" { renewal_begin_n++; renewal_begin_at=NR }
+    $0 == "<!-- resume-mutation-renewal:end -->" { renewal_end_n++; renewal_end_at=NR }
+    $0 == "<!-- resume-preemption:begin -->" { preemption_begin_n++; preemption_begin_at=NR }
     $0 == "<!-- resume-preemption:end -->" { preemption_end_n++; preemption_end_at=NR }
     $0 == "<!-- full-survey:begin -->" { full_survey_n++; full_survey_at=NR }
+    $0 == "## 2. Select — operate first, then advance" { select_n++; select_at=NR }
+    $0 == "<!-- survey-write-back:begin -->" { write_back_begin_n++; write_back_begin_at=NR }
+    $0 == "<!-- survey-write-back:end -->" { write_back_end_n++; write_back_end_at=NR }
     END {
-      exit !(preemption_end_n == 1 && full_survey_n == 1 &&
-             preemption_end_at < full_survey_at)
+      exit !(dispatch_n == 1 && renewal_begin_n == 1 && renewal_end_n == 1 &&
+             preemption_begin_n == 1 && preemption_end_n == 1 &&
+             full_survey_n == 1 && select_n == 1 &&
+             write_back_begin_n == 1 && write_back_end_n == 1 &&
+             dispatch_at < renewal_begin_at && renewal_begin_at < renewal_end_at &&
+             renewal_end_at < preemption_begin_at && preemption_begin_at < preemption_end_at &&
+             preemption_end_at < full_survey_at && full_survey_at < select_at &&
+             select_at < write_back_begin_at && write_back_begin_at < write_back_end_at)
     }
   ' "$1"
 }
@@ -100,6 +115,14 @@ contract_in_block() { # skill, begin pattern, end pattern, normalized contract
   flat="$(normalize "$block")"
   rm -f "$block"
   grep -Fq "$4" <<<"$flat"
+}
+
+check_preemption_registry() {
+  local actual="" spec
+  for spec in "${preemption_checks[@]}"; do
+    actual+="${spec%%|*}"$'\n'
+  done
+  [ "${actual%$'\n'}" = "$expected_preemption_labels" ]
 }
 
 decision_table() { # skill
@@ -147,12 +170,15 @@ check_gate_contract() { # skill
     grep -Fq "$unknown_contract" <<<"$flat" &&
     grep -Fq "$advance_contract" <<<"$flat" &&
     [ "$actual_table" = "$expected_table" ] &&
+    check_preemption_registry &&
     check_preemption_contract "$1" &&
-    preemption_precedes_full_survey "$1" &&
+    operative_markers_in_order "$1" &&
     contract_in_block "$1" '^<!-- resume-mutation-renewal:begin -->$' \
       '^<!-- resume-mutation-renewal:end -->$' "$renewal_contract" &&
     contract_in_block "$1" '^<!-- survey-write-back:begin -->$' \
-      '^<!-- survey-write-back:end -->$' "$completion_contract"
+      '^<!-- survey-write-back:end -->$' "$completion_contract" &&
+    contract_in_block "$1" '^<!-- full-survey:begin -->$' \
+      '^## 2\. Select — operate first, then advance$' "$closing_recheck_contract"
 }
 
 fail=0
@@ -171,16 +197,26 @@ preemption_body=""
 for check_spec in "${preemption_checks[@]}"; do
 	preemption_body+="${check_spec#*|}"$'\n'
 done
-printf '### Survey dispatch decision\n%s\n%s\n%s\n%s\n%s\n\n| Fresh | Higher-rung result | Full survey |\n| --- | --- | --- |\n| Yes | Yes | Skip |\n| Yes | No | Dispatch |\n| No | Either | Dispatch |\n### Survey dispatch procedure\n<!-- resume-mutation-renewal:begin -->\n%s\n<!-- resume-mutation-renewal:end -->\n<!-- survey-write-back:begin -->\n%s\n<!-- survey-write-back:end -->\n<!-- resume-preemption:begin -->\n%s<!-- resume-preemption:end -->\n<!-- full-survey:begin -->\n' \
+printf '### Survey dispatch decision\n%s\n%s\n%s\n%s\n%s\n\n| Fresh | Higher-rung result | Full survey |\n| --- | --- | --- |\n| Yes | Yes | Skip |\n| Yes | No | Dispatch |\n| No | Either | Dispatch |\n### Survey dispatch procedure\n<!-- resume-mutation-renewal:begin -->\n%s\n<!-- resume-mutation-renewal:end -->\n<!-- resume-preemption:begin -->\n%s<!-- resume-preemption:end -->\n<!-- full-survey:begin -->\n%s\n## 2. Select — operate first, then advance\n<!-- survey-write-back:begin -->\n%s\n<!-- survey-write-back:end -->\n' \
   "$freshness_contract" "$selection_contract" "$carry_forward_contract" \
-  "$unknown_contract" "$advance_contract" "$renewal_contract" "$completion_contract" \
-  "$preemption_body" >"$complete_fixture"
+  "$unknown_contract" "$advance_contract" "$renewal_contract" "$preemption_body" \
+  "$closing_recheck_contract" "$completion_contract" >"$complete_fixture"
 if check_gate_contract "$complete_fixture"; then
   printf '  ✅ complete dispatch table passes\n'
 else
   printf '  ❌ complete dispatch table unexpectedly fails\n' >&2
   fail=1
 fi
+
+saved_preemption_checks=("${preemption_checks[@]}")
+preemption_checks=("${preemption_checks[0]}" "${preemption_checks[2]}" "${preemption_checks[3]}")
+if check_gate_contract "$complete_fixture"; then
+  printf '  ❌ reduced preemption registry unexpectedly passes\n' >&2
+  fail=1
+else
+  printf '  ✅ reduced preemption registry fails closed\n'
+fi
+preemption_checks=("${saved_preemption_checks[@]}")
 
 carry_forward_required_fixture="$tmp/carry-forward-required.md"
 sed 's/nor a prerequisite to skipping the survey/and is required to skip the survey/' \
@@ -324,6 +360,56 @@ if check_gate_contract "$relocated_completion_fixture"; then
   fail=1
 else
   printf '  ✅ completion outside survey write-back fails closed\n'
+fi
+
+relocated_renewal_block_fixture="$tmp/relocated-renewal-block.md"
+LC_ALL=C awk '
+  /^<!-- resume-mutation-renewal:begin -->$/ { moving=1; block=$0 ORS; next }
+  moving {
+    block=block $0 ORS
+    if ($0 == "<!-- resume-mutation-renewal:end -->") moving=0
+    next
+  }
+  { print }
+  /^<!-- full-survey:begin -->$/ { printf "%s", block }
+' "$complete_fixture" >"$relocated_renewal_block_fixture"
+if check_gate_contract "$relocated_renewal_block_fixture"; then
+  printf '  ❌ renewal block below full survey unexpectedly passes\n' >&2
+  fail=1
+else
+  printf '  ✅ renewal block below full survey fails closed\n'
+fi
+
+relocated_write_back_block_fixture="$tmp/relocated-write-back-block.md"
+LC_ALL=C awk '
+  {
+    lines[NR]=$0
+    if ($0 == "<!-- survey-write-back:begin -->") begin_at=NR
+    if (begin_at && !end_at) block=block $0 ORS
+    if ($0 == "<!-- survey-write-back:end -->") end_at=NR
+  }
+  END {
+    for (i=1; i<=NR; i++) {
+      if (lines[i] == "<!-- full-survey:begin -->") printf "%s", block
+      if (i < begin_at || i > end_at) print lines[i]
+    }
+  }
+' "$complete_fixture" >"$relocated_write_back_block_fixture"
+if check_gate_contract "$relocated_write_back_block_fixture"; then
+  printf '  ❌ write-back block before full survey unexpectedly passes\n' >&2
+  fail=1
+else
+  printf '  ✅ write-back block before full survey fails closed\n'
+fi
+
+missing_closing_recheck_fixture="$tmp/missing-closing-recheck.md"
+LC_ALL=C awk -v contract="$closing_recheck_contract" '$0 != contract' \
+  "$complete_fixture" >"$missing_closing_recheck_fixture"
+if check_gate_contract "$missing_closing_recheck_fixture"; then
+  printf '  ❌ undefined closing exact-head recheck unexpectedly passes\n' >&2
+  fail=1
+else
+  printf '  ✅ undefined closing exact-head recheck fails closed\n'
 fi
 
 if [ "$fail" -ne 0 ]; then
