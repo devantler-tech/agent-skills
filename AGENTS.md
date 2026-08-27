@@ -111,6 +111,10 @@ shellcheck scripts/*.sh
 ./scripts/promotion-readiness-contract.test.sh # pins the complete promotion gate in each standalone
                                                # engineering skill and fresh revalidation before
                                                # both self-promotion and merge
+./scripts/portfolio-maintenance-survey-gate.test.sh # pins when a run may skip broad discovery: a
+                                                    # complete fresh higher-rung preemption result
+                                                    # makes it decision-irrelevant, while stale or
+                                                    # incomplete evidence still surveys
 
 # 4. (local only) Lint changed workflows.
 actionlint
