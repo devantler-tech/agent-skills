@@ -829,6 +829,105 @@ else
   printf '  ✅ contradictory shared-enumeration guidance fails closed\n'
 fi
 
+check_deployment_liveness_contract() { # skill
+  local flat flat_lower section
+  section="$(LC_ALL=C awk '
+    /^## 5\. Verify/ { capture=1 }
+    capture && /^---$/ { exit }
+    capture { print }
+  ' "$1")"
+  [ -n "$section" ] || return 1
+  flat="$(tr '\n' ' ' <<<"$section" | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//')"
+  flat_lower="$(tr '[:upper:]' '[:lower:]' <<<"$flat")"
+
+  # An adverse verdict must be gated on deployment, not merely stated near it.
+  grep -Eqi 'before any adverse verdict[^.]{0,80}prove the intervention is deployed' <<<"$flat" || return 1
+  # Deployment is established from CONTENT at the revision the runtime loads.
+  grep -Eqi 'content at[^.]{0,80}revision the consuming deployment loads' <<<"$flat" || return 1
+  # The insufficient evidence must be named, or "prove it is deployed" is satisfied by the merge.
+  grep -Eqi 'upstream merge[^.]{0,140}version string[^.]{0,140}is not delivery' <<<"$flat" || return 1
+  # WHY a merge is not delivery: intermediate hops. Without this the rule reads as a formality.
+  grep -Eqi '(synced|vendored)[^.]{0,100}only after every intermediate hop' <<<"$flat" || return 1
+  # The verdict mapping must sit in ONE clause; split across sentences it pins no substitution.
+  grep -Eqi 'not live is not-yet-due[^.]{0,80}blocked on rollout[^.]{0,60}never not-working' <<<"$flat" || return 1
+  # The blockage is work to pursue, not a reason to revert.
+  grep -Eqi 'stalled rollout is itself the finding' <<<"$flat" || return 1
+  # The ladder's own unchanged branch must carry the liveness condition, or the gate above is
+  # contradicted three lines later by the rule a reader actually executes.
+  grep -Eqi 'metric unchanged[^.]{0,60}intervention proven live' <<<"$flat" || return 1
+
+  case "$flat_lower" in
+    *"an upstream merge is sufficient"*|*"score an undeployed intervention not-working"*) return 1 ;;
+  esac
+}
+
+if check_deployment_liveness_contract "$skill"; then
+  printf '  ✅ Verify gates an adverse verdict on proven deployment\n'
+else
+  printf '  ❌ Verify does not require deployment liveness before an adverse verdict\n' >&2
+  fail=1
+fi
+
+liveness_good="$tmp/liveness-good.md"
+cat >"$liveness_good" <<'EOF'
+## 5. Verify
+
+Before any adverse verdict, prove the intervention is deployed. Establish deployment by reading the
+intervention's content at the revision the consuming deployment loads; an upstream merge, a version
+string, or a green check on the authoring pull request is not delivery, because a synced or vendored
+artifact reaches the runtime only after every intermediate hop lands. An intervention that is not
+live is NOT-YET-DUE, blocked on rollout, never NOT-WORKING, and the stalled rollout is itself the
+finding to pursue rather than a reason to revert.
+- metric unchanged and the intervention proven live, the diagnosis was wrong.
+
+---
+EOF
+
+if check_deployment_liveness_contract "$liveness_good"; then
+  printf '  ✅ liveness good fixture passes\n'
+else
+  printf '  ❌ liveness good fixture unexpectedly fails\n' >&2
+  fail=1
+fi
+
+# One isolating ablation per conjunct. Each is cmp-guarded: a sed that changed nothing would
+# otherwise "pass" the ablation while proving the conjunct discriminates nothing.
+while IFS='|' read -r label expr; do
+  [ -n "$label" ] || continue
+  bad="$tmp/liveness-bad-$label.md"
+  sed -E "$expr" "$liveness_good" >"$bad"
+  if cmp -s "$liveness_good" "$bad"; then
+    printf '  ❌ liveness ablation %s changed nothing\n' "$label" >&2
+    fail=1
+  elif check_deployment_liveness_contract "$bad"; then
+    printf '  ❌ liveness ablation %s still passes\n' "$label" >&2
+    fail=1
+  else
+    printf '  ✅ liveness ablation %s fails closed\n' "$label"
+  fi
+done <<'EOF'
+gate|s/Before any adverse verdict, prove the intervention is deployed/Deployment is worth considering/
+loaded-revision|s/revision the consuming deployment loads/latest upstream revision/
+named-insufficient|s/an upstream merge, a version/a merge, a version/
+hops|s/only after every intermediate hop lands/promptly/
+verdict-map|s/never NOT-WORKING/and may also be NOT-WORKING/
+pursue|s/stalled rollout is itself the/rollout is a separate concern and the/
+ladder|s/metric unchanged and the intervention proven live/metric unchanged/
+EOF
+
+liveness_contradiction_bad="$tmp/liveness-contradiction-bad.md"
+awk '/^---$/ && !ins {print "An upstream merge is sufficient."; ins=1} {print}' \
+  "$liveness_good" >"$liveness_contradiction_bad"
+if cmp -s "$liveness_good" "$liveness_contradiction_bad"; then
+  printf '  ❌ liveness contradiction ablation changed nothing\n' >&2
+  fail=1
+elif check_deployment_liveness_contract "$liveness_contradiction_bad"; then
+  printf '  ❌ contradictory upstream-merge guidance unexpectedly passes\n' >&2
+  fail=1
+else
+  printf '  ✅ contradictory upstream-merge guidance fails closed\n'
+fi
+
 if [ "$fail" -ne 0 ]; then
   printf '❌ agent-improvement contract test failed\n' >&2
   exit 1

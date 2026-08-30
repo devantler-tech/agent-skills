@@ -431,13 +431,23 @@ Two verifications, both required:
    sessions, dispatches, requests, or artifacts). Count only evidence generated at or after the
    verification-window start toward the post-change volume.
    A state metric whose outcome is decisive from one live inspection may omit the volume floor.
+   **Before any adverse verdict, prove the intervention is deployed.** A metric that did not move
+   has two causes taking opposite remedies: the diagnosis was wrong, or the change never reached the
+   runtime that generated the evidence. Establish deployment by reading the intervention's content at
+   the revision the consuming deployment loads; an upstream merge, a version string, or a green check
+   on the authoring pull request is not delivery, because a synced or vendored artifact reaches the
+   runtime only after every intermediate hop lands. An intervention that is not live is NOT-YET-DUE,
+   blocked on rollout, never NOT-WORKING, and the stalled rollout is itself the finding to pursue
+   rather than a reason to revert or reshape.
+
    The next run checks eligibility before applying a verdict:
-   - if either floor is unmet → record **NOT-YET-DUE**, keep the hypothesis open without applying a
+   - if either floor is unmet, or the intervention is not live at the consuming deployment's loaded
+     revision → record **NOT-YET-DUE**, keep the hypothesis open without applying a
      verdict, and continue with other authorised work;
    - metric moved in its expected direction and every declared companion floor held → close the
      hypothesis, keep the change;
-   - metric unchanged → the diagnosis was wrong. **Say so**, then revert or reshape — never layer a
-     second guess on an unverified first;
+   - metric unchanged **and the intervention proven live** → the diagnosis was wrong. **Say so**,
+     then revert or reshape — never layer a second guess on an unverified first;
    - metric moved in the wrong direction, or a companion safety or quality floor regressed → **revert
      first, diagnose after**.
 
