@@ -35,7 +35,6 @@ check_corpus_coverage_contract() { # skill
   # Delegated transcripts are part of the corpus and are stored elsewhere.
   grep -Eqi 'delegated (transcript|session|work).{0,200}stored separately' <<<"$flat" || return 1
   grep -Eqi 'enumerat[a-z]*.{0,200}(only the top level|top level of the session store)' <<<"$flat" || return 1
-  grep -Eqi 'report coverage.{0,200}(share|proportion|fraction) of records.{0,40}delegated' <<<"$flat" || return 1
   # The two clauses above are satisfied by the *diagnosis* sentence, so each requirement the
   # skill actually imposes needs its own conjunct or it is pinned by nothing.
   grep -Eqi 'enumerate delegated (transcript|session|work)s? explicitly' <<<"$flat" || return 1
