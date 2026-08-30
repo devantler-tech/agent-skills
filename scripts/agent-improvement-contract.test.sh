@@ -28,6 +28,19 @@ check_contract() { # skill
   grep -Eqi 'state metric.{0,240}(single|one) live inspection.{0,240}(omit|without).{0,120}volume floor' <<<"$flat" || return 1
 }
 
+check_corpus_coverage_contract() { # skill
+  local flat
+  flat="$(tr '\n' ' ' <"$1" | sed -E 's/[[:space:]]+/ /g')"
+
+  # Delegated transcripts are part of the corpus and are stored elsewhere.
+  grep -Eqi 'delegated (transcript|session|work).{0,200}stored separately' <<<"$flat" || return 1
+  grep -Eqi 'enumerat[a-z]*.{0,200}(only the top level|top level of the session store)' <<<"$flat" || return 1
+  grep -Eqi 'report coverage.{0,200}(share|proportion|fraction) of records' <<<"$flat" || return 1
+  # A control that re-reads the same population is not a control.
+  grep -Eqi 'control must vary the (suspected )?filter' <<<"$flat" || return 1
+  grep -Eqi 'shares the enumeration is not a control' <<<"$flat" || return 1
+}
+
 check_coordination_contract() { # skill
   local coordination_contract flat
   flat="$(LC_ALL=C awk '
@@ -217,6 +230,13 @@ if check_research_fallback_contract "$skill"; then
   printf '  ✅ live skill turns an evidence-clean run into bounded research and routed candidates\n'
 else
   printf '  ❌ live skill can stop idle when telemetry exposes no actionable improvement\n' >&2
+  fail=1
+fi
+
+if check_corpus_coverage_contract "$skill"; then
+  printf '  ✅ live skill enumerates delegated transcripts and rejects a filter-sharing control\n'
+else
+  printf '  ❌ live skill can measure a partial corpus and call a shared-filter recount a control\n' >&2
   fail=1
 fi
 
@@ -679,6 +699,44 @@ for missing in baseline timestamp verification_start volume post_change polarity
     fail=1
   else
     printf '  ✅ missing %s fails closed\n' "$missing"
+  fi
+done
+
+coverage_good="$tmp/coverage-good.md"
+cat >"$coverage_good" <<'EOF'
+Delegated work is stored separately from the parent session's transcript, commonly nested beneath it.
+An enumeration that walks only the top level of the session store omits every one of them. Enumerate
+delegated transcripts explicitly and report coverage alongside every measurement: files enumerated,
+and the share of records drawn from delegated sessions. A control must vary the suspected filter, not
+merely the method; a control that shares the enumeration is not a control.
+EOF
+
+if check_corpus_coverage_contract "$coverage_good"; then
+  printf '  ✅ complete corpus-coverage contract passes\n'
+else
+  printf '  ❌ complete corpus-coverage contract unexpectedly fails\n' >&2
+  fail=1
+fi
+
+for missing in separate_storage top_level coverage_share vary_filter not_a_control; do
+  fixture="$tmp/coverage-$missing.md"
+  case "$missing" in
+    separate_storage) sed 's/stored separately/stored together/' "$coverage_good" >"$fixture" ;;
+    top_level) sed 's/only the top level of the session store/across the whole store/' "$coverage_good" >"$fixture" ;;
+    coverage_share) sed 's/the share of records/the number of files/' "$coverage_good" >"$fixture" ;;
+    vary_filter) sed 's/control must vary the suspected filter/control should use a second tool/' "$coverage_good" >"$fixture" ;;
+    not_a_control) sed 's/shares the enumeration is not a control/shares the enumeration is acceptable/' "$coverage_good" >"$fixture" ;;
+  esac
+  if ! cmp -s "$coverage_good" "$fixture"; then
+    if check_corpus_coverage_contract "$fixture"; then
+      printf '  ❌ missing corpus-coverage %s unexpectedly passed\n' "$missing" >&2
+      fail=1
+    else
+      printf '  ✅ missing corpus-coverage %s fails closed\n' "$missing"
+    fi
+  else
+    printf '  ❌ corpus-coverage ablation %s changed nothing\n' "$missing" >&2
+    fail=1
   fi
 done
 
