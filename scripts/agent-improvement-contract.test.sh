@@ -35,13 +35,13 @@ check_corpus_coverage_contract() { # skill
   # Delegated transcripts are part of the corpus and are stored elsewhere.
   grep -Eqi 'delegated (transcript|session|work).{0,200}stored separately' <<<"$flat" || return 1
   grep -Eqi 'enumerat[a-z]*.{0,200}(only the top level|top level of the session store)' <<<"$flat" || return 1
-  grep -Eqi 'report coverage.{0,200}(share|proportion|fraction) of records' <<<"$flat" || return 1
+  grep -Eqi 'report coverage.{0,200}(share|proportion|fraction) of records.{0,40}delegated' <<<"$flat" || return 1
   # The two clauses above are satisfied by the *diagnosis* sentence, so each requirement the
   # skill actually imposes needs its own conjunct or it is pinned by nothing.
   grep -Eqi 'enumerate delegated (transcript|session|work)s? explicitly' <<<"$flat" || return 1
   # `files enumerated` must be LINKED to the coverage statement: satisfied in an unrelated
   # sentence it pins nothing, because the requirement is that each measurement reports BOTH.
-  grep -Eqi 'report coverage alongside every measurement.{0,40}files enumerated.{0,200}(share|proportion|fraction) of records' <<<"$flat" || return 1
+  grep -Eqi 'report coverage alongside every measurement.{0,40}files enumerated.{0,200}(share|proportion|fraction) of records.{0,40}delegated' <<<"$flat" || return 1
   # A control that re-reads the same population is not a control.
   grep -Eqi 'control must vary the (suspected )?filter' <<<"$flat" || return 1
   grep -Eqi 'shares the enumeration is not a control' <<<"$flat" || return 1
@@ -725,7 +725,7 @@ else
 fi
 
 for missing in separate_storage top_level coverage_share vary_filter not_a_control \
-  explicit_enumeration files_enumerated files_enumerated_unlinked; do
+  explicit_enumeration files_enumerated files_enumerated_unlinked delegated_scope; do
   fixture="$tmp/coverage-$missing.md"
   case "$missing" in
     separate_storage) sed 's/stored separately/stored together/' "$coverage_good" >"$fixture" ;;
@@ -735,6 +735,7 @@ for missing in separate_storage top_level coverage_share vary_filter not_a_contr
     not_a_control) sed 's/shares the enumeration is not a control/shares the enumeration is acceptable/' "$coverage_good" >"$fixture" ;;
     explicit_enumeration) sed 's/^delegated transcripts explicitly and report/delegated transcripts and report/' "$coverage_good" >"$fixture" ;;
     files_enumerated) sed 's/: files enumerated,/:/' "$coverage_good" >"$fixture" ;;
+    delegated_scope) sed 's/drawn from delegated sessions/drawn from all sessions/' "$coverage_good" >"$fixture" ;;
     files_enumerated_unlinked) sed -e 's/measurement: files enumerated,/measurement:/' \
       -e 's/drawn from delegated sessions\./drawn from delegated sessions. A separate audit lists files enumerated./' \
       "$coverage_good" >"$fixture" ;;
