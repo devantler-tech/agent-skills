@@ -28,6 +28,46 @@ check_contract() { # skill
   grep -Eqi 'state metric.{0,240}(single|one) live inspection.{0,240}(omit|without).{0,120}volume floor' <<<"$flat" || return 1
 }
 
+check_corpus_coverage_contract() { # skill
+  local flat flat_lower section
+  section="$(LC_ALL=C awk '
+    /^## 1\. Gather$/ { capture=1 }
+    capture && /^---$/ { exit }
+    capture { print }
+  ' "$1")"
+  [ -n "$section" ] || return 1
+  flat="$(tr '\n' ' ' <<<"$section" | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//')"
+  flat_lower="$(tr '[:upper:]' '[:lower:]' <<<"$flat")"
+
+  # Delegated transcripts are part of the corpus and are stored elsewhere.
+  grep -Eqi 'delegated (transcript|session|work).{0,200}stored separately' <<<"$flat" || return 1
+  grep -Eqi 'enumerat[a-z]*.{0,200}(only the top level|top level of the session store)' <<<"$flat" || return 1
+  # The two clauses above are satisfied by the *diagnosis* sentence, so each requirement the
+  # skill actually imposes needs its own conjunct or it is pinned by nothing.
+  grep -Eqi 'enumerate delegated (transcript|session|work)s? explicitly' <<<"$flat" || return 1
+  # `files enumerated` must be LINKED to the coverage statement: satisfied in an unrelated
+  # sentence it pins nothing, because the requirement is that each measurement reports BOTH.
+  # DIRECTION: the three parts must sit in ONE clause. Unbounded `.` spans crossed sentence
+  # boundaries, so an unrelated "files enumerated" sentence in EITHER order satisfied this.
+  # `[^.]` cannot cross a full stop, which closes the whole arrangement class rather than
+  # one more ordering.
+  grep -Eqi 'report coverage alongside every measurement[^.]{0,60}files enumerated[^.]{0,160}(share|proportion|fraction) of records[^.]{0,40}delegated' <<<"$flat" || return 1
+  # A zero delegated share is only meaningful against an independently expected inventory.
+  grep -Eqi 'independent expected delegated-(session|transcript) inventory.{0,160}(runtime|dispatch|parent|child|index|metadata)' <<<"$flat" || return 1
+  grep -Eqi 'report every expected (session|transcript|id).{0,120}missing from.{0,80}(transcript )?(walk|enumeration|inventory)' <<<"$flat" || return 1
+  # A control that re-reads the same population is not a control.
+  grep -Eqi 'control must vary the (suspected )?filter' <<<"$flat" || return 1
+  grep -Eqi 'shares the enumeration is not a control' <<<"$flat" || return 1
+  # Removing a filter normally changes raw totals. Pin a comparable basis and explain that delta.
+  grep -Eqi '(re-derive|compare).{0,80}(comparable|equivalent cohort).{0,120}(filter removed|differing only)' <<<"$flat" || return 1
+  grep -Eqi 'reconcile the delta.{0,120}(records|population).{0,80}filter.{0,40}excluded' <<<"$flat" || return 1
+  grep -Eqi 'only an unexplained residual.{0,80}(is|becomes|counts as) a finding' <<<"$flat" || return 1
+
+  case "$flat_lower" in
+    *"do not enumerate delegated transcripts explicitly"*|*"never enumerate delegated transcripts explicitly"*|*"a control that shares the enumeration is also a valid control"*) return 1 ;;
+  esac
+}
+
 check_coordination_contract() { # skill
   local coordination_contract flat
   flat="$(LC_ALL=C awk '
@@ -217,6 +257,13 @@ if check_research_fallback_contract "$skill"; then
   printf '  ✅ live skill turns an evidence-clean run into bounded research and routed candidates\n'
 else
   printf '  ❌ live skill can stop idle when telemetry exposes no actionable improvement\n' >&2
+  fail=1
+fi
+
+if check_corpus_coverage_contract "$skill"; then
+  printf '  ✅ live skill enumerates delegated transcripts and rejects a filter-sharing control\n'
+else
+  printf '  ❌ live skill can measure a partial corpus and call a shared-filter recount a control\n' >&2
   fail=1
 fi
 
@@ -681,6 +728,106 @@ for missing in baseline timestamp verification_start volume post_change polarity
     printf '  ✅ missing %s fails closed\n' "$missing"
   fi
 done
+
+coverage_good="$tmp/coverage-good.md"
+cat >"$coverage_good" <<'EOF'
+## 1. Gather
+
+Delegated work is stored separately from the parent session's transcript, commonly nested beneath it.
+An enumeration that walks only the top level of the session store omits every one of them. Enumerate
+delegated transcripts explicitly and report coverage alongside every measurement: files enumerated,
+and the share of records drawn from delegated sessions.
+Build an independent expected delegated-session inventory from runtime metadata.
+Report every expected session missing from the transcript walk.
+A control must vary the suspected filter, not merely the method.
+A control that shares the enumeration is not a control.
+Re-derive a comparable count with the suspected filter removed.
+Reconcile the delta to the records that filter excluded; only an unexplained residual is a finding.
+
+---
+EOF
+
+if check_corpus_coverage_contract "$coverage_good"; then
+  printf '  ✅ complete corpus-coverage contract passes\n'
+else
+  printf '  ❌ complete corpus-coverage contract unexpectedly fails\n' >&2
+  fail=1
+fi
+
+for missing in separate_storage top_level coverage_share vary_filter not_a_control \
+  explicit_enumeration files_enumerated files_enumerated_unlinked delegated_scope \
+  files_enumerated_before independent_inventory missing_records common_basis \
+  reconcile_delta; do
+  fixture="$tmp/coverage-$missing.md"
+  case "$missing" in
+    separate_storage) sed 's/stored separately/stored together/' "$coverage_good" >"$fixture" ;;
+    top_level) sed 's/only the top level of the session store/across the whole store/' "$coverage_good" >"$fixture" ;;
+    coverage_share) sed 's/the share of records/the number of files/' "$coverage_good" >"$fixture" ;;
+    vary_filter) sed 's/control must vary the suspected filter/control should use a second tool/' "$coverage_good" >"$fixture" ;;
+    not_a_control) sed 's/shares the enumeration is not a control/shares the enumeration is acceptable/' "$coverage_good" >"$fixture" ;;
+    explicit_enumeration) sed 's/^delegated transcripts explicitly and report/delegated transcripts and report/' "$coverage_good" >"$fixture" ;;
+    files_enumerated) sed 's/: files enumerated,/:/' "$coverage_good" >"$fixture" ;;
+    delegated_scope) sed 's/drawn from delegated sessions/drawn from all sessions/' "$coverage_good" >"$fixture" ;;
+    files_enumerated_before) sed 's/measurement: files enumerated,/measurement. Files enumerated are listed in a separate audit./' "$coverage_good" >"$fixture" ;;
+    files_enumerated_unlinked) sed -e 's/measurement: files enumerated,/measurement:/' \
+      -e 's/drawn from delegated sessions\./drawn from delegated sessions. A separate audit lists files enumerated./' \
+      "$coverage_good" >"$fixture" ;;
+    independent_inventory) sed 's/independent expected delegated-session inventory/local delegated-session sample/' "$coverage_good" >"$fixture" ;;
+    missing_records) sed 's/Report every expected session missing from the transcript walk/Report the delegated share/' "$coverage_good" >"$fixture" ;;
+    common_basis) sed 's/Re-derive a comparable count/Re-derive the raw count/' "$coverage_good" >"$fixture" ;;
+    reconcile_delta) sed 's/Reconcile the delta/Accept the delta/' "$coverage_good" >"$fixture" ;;
+  esac
+  if ! cmp -s "$coverage_good" "$fixture"; then
+    if check_corpus_coverage_contract "$fixture"; then
+      printf '  ❌ missing corpus-coverage %s unexpectedly passed\n' "$missing" >&2
+      fail=1
+    else
+      printf '  ✅ missing corpus-coverage %s fails closed\n' "$missing"
+    fi
+  else
+    printf '  ❌ corpus-coverage ablation %s changed nothing\n' "$missing" >&2
+    fail=1
+  fi
+done
+
+coverage_outside_gather_bad="$tmp/coverage-outside-gather-bad.md"
+{
+  sed 's/^## 1\. Gather$/## 0. Pre-flight/' "$coverage_good"
+  cat <<'EOF'
+## 1. Gather
+
+Gather some telemetry.
+
+---
+EOF
+} >"$coverage_outside_gather_bad"
+if check_corpus_coverage_contract "$coverage_outside_gather_bad"; then
+  printf '  ❌ corpus coverage can be satisfied outside the canonical Gather section\n' >&2
+  fail=1
+else
+  printf '  ✅ corpus coverage is scoped to the canonical Gather section\n'
+fi
+
+coverage_negated_bad="$tmp/coverage-negated-bad.md"
+sed 's/Enumerate$/Do not enumerate/' \
+  "$coverage_good" >"$coverage_negated_bad"
+if check_corpus_coverage_contract "$coverage_negated_bad"; then
+  printf '  ❌ a negated delegated enumeration unexpectedly passes\n' >&2
+  fail=1
+else
+  printf '  ✅ a negated delegated enumeration fails closed\n'
+fi
+
+coverage_contradictory_bad="$tmp/coverage-contradictory-bad.md"
+sed '/^---$/i\
+A control that shares the enumeration is also a valid control.' \
+  "$coverage_good" >"$coverage_contradictory_bad"
+if check_corpus_coverage_contract "$coverage_contradictory_bad"; then
+  printf '  ❌ contradictory shared-enumeration guidance unexpectedly passes\n' >&2
+  fail=1
+else
+  printf '  ✅ contradictory shared-enumeration guidance fails closed\n'
+fi
 
 if [ "$fail" -ne 0 ]; then
   printf '❌ agent-improvement contract test failed\n' >&2

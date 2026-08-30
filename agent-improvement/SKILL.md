@@ -128,6 +128,30 @@ attributed to the tool that produced them; latency waste; guard firings and deni
 collisions; loader↔contract drift; per-session value-bearing and terminal outcomes; and post-merge
 outcomes.
 
+**Cover the whole corpus — delegated transcripts are usually stored separately.** Where the runtime
+records delegated work (subagents, sidechains, sub-sessions) in files stored separately from the
+parent session's — commonly nested beneath it rather than beside it — an enumeration that walks only
+the top level of the session store silently omits every one of them. That fails open on the
+observation plane: delegated work is where a guard's firings and a delegated survey's cost actually
+land, so a denial family occurring only inside subagents reads as *never occurring*, and a live
+regression scores as absent. Enumerate delegated transcripts explicitly, and **report coverage
+alongside every measurement** — files enumerated, and the share of records drawn from delegated
+sessions — so an omission is visible in the output instead of being inferred from a
+plausible-looking number. Before accepting that share, build an **independent expected
+delegated-session inventory** from runtime metadata that does not depend on the transcript walk — for
+example parent/child session IDs, dispatch records, or a runtime index — and report every expected
+session missing from the transcript walk. If no independent source exists, delegated coverage is
+**UNKNOWN**, never zero percent.
+
+**A control must vary the suspected filter, not merely the method.** Re-counting one file list with a
+second tool re-measures the same population: it confirms the parser and cannot reveal a population
+that was never enumerated. Before a count becomes a verdict, re-derive it once with the filter you
+most doubt removed — the enumeration root, the traversal depth, the time window, the record-type
+predicate. Re-derive a comparable count with the suspected filter removed, then reconcile the delta to
+the records that the filter intentionally excluded; an equivalent-cohort comparison may instead hold
+everything except that filter constant. Only an unexplained residual is a finding about the filter. A
+control that shares the enumeration is not a control.
+
 Supplement it with:
 
 - **Every instance's durable memory** — read for *what the agent believes*, compare against live state,
