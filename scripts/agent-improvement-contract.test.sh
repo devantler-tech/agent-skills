@@ -39,7 +39,9 @@ check_corpus_coverage_contract() { # skill
   # The two clauses above are satisfied by the *diagnosis* sentence, so each requirement the
   # skill actually imposes needs its own conjunct or it is pinned by nothing.
   grep -Eqi 'enumerate delegated (transcript|session|work)s? explicitly' <<<"$flat" || return 1
-  grep -Eqi 'files enumerated' <<<"$flat" || return 1
+  # `files enumerated` must be LINKED to the coverage statement: satisfied in an unrelated
+  # sentence it pins nothing, because the requirement is that each measurement reports BOTH.
+  grep -Eqi 'report coverage alongside every measurement.{0,40}files enumerated.{0,200}(share|proportion|fraction) of records' <<<"$flat" || return 1
   # A control that re-reads the same population is not a control.
   grep -Eqi 'control must vary the (suspected )?filter' <<<"$flat" || return 1
   grep -Eqi 'shares the enumeration is not a control' <<<"$flat" || return 1
@@ -723,7 +725,7 @@ else
 fi
 
 for missing in separate_storage top_level coverage_share vary_filter not_a_control \
-  explicit_enumeration files_enumerated; do
+  explicit_enumeration files_enumerated files_enumerated_unlinked; do
   fixture="$tmp/coverage-$missing.md"
   case "$missing" in
     separate_storage) sed 's/stored separately/stored together/' "$coverage_good" >"$fixture" ;;
@@ -733,6 +735,9 @@ for missing in separate_storage top_level coverage_share vary_filter not_a_contr
     not_a_control) sed 's/shares the enumeration is not a control/shares the enumeration is acceptable/' "$coverage_good" >"$fixture" ;;
     explicit_enumeration) sed 's/^delegated transcripts explicitly and report/delegated transcripts and report/' "$coverage_good" >"$fixture" ;;
     files_enumerated) sed 's/: files enumerated,/:/' "$coverage_good" >"$fixture" ;;
+    files_enumerated_unlinked) sed -e 's/measurement: files enumerated,/measurement:/' \
+      -e 's/drawn from delegated sessions\./drawn from delegated sessions. A separate audit lists files enumerated./' \
+      "$coverage_good" >"$fixture" ;;
   esac
   if ! cmp -s "$coverage_good" "$fixture"; then
     if check_corpus_coverage_contract "$fixture"; then
