@@ -137,14 +137,20 @@ land, so a denial family occurring only inside subagents reads as *never occurri
 regression scores as absent. Enumerate delegated transcripts explicitly, and **report coverage
 alongside every measurement** — files enumerated, and the share of records drawn from delegated
 sessions — so an omission is visible in the output instead of being inferred from a
-plausible-looking number.
+plausible-looking number. Before accepting that share, build an **independent expected
+delegated-session inventory** from runtime metadata that does not depend on the transcript walk — for
+example parent/child session IDs, dispatch records, or a runtime index — and report every expected
+session missing from the transcript walk. If no independent source exists, delegated coverage is
+**UNKNOWN**, never zero percent.
 
 **A control must vary the suspected filter, not merely the method.** Re-counting one file list with a
 second tool re-measures the same population: it confirms the parser and cannot reveal a population
 that was never enumerated. Before a count becomes a verdict, re-derive it once with the filter you
 most doubt removed — the enumeration root, the traversal depth, the time window, the record-type
-predicate — and treat any disagreement as a finding about the filter. A control that shares the
-enumeration is not a control.
+predicate. Re-derive a comparable count with the suspected filter removed, then reconcile the delta to
+the records that the filter intentionally excluded; an equivalent-cohort comparison may instead hold
+everything except that filter constant. Only an unexplained residual is a finding about the filter. A
+control that shares the enumeration is not a control.
 
 Supplement it with:
 
