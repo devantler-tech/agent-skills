@@ -846,6 +846,10 @@ check_deployment_liveness_contract() { # skill
   grep -Eqi 'content at[^.]{0,80}revision the consuming deployment loads' <<<"$flat" || return 1
   # The insufficient evidence must be named, or "prove it is deployed" is satisfied by the merge.
   grep -Eqi 'upstream merge[^.]{0,140}version string[^.]{0,140}is not delivery' <<<"$flat" || return 1
+  # The third forbidden signal must be pinned too. Without it the clause can drop the
+  # authoring-PR check and still satisfy every other conjunct, so a green PR check becomes
+  # a declarable substitute for delivery.
+  grep -Eqi 'green check on the authoring pull request[^.]{0,80}is not delivery' <<<"$flat" || return 1
   # WHY a merge is not delivery: intermediate hops. Without this the rule reads as a formality.
   grep -Eqi '(synced|vendored)[^.]{0,100}only after every intermediate hop' <<<"$flat" || return 1
   # The verdict mapping must sit in ONE clause; split across sentences it pins no substitution.
@@ -855,9 +859,17 @@ check_deployment_liveness_contract() { # skill
   # The ladder's own unchanged branch must carry the liveness condition, or the gate above is
   # contradicted three lines later by the rule a reader actually executes.
   grep -Eqi 'metric unchanged[^.]{0,60}intervention proven live' <<<"$flat" || return 1
+  # The OTHER adverse branch needs the same gate. A metric that moved the wrong way while the
+  # intervention was never live indicts the rollout, not the diagnosis, so reverting on it
+  # discards a change that was never given a chance to act.
+  grep -Eqi 'wrong direction[^.]{0,120}intervention proven live' <<<"$flat" || return 1
 
   case "$flat_lower" in
-    *"an upstream merge is sufficient"*|*"score an undeployed intervention not-working"*) return 1 ;;
+    *"an upstream merge is sufficient"* | \
+    *"a version string is sufficient"* | \
+    *"a green check on the authoring pull request is sufficient"* | \
+    *"score an undeployed intervention not-working"* | \
+    *"not live is not-working"*) return 1 ;;
   esac
 }
 
@@ -879,6 +891,7 @@ artifact reaches the runtime only after every intermediate hop lands. An interve
 live is NOT-YET-DUE, blocked on rollout, never NOT-WORKING, and the stalled rollout is itself the
 finding to pursue rather than a reason to revert.
 - metric unchanged and the intervention proven live, the diagnosis was wrong.
+- metric moved in the wrong direction, or a companion floor regressed, and the intervention proven live, revert first.
 
 ---
 EOF
@@ -913,20 +926,32 @@ hops|s/only after every intermediate hop lands/promptly/
 verdict-map|s/never NOT-WORKING/and may also be NOT-WORKING/
 pursue|s/stalled rollout is itself the/rollout is a separate concern and the/
 ladder|s/metric unchanged and the intervention proven live/metric unchanged/
+authoring-pr|s/, or a green check on the authoring pull request is not delivery/ is not delivery/
+ladder-adverse|s/regressed, and the intervention proven live/regressed/
 EOF
 
-liveness_contradiction_bad="$tmp/liveness-contradiction-bad.md"
-awk '/^---$/ && !ins {print "An upstream merge is sufficient."; ins=1} {print}' \
-  "$liveness_good" >"$liveness_contradiction_bad"
-if cmp -s "$liveness_good" "$liveness_contradiction_bad"; then
-  printf '  ❌ liveness contradiction ablation changed nothing\n' >&2
-  fail=1
-elif check_deployment_liveness_contract "$liveness_contradiction_bad"; then
-  printf '  ❌ contradictory upstream-merge guidance unexpectedly passes\n' >&2
-  fail=1
-else
-  printf '  ✅ contradictory upstream-merge guidance fails closed\n'
-fi
+# One contradiction fixture per forbidden delivery signal, plus the inverse verdict mapping. Each is
+# inserted ALONGSIDE the correct text, so every positive conjunct still matches and only these
+# guards can catch it — which is exactly the case a single upstream-merge fixture missed.
+while IFS='|' read -r label sentence; do
+  [ -n "$label" ] || continue
+  bad="$tmp/liveness-contradiction-$label.md"
+  awk -v s="$sentence" '/^---$/ && !ins {print s; ins=1} {print}' "$liveness_good" >"$bad"
+  if cmp -s "$liveness_good" "$bad"; then
+    printf '  ❌ liveness contradiction %s changed nothing\n' "$label" >&2
+    fail=1
+  elif check_deployment_liveness_contract "$bad"; then
+    printf '  ❌ contradictory %s guidance unexpectedly passes\n' "$label" >&2
+    fail=1
+  else
+    printf '  ✅ contradictory %s guidance fails closed\n' "$label"
+  fi
+done <<'EOF'
+upstream-merge|An upstream merge is sufficient.
+version-string|A version string is sufficient.
+authoring-pr|A green check on the authoring pull request is sufficient.
+inverse-verdict|An intervention that is not live is NOT-WORKING.
+EOF
 
 if [ "$fail" -ne 0 ]; then
   printf '❌ agent-improvement contract test failed\n' >&2

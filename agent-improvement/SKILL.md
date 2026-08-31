@@ -448,8 +448,8 @@ Two verifications, both required:
      hypothesis, keep the change;
    - metric unchanged **and the intervention proven live** → the diagnosis was wrong. **Say so**,
      then revert or reshape — never layer a second guess on an unverified first;
-   - metric moved in the wrong direction, or a companion safety or quality floor regressed → **revert
-     first, diagnose after**.
+   - metric moved in the wrong direction, or a companion safety or quality floor regressed,
+     **and the intervention proven live** → **revert first, diagnose after**.
 
 While the hypothesis remains pending, continue only with work that cannot affect its tracked signature
 or metric; otherwise wait for evidence or choose a non-overlapping improvement.
