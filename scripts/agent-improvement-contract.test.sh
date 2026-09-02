@@ -82,6 +82,9 @@ check_floor_disposition_contract() { # skill
   # A floor has THREE dispositions. Two of them were already in the verdict map; the third is
   # what this pins, because conflating it with "regressed" or with "held" are opposite errors.
   grep -Eqi 'three dispositions' <<<"$flat" || return 1
+  # The count alone does not pin the LABELS: with only 'three dispositions', renaming
+  # REGRESSED to anything else still passes. Bind the adverse label to its own clause.
+  grep -Eqi 'evidence showing a regression[^.]{0,60}regressed' <<<"$flat" || return 1
   # HELD must be TIED to the stated coverage, or the clause pins nothing: an unrelated sentence
   # mentioning coverage would satisfy a loose match. `[^.]` keeps it inside one sentence.
   grep -Eqi 'no regression[^.]{0,60}within a stated coverage[^.]{0,40}held' <<<"$flat" || return 1
@@ -93,8 +96,7 @@ check_floor_disposition_contract() { # skill
   # Coverage must travel WITH the disposition, mirroring the Gather step.
   grep -Eqi 'state the coverage next to the disposition' <<<"$flat" || return 1
   # UNMEASURED must terminate: a floor that never resolves cannot park a hypothesis forever.
-  grep -Eqi 'three consecutive eligible dispatches[^.]{0,80}measurement gap' <<<"$flat" || return 1
-  grep -Eqi 'becomes tracked work' <<<"$flat" || return 1
+  grep -Eqi 'three consecutive eligible dispatches[^.]{0,80}measurement gap[^.]{0,100}becomes tracked work' <<<"$flat" || return 1
 
   case "$flat_lower" in
     *"a bounded sample is always unmeasured"*|*"an unbounded not-yet-due is acceptable"*|*"gathered evidence within a bounded coverage is unmeasured"*) return 1 ;;
@@ -325,6 +327,7 @@ while IFS='|' read -r label expr; do
   fi
 done <<'ABL'
 three-dispositions|s/three dispositions/several dispositions/
+regressed-label|s/\*\*REGRESSED\*\*/**FAILED**/
 held-within-coverage|s/\*\*within a stated coverage\*\*/**within some coverage**/
 bounded-never-unmeasured|s/never UNMEASURED/sometimes UNMEASURED/
 absence-only|s/only the absence of admissible evidence is UNMEASURED/absence of evidence is UNMEASURED/
