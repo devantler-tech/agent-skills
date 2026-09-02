@@ -68,6 +68,39 @@ check_corpus_coverage_contract() { # skill
   esac
 }
 
+check_floor_disposition_contract() { # skill
+  local flat flat_lower section
+  section="$(LC_ALL=C awk '
+    /^## 5\. Verify/ { capture=1 }
+    capture && /^## 6\./ { exit }
+    capture { print }
+  ' "$1")"
+  [ -n "$section" ] || return 1
+  flat="$(tr '\n' ' ' <<<"$section" | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//')"
+  flat_lower="$(tr '[:upper:]' '[:lower:]' <<<"$flat")"
+
+  # A floor has THREE dispositions. Two of them were already in the verdict map; the third is
+  # what this pins, because conflating it with "regressed" or with "held" are opposite errors.
+  grep -Eqi 'three dispositions' <<<"$flat" || return 1
+  # HELD must be TIED to the stated coverage, or the clause pins nothing: an unrelated sentence
+  # mentioning coverage would satisfy a loose match. `[^.]` keeps it inside one sentence.
+  grep -Eqi 'no regression[^.]{0,60}within a stated coverage[^.]{0,40}held' <<<"$flat" || return 1
+  # The load-bearing direction: gathered-but-bounded is NOT the unmeasured state.
+  grep -Eqi 'bounded sample[^.]{0,240}never unmeasured' <<<"$flat" || return 1
+  grep -Eqi 'only the absence of admissible evidence is unmeasured' <<<"$flat" || return 1
+  # Naming the consequence is what stops the rule being read as bookkeeping.
+  grep -Eqi 'unscoreable in principle' <<<"$flat" || return 1
+  # Coverage must travel WITH the disposition, mirroring the Gather step.
+  grep -Eqi 'state the coverage next to the disposition' <<<"$flat" || return 1
+  # UNMEASURED must terminate: a floor that never resolves cannot park a hypothesis forever.
+  grep -Eqi 'three consecutive eligible dispatches[^.]{0,80}measurement gap' <<<"$flat" || return 1
+  grep -Eqi 'becomes tracked work' <<<"$flat" || return 1
+
+  case "$flat_lower" in
+    *"a bounded sample is always unmeasured"*|*"an unbounded not-yet-due is acceptable"*|*"gathered evidence within a bounded coverage is unmeasured"*) return 1 ;;
+  esac
+}
+
 check_coordination_contract() { # skill
   local coordination_contract flat
   flat="$(LC_ALL=C awk '
@@ -266,6 +299,61 @@ else
   printf '  ❌ live skill can measure a partial corpus and call a shared-filter recount a control\n' >&2
   fail=1
 fi
+
+if check_floor_disposition_contract "$skill"; then
+  printf '  ✅ live skill reads a bounded no-regression sample as HELD within its coverage\n'
+else
+  printf '  ❌ live skill can file gathered floor evidence as UNMEASURED and park a hypothesis forever\n' >&2
+  fail=1
+fi
+
+# One isolating ablation per floor-disposition conjunct, taken against the REAL skill so the
+# fixture cannot silently drift away from the text it claims to pin. cmp-guarded: a sed that
+# matched nothing would otherwise "pass" while proving the conjunct discriminates nothing.
+while IFS='|' read -r label expr; do
+  [ -n "$label" ] || continue
+  bad="$tmp/floor-bad-$label.md"
+  sed -E "$expr" "$skill" >"$bad"
+  if cmp -s "$skill" "$bad"; then
+    printf '  ❌ floor ablation %s changed nothing\n' "$label" >&2
+    fail=1
+  elif check_floor_disposition_contract "$bad"; then
+    printf '  ❌ floor ablation %s still passes\n' "$label" >&2
+    fail=1
+  else
+    printf '  ✅ floor ablation %s fails closed\n' "$label"
+  fi
+done <<'ABL'
+three-dispositions|s/three dispositions/several dispositions/
+held-within-coverage|s/\*\*within a stated coverage\*\*/**within some coverage**/
+bounded-never-unmeasured|s/never UNMEASURED/sometimes UNMEASURED/
+absence-only|s/only the absence of admissible evidence is UNMEASURED/absence of evidence is UNMEASURED/
+unscoreable|s/unscoreable in principle/hard to score/
+coverage-adjacent|s/State the coverage next to the disposition/Coverage may be recorded separately/
+bounded-unmeasured|s/three consecutive eligible dispatches/several dispatches/
+tracked-work|s/becomes tracked work/is worth noting/
+ABL
+
+# A contradiction inserted ALONGSIDE the correct text: every positive conjunct still matches, so
+# only the forbidden-phrase guard can catch it.
+while IFS='|' read -r label sentence; do
+  [ -n "$label" ] || continue
+  bad="$tmp/floor-contradiction-$label.md"
+  awk -v s="$sentence" '/^## 6\./ && !ins {print "   " s; print ""; ins=1} {print}' "$skill" >"$bad"
+  if cmp -s "$skill" "$bad"; then
+    printf '  ❌ floor contradiction %s changed nothing\n' "$label" >&2
+    fail=1
+  elif check_floor_disposition_contract "$bad"; then
+    printf '  ❌ contradictory %s floor guidance unexpectedly passes\n' "$label" >&2
+    fail=1
+  else
+    printf '  ✅ contradictory %s floor guidance fails closed\n' "$label"
+  fi
+done <<'CON'
+always-unmeasured|A bounded sample is always UNMEASURED.
+unbounded-ok|An unbounded NOT-YET-DUE is acceptable.
+gathered-unknown|Gathered evidence within a bounded coverage is UNMEASURED.
+CON
 
 diagnosis_good="$tmp/diagnosis-good.md"
 cat >"$diagnosis_good" <<'EOF'
