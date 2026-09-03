@@ -96,7 +96,9 @@ check_floor_disposition_contract() { # skill
   # Coverage must travel WITH the disposition, mirroring the Gather step.
   grep -Eqi 'state the coverage next to the disposition' <<<"$flat" || return 1
   # UNMEASURED must terminate: a floor that never resolves cannot park a hypothesis forever.
-  grep -Eqi 'three consecutive eligible dispatches[^.]{0,80}measurement gap[^.]{0,100}becomes tracked work' <<<"$flat" || return 1
+  # Bind the threshold to the UNMEASURED disposition AND to the same hypothesis: without both, a
+  # rewrite that drops what must terminate still satisfies the clause and pins nothing.
+  grep -Eqi 'unmeasured[^.]{0,120}same hypothesis[^.]{0,80}three consecutive eligible dispatches[^.]{0,80}measurement gap[^.]{0,100}becomes tracked work' <<<"$flat" || return 1
 
   case "$flat_lower" in
     *"a bounded sample is always unmeasured"*|*"an unbounded not-yet-due is acceptable"*|*"gathered evidence within a bounded coverage is unmeasured"*) return 1 ;;
@@ -334,6 +336,8 @@ absence-only|s/only the absence of admissible evidence is UNMEASURED/absence of 
 unscoreable|s/unscoreable in principle/hard to score/
 coverage-adjacent|s/State the coverage next to the disposition/Coverage may be recorded separately/
 bounded-unmeasured|s/three consecutive eligible dispatches/several dispatches/
+unmeasured-binding|s/A floor recorded UNMEASURED for the same/A floor recorded for the same/
+same-hypothesis-binding|s/UNMEASURED for the same/UNMEASURED for a different/
 tracked-work|s/becomes tracked work/is worth noting/
 ABL
 
