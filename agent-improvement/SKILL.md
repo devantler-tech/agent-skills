@@ -451,6 +451,23 @@ Two verifications, both required:
    - metric moved in the wrong direction, or a companion safety or quality floor regressed,
      **and the intervention proven live** → **revert first, diagnose after**.
 
+   **A companion floor has three dispositions, not two.** Evidence showing
+   no regression **within a stated coverage** is **HELD**; evidence showing a regression is
+   **REGRESSED**; only the absence of admissible evidence is UNMEASURED. A fleet-wide safety or
+   coordination floor is normally evidenced by a
+   bounded sample, so "no regression across the sessions actually examined" is HELD within that
+   stated coverage, never UNMEASURED — filing gathered evidence as unknown discards it, and is what
+   makes such a hypothesis
+   unscoreable in principle rather than merely unscored.
+   State the coverage next to the disposition, exactly as the Gather step already requires of every
+   measurement.
+
+   **UNMEASURED is bounded, never a standing state.** A floor recorded UNMEASURED for the same
+   hypothesis across
+   three consecutive eligible dispatches is a measurement gap, and that gap
+   becomes tracked work in its own right rather than a reason to park the hypothesis again. An
+   unbounded NOT-YET-DUE is this step's own failure mode wearing the costume of rigour.
+
 While the hypothesis remains pending, continue only with work that cannot affect its tracked signature
 or metric; otherwise wait for evidence or choose a non-overlapping improvement.
 
