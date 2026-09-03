@@ -100,8 +100,19 @@ check_floor_disposition_contract() { # skill
   # rewrite that drops what must terminate still satisfies the clause and pins nothing.
   grep -Eqi 'unmeasured[^.]{0,120}same hypothesis[^.]{0,80}three consecutive eligible dispatches[^.]{0,80}measurement gap[^.]{0,100}becomes tracked work' <<<"$flat" || return 1
 
+  # A DIRECT NEGATION of any disposition is a contradiction the positive conjuncts cannot
+  # catch. Each positive check spans its gap with [^.]{0,N}, which happily absorbs an
+  # intervening " is not " — and when the contradiction is ADDED alongside the correct
+  # sentence rather than replacing it, the original still satisfies every conjunct. So all
+  # three labels need an explicit reject here, including UNMEASURED: its positive check
+  # rejects the REPLACEMENT form on its own, but not the inserted one.
   case "$flat_lower" in
-    *"a bounded sample is always unmeasured"*|*"an unbounded not-yet-due is acceptable"*|*"gathered evidence within a bounded coverage is unmeasured"*) return 1 ;;
+    *"a bounded sample is always unmeasured"*|\
+    *"an unbounded not-yet-due is acceptable"*|\
+    *"gathered evidence within a bounded coverage is unmeasured"*|\
+    *"within a stated coverage is not held"*|\
+    *"evidence showing a regression is not regressed"*|\
+    *"admissible evidence is not unmeasured"*) return 1 ;;
   esac
 }
 
@@ -360,6 +371,9 @@ done <<'CON'
 always-unmeasured|A bounded sample is always UNMEASURED.
 unbounded-ok|An unbounded NOT-YET-DUE is acceptable.
 gathered-unknown|Gathered evidence within a bounded coverage is UNMEASURED.
+held-negation|Evidence showing no regression within a stated coverage is not HELD.
+regressed-negation|Evidence showing a regression is not REGRESSED.
+unmeasured-negation|Only the absence of admissible evidence is not UNMEASURED.
 CON
 
 diagnosis_good="$tmp/diagnosis-good.md"
