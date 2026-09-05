@@ -1,19 +1,22 @@
-# devantler-tech/agent-skills
+# Agent Skills
 
-<!-- A skills.sh badge (https://skills.sh/b/devantler-tech/agent-skills) is deliberately NOT here yet.
-     skills.sh indexes a repo from anonymous `skills` CLI install telemetry, so until this repo has
-     its first installs the badge renders "custom badge | resource not found" rather than an install
-     count. Add it once https://skills.sh/devantler-tech/agent-skills stops 404ing. -->
+Reusable instructions that help AI coding assistants work with Kubernetes, GitHub, Go, web design, and software engineering. This catalogue is for developers using Codex, Claude Code, GitHub Copilot, Cursor, or another assistant that supports [Agent Skills](https://agentskills.io).
 
-A curated index of generic [agent skills](https://agentskills.io) installable with either the [`gh skill`](https://github.blog/changelog/2026-04-16-manage-agent-skills-with-github-cli/) CLI (v2.90.0+) or [`npx skills`](https://github.com/vercel-labs/skills).
+## Installing
 
-These skills are **agent-neutral**: every `SKILL.md` follows the [`agentskills.io`](https://agentskills.io) spec, so the same skill works in **GitHub Copilot, Claude Code, Cursor, Codex, Gemini CLI**, and the other agents these CLIs support — pick the target with `--agent`. See [Installing](#installing) to install for one agent or several at once.
+With [GitHub CLI](https://cli.github.com/) 2.90.0 or newer, run this from your project to add our engineering workflow skill for Codex:
 
-This repo is a **pointer list** and publisher of in-house skills. Each row below is either an in-house skill or installs directly from its original upstream so `gh skill` records the true source in the skill's `SKILL.md` frontmatter (`metadata.github-repo`, `github-path`, `github-ref`, `github-tree-sha`) and `gh skill update --all` works natively — no lockfile, no sync bot, no custom metadata.
+```sh
+gh skill install devantler-tech/agent-skills ways-of-working --agent codex --scope project
+```
+
+Use `--agent claude-code`, `github-copilot`, `cursor`, or `gemini-cli` for another assistant. See the [installation guide](docs/installation.md) for other installers, updates, and installing several skills or agents together. Prefer a ready-made bundle? Browse [Agent Plugins](https://github.com/devantler-tech/agent-plugins).
 
 ## Skills
 
-<details open>
+Expand a category and copy a skill’s install command. The source column names the repository that maintains it.
+
+<details>
 <summary>GitOps &amp; Kubernetes</summary>
 
 | Skill | Upstream | Install |
@@ -26,7 +29,7 @@ This repo is a **pointer list** and publisher of in-house skills. Each row below
 
 </details>
 
-<details open>
+<details>
 <summary>GitHub</summary>
 
 | Skill | Upstream | Install |
@@ -36,7 +39,7 @@ This repo is a **pointer list** and publisher of in-house skills. Each row below
 
 </details>
 
-<details open>
+<details>
 <summary>Copilot</summary>
 
 | Skill | Upstream | Install |
@@ -47,7 +50,7 @@ This repo is a **pointer list** and publisher of in-house skills. Each row below
 
 </details>
 
-<details open>
+<details>
 <summary>Go</summary>
 
 | Skill | Upstream | Install |
@@ -57,7 +60,7 @@ This repo is a **pointer list** and publisher of in-house skills. Each row below
 
 </details>
 
-<details open>
+<details>
 <summary>Git</summary>
 
 | Skill | Upstream | Install |
@@ -66,7 +69,7 @@ This repo is a **pointer list** and publisher of in-house skills. Each row below
 
 </details>
 
-<details open>
+<details>
 <summary>Agentic Engineer</summary>
 
 | Skill | Upstream | Install |
@@ -78,7 +81,7 @@ This repo is a **pointer list** and publisher of in-house skills. Each row below
 
 </details>
 
-<details open>
+<details>
 <summary>Engineering Practices</summary>
 
 | Skill | Upstream | Install |
@@ -91,7 +94,7 @@ This repo is a **pointer list** and publisher of in-house skills. Each row below
 
 </details>
 
-<details open>
+<details>
 <summary>Vibe Coding</summary>
 
 | Skill | Upstream | Install |
@@ -102,7 +105,7 @@ This repo is a **pointer list** and publisher of in-house skills. Each row below
 
 </details>
 
-<details open>
+<details>
 <summary>Frontend &amp; Design</summary>
 
 | Skill | Upstream | Install |
@@ -113,121 +116,14 @@ This repo is a **pointer list** and publisher of in-house skills. Each row below
 
 </details>
 
-## Installing
-
-Two CLIs install these skills, and **they reach different things** — because this repo is a *pointer list*, not a re-host. Of the 29 rows above, only **11 are in-house** (hosted here); the other 18 point at their own upstream repo.
-
-| CLI | Reaches | Best for |
-|-----|---------|----------|
-| [`gh skill`](https://github.blog/changelog/2026-04-16-manage-agent-skills-with-github-cli/) | **Every row above** — each row's command already targets that skill's true source | Anything in the index. Records upstream provenance in the installed `SKILL.md`, so `gh skill update --all` works natively. **Copy the command from the table**, don't retype it against this repo. |
-| [`npx skills`](https://github.com/vercel-labs/skills) | **The 11 in-house skills only** — it installs what physically lives in the repo you point it at | The in-house skills, several at once, or an agent `gh skill` doesn't cover (70+ supported). For an indexed upstream skill, point it at that upstream instead (e.g. `npx skills add fluxcd/agent-skills`). |
-
-> [!NOTE]
-> There is no registry to sign up for and no package to publish — both CLIs resolve `owner/repo` straight from GitHub.
-
-### With `npx skills`
-
-[`npx skills`](https://github.com/vercel-labs/skills) needs no install of its own and prompts for which skills and which agents you want. Pointed at this repo it offers the **11 in-house skills**; for an indexed upstream skill, point it at that skill's own repo instead.
-
-> [!NOTE]
-> Requires **Node.js ≥ 22.20.0** (the `skills` package's declared `engines.node`). On an older Node this fails before any skill is fetched. `gh skill` has no Node dependency.
-
-```sh
-# Browse what's on offer without installing anything
-npx skills add devantler-tech/agent-skills --list
-
-# Install specific skills for specific agents
-npx skills add devantler-tech/agent-skills --skill ways-of-working --agent claude-code
-
-# Install every in-house skill, for EVERY supported agent, no prompts.
-# Note --all is not scoped to agents you have installed — pass --agent to limit it.
-npx skills add devantler-tech/agent-skills --all
-```
-
-Add `-g` to install to your user directory instead of the current project.
-
-The [skills.sh](https://skills.sh) directory has no submission step — it lists a repo off **anonymous install telemetry** from this CLI. That telemetry is opt-out (`DISABLE_TELEMETRY` or `DO_NOT_TRACK`) and is disabled automatically in CI, so only telemetry-enabled installs contribute to a listing.
-
-### With `gh skill`
-
-Each `gh skill install` accepts `--agent <name>`, `--scope user|project`, and `--pin <ref>` (or an `@ref` suffix on the skill name) — see `gh skill install --help` for the full list of supported agents.
-
-The install commands in the tables above use the default agent (GitHub Copilot) at project scope. To install for **Claude Code** instead, or for **both agents at once at user scope** (so the skill is available everywhere), add `--agent` / `--scope`:
-
-```sh
-# GitHub Copilot, user scope -> ~/.copilot/skills/<skill>/
-gh skill install devantler-tech/agent-skills ways-of-working --agent github-copilot --scope user
-
-# Claude Code, user scope -> ~/.claude/skills/<skill>/
-gh skill install devantler-tech/agent-skills ways-of-working --agent claude-code --scope user
-```
-
-### Install everything for both Copilot and Claude
-
-[`scripts/install.sh`](scripts/install.sh) installs every skill listed above for the agents you name (default: `github-copilot` and `claude-code`) at user scope:
-
-```sh
-./scripts/install.sh                          # both Copilot + Claude Code (user scope)
-./scripts/install.sh claude-code              # just Claude Code
-AGENTS="github-copilot claude-code cursor" ./scripts/install.sh   # any gh skill agents
-```
-
-The script is the single source of truth's consumer — it reads the install commands straight out of this README, so it never drifts from the index.
-
-## Automated installation and updates
-
-To adopt these skills in another repository:
-
-- [`devantler-tech/actions/setup-agent-skills`](https://github.com/devantler-tech/actions/tree/main/setup-agent-skills) — composite action that installs a newline list of `<owner/repo> <skill>[@pin]` entries, for one or more agents.
-- [`devantler-tech/actions/update-agent-skills`](https://github.com/devantler-tech/actions/tree/main/update-agent-skills) — composite action that runs `gh skill update --all` against the checked-in skills.
-- [`devantler-tech/actions/.github/workflows/update-agent-skills.yaml`](https://github.com/devantler-tech/actions/blob/main/.github/workflows/update-agent-skills.yaml) — reusable workflow that opens a PR when any skill's upstream has drifted.
-
-All three rely on the `github-*` metadata that `gh skill install` injects into each `SKILL.md`, so no lockfile or external manifest is required.
-
 ## Contributing
 
-This repository follows the [`agentskills.io`](https://agentskills.io) spec: skill directories live at the repository root and include a conformant `SKILL.md` at their root.
-
-Every pull request runs the [`🧪 CI`](.github/workflows/ci.yaml) workflow, whose `CI - Required Checks` aggregator gates the merge on four jobs:
-
-- **Publish dry-run** — `gh skill publish --dry-run` confirms the repo is publishable as a skill bundle.
-- **Spec validation** — each in-house skill is validated against the [`agentskills.io`](https://agentskills.io) spec with `skills-ref validate`.
-- **Script lint** — `shellcheck` over `scripts/*.sh`.
-- **Index lockstep** — [`./scripts/check-readme-index.sh`](scripts/check-readme-index.sh) asserts the README `## Skills` tables stay in lockstep with every consumer: a non-empty parse, parsed install-count equal to the number of table rows, every in-house skill present in the index, every in-house entry resolving to an on-disk `SKILL.md`, and each row's Skill/Upstream/Install columns agreeing (so a typo'd repo or slug can't ship a broken install command).
-
-A separate [`🔗 Upstream skill targets`](.github/workflows/check-upstream-skills.yaml) workflow verifies every *upstream* row still resolves to a real skill at its source. It runs weekly and on any PR that touches the index, but is **deliberately not** a required check — a third-party outage must never block a contributor PR, so transient errors downgrade to warnings and only definitive drift fails.
-
-Releases are cut automatically on every push to `main` — [`release.yaml`](.github/workflows/release.yaml) uses [`mathieudutour/github-tag-action`](https://github.com/mathieudutour/github-tag-action) to derive the next version tag from [commit conventions](https://www.conventionalcommits.org/), and [`cd.yaml`](.github/workflows/cd.yaml) then runs `gh skill publish` against the resulting tag. The publish pipeline publishes in-house skills (e.g. `ways-of-working`) on each release.
+Have a useful skill to share? Read the [contribution guide](docs/contributing.md). For checks and release maintenance, see [AGENTS.md](AGENTS.md).
 
 ### Inclusion criteria
 
-Before adding a row, check the skill clears the bar this index is curated to. These criteria are
-already applied in review — they are written here so every contributor (and the autonomous
-assistant) applies the same bar:
-
-- **Generic & reusable.** Index a skill only if it is useful **beyond a single project or person** —
-  a general capability (a framework, a workflow, a language toolchain, an engineering practice).
-  Project- or repo-specific knowledge belongs in *that* project, not here.
-- **Upstream pointer by default.** Prefer a row that installs **directly from the skill's canonical
-  upstream** (`gh skill install <owner/repo> <skill>`) so `gh skill update --all` tracks the true
-  source — no fork, no copy. Add an in-house directory **only** for skills devantler-tech genuinely
-  authors and maintains (e.g. `ways-of-working`).
-- **Spec-conformant & agent-neutral.** The skill's `SKILL.md` must follow the
-  [`agentskills.io`](https://agentskills.io) spec and stay **tool-neutral** — no Copilot/Claude-only
-  assumptions — so it works across every agent `gh skill` supports.
-- **Quality upstream.** Point only at an **actively-maintained, good-quality** source with a precise
-  `description` (the field agents match on to trigger the skill). Avoid abandoned or low-signal
-  upstreams.
-- **Naming & category.** The row's skill slug matches the upstream skill name; place it under the
-  best-fitting `## Skills` category, adding a new category only when a skill clearly fits none of the
-  existing ones.
-- **Lockstep.** Every change updates the README `## Skills` tables — the **single source of truth**
-  that `install.sh` and the `setup-`/`update-agent-skills` consumers parse. Never hand-maintain a
-  parallel list; run [`./scripts/check-readme-index.sh`](scripts/check-readme-index.sh) — the same gate CI enforces — before
-  opening a PR.
-
-See the [devantler-tech organization guidelines](https://github.com/devantler-tech/.github) for PR/issue templates and general contribution rules.
+Skills must be reusable, follow the Agent Skills format, and come from a maintained source. The [full inclusion criteria](docs/contributing.md#inclusion-criteria) explain what to check before adding a catalogue entry.
 
 ## License
 
-Apache 2.0 — see [`LICENSE`](LICENSE).
+[Apache 2.0](LICENSE). Each linked upstream skill has its own license.
