@@ -57,3 +57,30 @@ jobs:
           TAG: ${{ inputs.tag }}
         run: gh skill publish --tag "$TAG"
 
+      - name: 🏷️ Verify the agent-skills discovery topic
+        # `gh skill publish` offers to add the `agent-skills` topic only on its interactive
+        # path; the non-interactive `--tag` path above never does, so a release alone leaves
+        # the repository invisible to `gh skill search` topic discovery. This step cannot apply
+        # the topic either: replacing repository topics needs the Administration permission,
+        # which GITHUB_TOKEN never carries. Topics are owned declaratively in
+        # devantler-tech/.github (temporarily unmanaged there pending a provider fix), so this
+        # step verifies after publishing and fails loudly, naming the one command that
+        # resolves it, instead of letting the gap pass silently release after release.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REQUIRED_TOPIC: agent-skills
+        run: |
+          if ! names=$(gh api "repos/${GITHUB_REPOSITORY}/topics" --jq '.names | join(" ")'); then
+            echo "::error title=Discovery topic unverified::The release is published, but the repository topics could not be read, so discovery could not be verified. Re-run this job once the API is reachable."
+            exit 1
+          fi
+          case " $names " in
+            *" $REQUIRED_TOPIC "*)
+              echo "Repository carries the '$REQUIRED_TOPIC' topic; skill discovery is intact."
+              ;;
+            *)
+              echo "::error title=Missing discovery topic::The release is published, but the repository does not carry the '$REQUIRED_TOPIC' topic, so 'gh skill search' cannot surface it. Apply it once with a repository-admin token: gh repo edit ${GITHUB_REPOSITORY} --add-topic ${REQUIRED_TOPIC}"
+              exit 1
+              ;;
+          esac
+
