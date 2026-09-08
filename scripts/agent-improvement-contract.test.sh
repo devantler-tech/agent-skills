@@ -1063,18 +1063,22 @@ inverse-verdict|An intervention that is not live is NOT-WORKING.
 EOF
 
 check_sibling_liveness_contract() { # skill
-  local section flat
+  local section flat evidence_source
   section="$(awk '/^## 1\. Gather$/ { capture=1 } capture && /^---$/ { exit } capture { print }' "$1")"
   flat="$(tr '\n' ' ' <<<"$section" | tr -d '*' | sed -E 's/[[:space:]]+/ /g')"
 
-  grep -Eqi 'before using a sibling[^.]{0,100}(store|telemetry)[^.]{0,100}establish[^.]{0,80}producing' <<<"$flat" || return 1
+  for evidence_source in scorecard 'hypothesis store' telemetry; do
+    grep -Eqi "before using a sibling[^.]{0,100}${evidence_source}[^.]{0,100}establish[^.]{0,80}producing" <<<"$flat" || return 1
+  done
   grep -Eqi 'consumer-declared[^.]{0,80}liveness[^.]{0,120}(completed work|produced work)' <<<"$flat" || return 1
   grep -Eqi 'dispatch marker[^.]{0,100}is not[^.]{0,60}liveness' <<<"$flat" || return 1
+  grep -Eqi 'advancing schedule[^.]{0,100}is not[^.]{0,60}liveness' <<<"$flat" || return 1
   grep -Eqi 'missing[^.]{0,80}liveness[^.]{0,80}UNKNOWN' <<<"$flat" || return 1
   grep -Eqi 'never substitute[^.]{0,80}reader[^.]{0,80}healthy lane[^.]{0,80}sibling' <<<"$flat" || return 1
   grep -Eqi '(not producing|indeterminate)[^.]{0,180}blocked by the outage[^.]{0,140}no verdict[^.]{0,80}directional[^.]{0,80}no movement' <<<"$flat" || return 1
   grep -Eqi 'only the affected[^.]{0,80}(lane|evidence|hypotheses)' <<<"$flat" || return 1
   grep -Eqi 'continue[^.]{0,100}unrelated authorised work' <<<"$flat" || return 1
+  grep -Eqi 'continue[^.]{0,100}measurement of producing lanes' <<<"$flat" || return 1
   grep -Eqi 'settled verdicts[^.]{0,80}signature-overlap[^.]{0,80}remain binding' <<<"$flat" || return 1
   grep -Eqi 'recovery[^.]{0,140}exclude[^.]{0,80}dead dispatches[^.]{0,80}denominators' <<<"$flat" || return 1
   grep -Eqi 'after recovery, re-establish liveness' <<<"$flat" || return 1
@@ -1084,7 +1088,12 @@ check_sibling_liveness_contract() { # skill
     *"do not establish that its lane is producing"*|\
     *"missing or unavailable liveness evidence remains healthy"*|\
     *"an unavailable sibling stops all work"*|\
-    *"a dispatch marker is sufficient evidence of liveness"*) return 1 ;;
+    *"a dispatch marker is sufficient evidence of liveness"*|\
+    *"an advancing schedule is sufficient evidence of liveness"*|\
+    *"sibling scorecard evidence needs no liveness check"*|\
+    *"sibling hypothesis-store evidence needs no liveness check"*|\
+    *"sibling telemetry evidence needs no liveness check"*|\
+    *"stop the measurement of producing lanes"*) return 1 ;;
   esac
 }
 
@@ -1112,15 +1121,20 @@ while IFS='|' read -r label expr; do
   fi
 done <<'EOF'
 ordering|s/Before using a sibling/After using a sibling/
+scorecard|s/scorecard,/archives,/
+hypothesis-store|s/hypothesis store, //
+telemetry|s/or telemetry/or archives/
 check-owner|s/consumer-declared runtime liveness check/arbitrary runtime liveness check/
 work-evidence|s/evidence of produced work/evidence of dispatched work/
 dispatch-marker|s/is not evidence of liveness/is evidence of liveness/
+advancing-schedule|s/or an advancing schedule/or a historical schedule/
 unknown|s/liveness evidence remains UNKNOWN/liveness evidence remains healthy/
 reader-health|s/never substitute/always substitute/
 blocked|s/blocked by the/ready despite the/
 no-verdict|s/no verdict/a success verdict/
 scope|s/only the affected/every available/
 continue|s/and unrelated authorised work/and stop unrelated work/
+producing-lanes|s/producing lanes/paused lanes/
 overlap|s/signature-overlap constraints remain binding/signature-overlap constraints no longer apply/
 denominator|s/dead dispatches from behavioural/healthy dispatches from behavioural/
 recovery-check|s/re-establish liveness/skip checking liveness/
@@ -1142,6 +1156,11 @@ negated-gate|Do not establish that its lane is producing.
 unknown-health|Missing or unavailable liveness evidence remains healthy.
 global-stop|An unavailable sibling stops all work.
 dispatch-health|A dispatch marker is sufficient evidence of liveness.
+schedule-health|An advancing schedule is sufficient evidence of liveness.
+scorecard-exemption|Sibling scorecard evidence needs no liveness check.
+store-exemption|Sibling hypothesis-store evidence needs no liveness check.
+telemetry-exemption|Sibling telemetry evidence needs no liveness check.
+producing-stop|Stop the measurement of producing lanes when a sibling is unavailable.
 EOF
 
 bad="$tmp/sibling-liveness-outside-gather.md"
