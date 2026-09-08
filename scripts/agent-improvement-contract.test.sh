@@ -1062,6 +1062,97 @@ authoring-pr|A green check on the authoring pull request is sufficient.
 inverse-verdict|An intervention that is not live is NOT-WORKING.
 EOF
 
+check_sibling_liveness_contract() { # skill
+  local section flat
+  section="$(awk '/^## 1\. Gather$/ { capture=1 } capture && /^---$/ { exit } capture { print }' "$1")"
+  flat="$(tr '\n' ' ' <<<"$section" | tr -d '*' | sed -E 's/[[:space:]]+/ /g')"
+
+  grep -Eqi 'before using a sibling[^.]{0,100}(store|telemetry)[^.]{0,100}establish[^.]{0,80}producing' <<<"$flat" || return 1
+  grep -Eqi 'consumer-declared[^.]{0,80}liveness[^.]{0,120}(completed work|produced work)' <<<"$flat" || return 1
+  grep -Eqi 'dispatch marker[^.]{0,100}is not[^.]{0,60}liveness' <<<"$flat" || return 1
+  grep -Eqi 'missing[^.]{0,80}liveness[^.]{0,80}UNKNOWN' <<<"$flat" || return 1
+  grep -Eqi '(not producing|indeterminate)[^.]{0,180}blocked by the outage[^.]{0,140}no verdict[^.]{0,80}directional[^.]{0,80}no movement' <<<"$flat" || return 1
+  grep -Eqi 'only the affected[^.]{0,80}(lane|evidence|hypotheses)' <<<"$flat" || return 1
+  grep -Eqi 'continue[^.]{0,100}unrelated authorised work' <<<"$flat" || return 1
+  grep -Eqi 'settled verdicts[^.]{0,80}signature-overlap[^.]{0,80}remain binding' <<<"$flat" || return 1
+  grep -Eqi 'recovery[^.]{0,140}exclude[^.]{0,80}dead dispatches[^.]{0,80}denominators' <<<"$flat" || return 1
+
+  case "$(tr '[:upper:]' '[:lower:]' <<<"$flat")" in
+    *"do not establish that its lane is producing"*|\
+    *"missing or unavailable liveness evidence remains healthy"*|\
+    *"an unavailable sibling stops all work"*|\
+    *"a dispatch marker is sufficient evidence of liveness"*) return 1 ;;
+  esac
+}
+
+if check_sibling_liveness_contract "$skill"; then
+  printf '  ✅ Gather requires sibling liveness and scopes unavailable evidence\n'
+else
+  printf '  ❌ Gather lacks the sibling-liveness evidence gate\n' >&2
+  fail=1
+fi
+
+# Mutate the actual instruction surface, and prove each mutation changed bytes.
+# Removing the gate, changing UNKNOWN to health, or stopping healthy lanes must fail.
+while IFS='|' read -r label expr; do
+  [ -n "$label" ] || continue
+  bad="$tmp/sibling-liveness-$label.md"
+  sed -E "$expr" "$skill" >"$bad"
+  if cmp -s "$skill" "$bad"; then
+    printf '  ❌ sibling liveness ablation %s changed nothing\n' "$label" >&2
+    fail=1
+  elif check_sibling_liveness_contract "$bad"; then
+    printf '  ❌ sibling liveness ablation %s still passes\n' "$label" >&2
+    fail=1
+  else
+    printf '  ✅ sibling liveness ablation %s fails closed\n' "$label"
+  fi
+done <<'EOF'
+ordering|s/Before using a sibling/After using a sibling/
+check-owner|s/consumer-declared runtime liveness check/arbitrary runtime liveness check/
+work-evidence|s/evidence of produced work/evidence of dispatched work/
+dispatch-marker|s/is not evidence of liveness/is evidence of liveness/
+unknown|s/liveness evidence remains UNKNOWN/liveness evidence remains healthy/
+blocked|s/blocked by the/ready despite the/
+no-verdict|s/no verdict/a success verdict/
+scope|s/only the affected/every available/
+continue|s/and unrelated authorised work/and stop unrelated work/
+overlap|s/signature-overlap constraints remain binding/signature-overlap constraints no longer apply/
+denominator|s/dead dispatches from behavioural/healthy dispatches from behavioural/
+EOF
+
+while IFS='|' read -r label sentence; do
+  [ -n "$label" ] || continue
+  bad="$tmp/sibling-liveness-contradiction-$label.md"
+  awk -v s="$sentence" '/^Supplement it with:$/ { print s } { print }' "$skill" >"$bad"
+  if cmp -s "$skill" "$bad" || check_sibling_liveness_contract "$bad"; then
+    printf '  ❌ sibling liveness contradiction %s does not fail closed\n' "$label" >&2
+    fail=1
+  else
+    printf '  ✅ sibling liveness contradiction %s fails closed\n' "$label"
+  fi
+done <<'EOF'
+negated-gate|Do not establish that its lane is producing.
+unknown-health|Missing or unavailable liveness evidence remains healthy.
+global-stop|An unavailable sibling stops all work.
+dispatch-health|A dispatch marker is sufficient evidence of liveness.
+EOF
+
+bad="$tmp/sibling-liveness-outside-gather.md"
+awk '
+  /^\*\*Establish sibling liveness/ { capture=1 }
+  capture && /^Supplement it with:$/ { capture=0 }
+  capture { saved=saved $0 "\n"; next }
+  { print }
+  END { print saved }
+' "$skill" >"$bad"
+if cmp -s "$skill" "$bad" || check_sibling_liveness_contract "$bad"; then
+  printf '  ❌ sibling liveness must be required at the Gather evidence boundary\n' >&2
+  fail=1
+else
+  printf '  ✅ sibling liveness outside Gather fails closed\n'
+fi
+
 if [ "$fail" -ne 0 ]; then
   printf '❌ agent-improvement contract test failed\n' >&2
   exit 1

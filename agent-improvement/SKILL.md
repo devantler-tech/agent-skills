@@ -152,6 +152,23 @@ the records that the filter intentionally excluded; an equivalent-cohort compari
 everything except that filter constant. Only an unexplained residual is a finding about the filter. A
 control that shares the enumeration is not a control.
 
+**Establish sibling liveness before consuming its evidence.** Before using a sibling's scorecard,
+hypothesis store, or telemetry as evidence, establish that its lane is producing. Use the
+consumer-declared runtime liveness check for that lane and task, using evidence of produced work.
+A dispatch marker or an advancing schedule is not evidence of liveness: a run can start and fail
+before doing any work. Missing or unavailable liveness evidence remains UNKNOWN; never substitute
+the reader's own healthy lane for the sibling's result.
+
+If it is not producing or its state is indeterminate, record affected hypotheses as **blocked by the
+outage** and take **no verdict**, directional reading, or "no movement" inference from that evidence.
+Fence only the affected lane's evidence and hypotheses; continue the measurement of producing lanes
+and unrelated authorised work. Settled verdicts and signature-overlap constraints remain binding,
+so an unavailable sibling does not permit duplicated or confounding interventions.
+After recovery, re-establish liveness and exclude the affected lane's dead dispatches from behavioural
+rate denominators; retain those failures in its reliability and outage record. A zero error count
+from a lane that did no work is not improvement. The consumer supplies the runtime-specific check;
+this skill requires its result without prescribing a scheduler, store, or provider.
+
 Supplement it with:
 
 - **Every instance's durable memory** — read for *what the agent believes*, compare against live state,
