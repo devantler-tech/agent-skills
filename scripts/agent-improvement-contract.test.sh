@@ -1073,16 +1073,29 @@ check_sibling_liveness_contract() { # skill
   grep -Eqi 'consumer-declared[^.]{0,80}liveness[^.]{0,120}(completed work|produced work)' <<<"$flat" || return 1
   grep -Eqi 'dispatch marker[^.]{0,100}is not[^.]{0,60}liveness' <<<"$flat" || return 1
   grep -Eqi 'advancing schedule[^.]{0,100}is not[^.]{0,60}liveness' <<<"$flat" || return 1
-  grep -Eqi 'missing[^.]{0,80}liveness[^.]{0,80}UNKNOWN' <<<"$flat" || return 1
+  # Both absent-evidence words are required SEPARATELY. A single alternation or a match on only one
+  # of them lets the other be deleted while the suite still passes — and "unavailable" is the half
+  # that covers a liveness check which ran and could not decide, the commonest real outage shape.
+  grep -Eqi 'missing[^.]{0,80}liveness evidence remains UNKNOWN' <<<"$flat" || return 1
+  grep -Eqi 'unavailable liveness evidence remains UNKNOWN' <<<"$flat" || return 1
   grep -Eqi 'never substitute[^.]{0,80}reader[^.]{0,80}healthy lane[^.]{0,80}sibling' <<<"$flat" || return 1
-  grep -Eqi '(not producing|indeterminate)[^.]{0,180}blocked by the outage[^.]{0,140}no verdict[^.]{0,80}directional[^.]{0,80}no movement' <<<"$flat" || return 1
+  # Split, never alternated: a lane that is NOT PRODUCING and a lane whose state is INDETERMINATE are
+  # different findings, and an alternation is satisfied by whichever one survives a regression.
+  grep -Eqi 'not producing[^.]{0,180}blocked by the outage[^.]{0,140}no verdict[^.]{0,80}directional[^.]{0,80}no movement' <<<"$flat" || return 1
+  grep -Eqi 'indeterminate[^.]{0,180}blocked by the outage[^.]{0,140}no verdict[^.]{0,80}directional[^.]{0,80}no movement' <<<"$flat" || return 1
   grep -Eqi 'only the affected[^.]{0,80}(lane|evidence|hypotheses)' <<<"$flat" || return 1
   grep -Eqi 'continue[^.]{0,100}unrelated authorised work' <<<"$flat" || return 1
   grep -Eqi 'continue[^.]{0,100}measurement of producing lanes' <<<"$flat" || return 1
   grep -Eqi 'settled verdicts[^.]{0,80}signature-overlap[^.]{0,80}remain binding' <<<"$flat" || return 1
-  grep -Eqi 'recovery[^.]{0,140}exclude[^.]{0,80}dead dispatches[^.]{0,80}denominators' <<<"$flat" || return 1
+  # "denominators" alone is not the rule: excluding dead dispatches matters precisely because they
+  # deflate a BEHAVIOURAL RATE, so that qualifier is bound rather than left to the surrounding prose.
+  grep -Eqi 'recovery[^.]{0,140}exclude[^.]{0,80}dead dispatches[^.]{0,80}behavioural rate denominators' <<<"$flat" || return 1
   grep -Eqi 'after recovery, re-establish liveness' <<<"$flat" || return 1
   grep -Eqi 'retain those failures[^.]{0,80}reliability and outage record' <<<"$flat" || return 1
+  # The reason the exclusion exists, asserted in its own right: a dead lane's error count falls to
+  # zero, so a naive reading scores an outage as an improvement. Nothing else in this matcher binds
+  # that sentence, so without this assertion it can be deleted with the suite green.
+  grep -Eqi 'zero error count[^.]{0,80}did no work is not improvement' <<<"$flat" || return 1
 
   case "$(tr '[:upper:]' '[:lower:]' <<<"$flat")" in
     *"do not establish that its lane is producing"*|\
@@ -1093,6 +1106,10 @@ check_sibling_liveness_contract() { # skill
     *"sibling scorecard evidence needs no liveness check"*|\
     *"sibling hypothesis-store evidence needs no liveness check"*|\
     *"sibling telemetry evidence needs no liveness check"*|\
+    *"unavailable liveness evidence remains healthy"*|\
+    *"an indeterminate lane still yields a verdict"*|\
+    *"count dead dispatches in behavioural rate denominators"*|\
+    *"a zero error count from a lane that did no work is improvement"*|\
     *"stop the measurement of producing lanes"*) return 1 ;;
   esac
 }
@@ -1139,6 +1156,12 @@ overlap|s/signature-overlap constraints remain binding/signature-overlap constra
 denominator|s/dead dispatches from behavioural/healthy dispatches from behavioural/
 recovery-check|s/re-establish liveness/skip checking liveness/
 retain-failures|s/retain those failures/discard those failures/
+unavailable|s/Missing or unavailable liveness/Missing liveness/
+missing|s/Missing or unavailable liveness/Unavailable liveness/
+not-producing|s/If it is not producing or its state is indeterminate,/If its state is indeterminate,/
+indeterminate|s/If it is not producing or its state is indeterminate,/If it is not producing,/
+behavioural-rate|s/ from behavioural$/ from/
+zero-error|s/did no work is not improvement/did no work is regrettable/
 EOF
 
 while IFS='|' read -r label sentence; do
@@ -1160,6 +1183,10 @@ schedule-health|An advancing schedule is sufficient evidence of liveness.
 scorecard-exemption|Sibling scorecard evidence needs no liveness check.
 store-exemption|Sibling hypothesis-store evidence needs no liveness check.
 telemetry-exemption|Sibling telemetry evidence needs no liveness check.
+unavailable-health|Unavailable liveness evidence remains healthy.
+indeterminate-verdict|An indeterminate lane still yields a verdict.
+dead-dispatch-counting|Count dead dispatches in behavioural rate denominators.
+zero-error-improvement|A zero error count from a lane that did no work is improvement.
 producing-stop|Stop the measurement of producing lanes when a sibling is unavailable.
 EOF
 
