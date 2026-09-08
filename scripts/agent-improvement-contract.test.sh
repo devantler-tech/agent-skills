@@ -1071,11 +1071,14 @@ check_sibling_liveness_contract() { # skill
   grep -Eqi 'consumer-declared[^.]{0,80}liveness[^.]{0,120}(completed work|produced work)' <<<"$flat" || return 1
   grep -Eqi 'dispatch marker[^.]{0,100}is not[^.]{0,60}liveness' <<<"$flat" || return 1
   grep -Eqi 'missing[^.]{0,80}liveness[^.]{0,80}UNKNOWN' <<<"$flat" || return 1
+  grep -Eqi 'never substitute[^.]{0,80}reader[^.]{0,80}healthy lane[^.]{0,80}sibling' <<<"$flat" || return 1
   grep -Eqi '(not producing|indeterminate)[^.]{0,180}blocked by the outage[^.]{0,140}no verdict[^.]{0,80}directional[^.]{0,80}no movement' <<<"$flat" || return 1
   grep -Eqi 'only the affected[^.]{0,80}(lane|evidence|hypotheses)' <<<"$flat" || return 1
   grep -Eqi 'continue[^.]{0,100}unrelated authorised work' <<<"$flat" || return 1
   grep -Eqi 'settled verdicts[^.]{0,80}signature-overlap[^.]{0,80}remain binding' <<<"$flat" || return 1
   grep -Eqi 'recovery[^.]{0,140}exclude[^.]{0,80}dead dispatches[^.]{0,80}denominators' <<<"$flat" || return 1
+  grep -Eqi 'after recovery, re-establish liveness' <<<"$flat" || return 1
+  grep -Eqi 'retain those failures[^.]{0,80}reliability and outage record' <<<"$flat" || return 1
 
   case "$(tr '[:upper:]' '[:lower:]' <<<"$flat")" in
     *"do not establish that its lane is producing"*|\
@@ -1113,12 +1116,15 @@ check-owner|s/consumer-declared runtime liveness check/arbitrary runtime livenes
 work-evidence|s/evidence of produced work/evidence of dispatched work/
 dispatch-marker|s/is not evidence of liveness/is evidence of liveness/
 unknown|s/liveness evidence remains UNKNOWN/liveness evidence remains healthy/
+reader-health|s/never substitute/always substitute/
 blocked|s/blocked by the/ready despite the/
 no-verdict|s/no verdict/a success verdict/
 scope|s/only the affected/every available/
 continue|s/and unrelated authorised work/and stop unrelated work/
 overlap|s/signature-overlap constraints remain binding/signature-overlap constraints no longer apply/
 denominator|s/dead dispatches from behavioural/healthy dispatches from behavioural/
+recovery-check|s/re-establish liveness/skip checking liveness/
+retain-failures|s/retain those failures/discard those failures/
 EOF
 
 while IFS='|' read -r label sentence; do
