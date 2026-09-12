@@ -7,7 +7,9 @@ the consuming deployment's run loop rather than a second delegation procedure he
 
 ## Gather the complete attempt chain
 
-Link each terminal work item to its full attempt chain: parent and child identities, failed and
+Link every routed work item to its full attempt chain, including work with no successful outcome.
+Record accepted, failed, abandoned and ongoing/window-censored work explicitly at the observation
+boundary; never drop unfinished work from the cohort. Retain parent and child identities, failed and
 abandoned attempts, handoffs, requested and effective models, reasoning effort, task class, runtime
 version, and loaded contract/policy revisions. Use runtime-produced metadata with provenance rather
 than agent assertions. Count a completion once; never credit the whole result to the final model or

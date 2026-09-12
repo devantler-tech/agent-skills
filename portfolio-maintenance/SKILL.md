@@ -63,12 +63,15 @@ skill says "per the *X* section", the consuming repo supplies the concrete fact.
    It owns model aliases, billing restrictions, quota admission, temporary runtime scopes, and
    escalation bounds; never infer them from a benchmark or a runtime default. Without that section,
    retain the deployment's existing routing. A declared but unresolved prerequisite blocks the
-   dispatch that depends on it; report the gap and continue unrelated authorised work. A policy
+   dispatch that depends on it. A policy
    evaluator reports eligibility, not runtime enforcement: only a verified control before inference
    can prevent a prohibited model or billing route. A required control that is unsupported or
    unverified is an unresolved prerequisite: block dependent startup, resume, child dispatch, and
-   fallback. Record the gap and continue only unrelated authorised work. An in-session check cannot
-   protect inference already consumed.
+   fallback. If the current parent route is prohibited or its required native enforcement is
+   unresolved, stop the current run; unrelated task content cannot authorize that inference route.
+   Continue unrelated authorised work only when the gap applies solely to a future child, switch or
+   fallback and the current parent route is permitted. Report the gap through an available safe
+   termination path. An in-session check cannot protect inference already consumed.
 
 ## 1. Survey — but only when you do not already know your next move
 
