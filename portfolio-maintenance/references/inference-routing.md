@@ -6,8 +6,9 @@ delegation or escalation. The consumer supplies model assignments and operationa
 
 Delegate only a coherent, independently verifiable deliverable when expected savings exceed
 instruction/history loading, tool use, parent integration, retries, and escalation. Keep deterministic
-lint, formatting, tests, and Git commands in the owning task. A new model session is not required for
-each sub-skill. Preserve required instructions; a short handoff does not bound automatically injected
+lint, formatting, tests, and Git commands in the task doing the associated work; do not spawn another
+agent solely to run one of them. A builder may commit its scoped changes in its own isolated working
+copy to produce a result revision. Preserve required instructions; a short handoff does not bound automatically injected
 history or preloaded skills.
 
 **One live delivery owner per work item.** The owner manages the claim and PR lifecycle, integrates
@@ -22,7 +23,10 @@ contract and routing-policy revisions; permitted paths and tools; acceptance che
 escalation bounds; and the evidence needed to resume. The child returns its result revision, checks
 and outcomes, unresolved findings, and a complete/partial/blocked status. It does not independently
 publish or merge the work. The owner verifies the actual result rather than trusting a completion
-message. Rebind ownership before resumed mutations and stop the former writer before a handoff;
+message. If a child-local commit cannot be transferred, return a portable patch/artifact with its
+base revision and integrity digest; the owner applies and verifies it before producing the integration
+commit. Branch publication and the PR lifecycle remain with the delivery owner. Rebind ownership
+before resumed mutations and stop the former writer before a handoff;
 passing context to another runtime does not transfer ownership or subscription entitlement.
 
 Escalate only on the consumer's declared failure evidence or direct task classification. Carry the
