@@ -118,6 +118,14 @@ nothing that depends on it. Do not infer which surfaces are yours, and do not as
 were not granted. This guard is load-bearing precisely because the skill edits guardrails — improvising
 its own bounds would remove them before any other check runs.
 
+**Optional inference routing.** When the consumer declares **Inference routing**, resolve that section's
+reviewed policy, named publisher, runtime evidence sources, and authority before proposing model or
+delegation changes; read [the routing evidence and experiment procedure](references/inference-routing.md)
+only for that work. Without it, retain existing routing and continue the ordinary improvement loop;
+do not invent aliases, billing entitlement, or a policy publisher. An unresolved declared prerequisite
+blocks only changes depending on it. Policy validity, native enforcement, and actual execution are
+separate evidence: a successful preflight or a self-reported model is not proof of either of the latter.
+
 ---
 
 ## 1. Gather
