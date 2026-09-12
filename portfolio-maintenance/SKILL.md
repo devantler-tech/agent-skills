@@ -65,8 +65,10 @@ skill says "per the *X* section", the consuming repo supplies the concrete fact.
    retain the deployment's existing routing. A declared but unresolved prerequisite blocks the
    dispatch that depends on it; report the gap and continue unrelated authorised work. A policy
    evaluator reports eligibility, not runtime enforcement: only a verified control before inference
-   can prevent a prohibited model or billing route, including startup, resume, and fallback. Record
-   unsupported controls honestly; an in-session check cannot protect inference already consumed.
+   can prevent a prohibited model or billing route. A required control that is unsupported or
+   unverified is an unresolved prerequisite: block dependent startup, resume, child dispatch, and
+   fallback. Record the gap and continue only unrelated authorised work. An in-session check cannot
+   protect inference already consumed.
 
 ## 1. Survey — but only when you do not already know your next move
 
