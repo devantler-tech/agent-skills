@@ -11,6 +11,7 @@ def valid:
   | type == "object" and .version == 1
   and (.run | type == "object"
     and (.id | text) and (.instance | text) and (.evidence | text)
+    and (.scoringVersion | text)
     and (.role == "engineer" or .role == "improver")
     and (.startedAt | timestamp) and (.endedAt | timestamp)
     and .endedAt >= .startedAt)
@@ -44,7 +45,7 @@ def artifact_mix:
 
 def selection_metric:
   . as $selection
-  | {id, at, evidence, selectedId, selectedClass} +
+  | {id, at, evidence, selectedId, selectedClass, candidatesComplete} +
     (if .selectedClass == "unknown" then
        {state: "UNKNOWN", oldestUnstarted: null}
      elif .selectedClass != "easy" then

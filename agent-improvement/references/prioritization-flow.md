@@ -68,7 +68,7 @@ Input version 1 is a JSON object:
 | Field | Contract |
 |---|---|
 | `version` | `1`; schema changes require a new version and preserved old series. |
-| `run` | Nonblank `id`, `instance`, `evidence`; `role` is `engineer` or `improver`; integer Unix-second `startedAt` and `endedAt`. Only completed runs. |
+| `run` | Nonblank `id`, `instance`, `evidence`, and `scoringVersion`; `role` is `engineer` or `improver`; integer Unix-second `startedAt` and `endedAt`. Only completed runs. `scoringVersion` identifies the deployment's classification/measurement rubric, separately from the JSON schema version. Compare only compatible scoring definitions. |
 | `artifactsComplete` | Boolean: every artifact attributable to this run was enumerated. |
 | `artifacts` | Array of `{id, class, evidence}`; class is `easy`, `substantive`, or `unknown`. IDs identify artifacts, not observations. Repeated IDs may have different evidence pointers but must agree on class. |
 | `selectionsComplete` | Boolean: every selection in this run was enumerated. False forbids a whole-run selection verdict even if individual observed selections are measurable. |
@@ -78,7 +78,9 @@ Input version 1 is a JSON object:
 All source pointers must be nonblank opaque strings. Keep sensitive evidence in the consumer's private
 store rather than embedding transcript text or private repository URLs in exported measurements.
 
-Output preserves the run and selection evidence pointers. `artifactMix` contains unique counts for
+Output preserves the run (including `scoringVersion`), selection evidence pointers, and each
+selection's `candidatesComplete` flag. This distinguishes incomplete candidate enumeration from a
+complete census with unknown actionability or start state. `artifactMix` contains unique counts for
 all three classes, `revisits`, and `easyShare`. The share is null if enumeration is incomplete, any
 artifact is unclassified, or the set is empty. It never silently drops unknowns.
 

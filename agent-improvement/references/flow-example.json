@@ -4,6 +4,7 @@
     "id": "synthetic-run",
     "role": "engineer",
     "instance": "example-instance",
+    "scoringVersion": "synthetic-rubric-v1",
     "startedAt": 100,
     "endedAt": 200,
     "evidence": "synthetic/run"

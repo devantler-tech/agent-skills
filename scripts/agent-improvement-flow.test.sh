@@ -8,7 +8,7 @@ trap 'rm -rf "$work"' EXIT
 cat > "$work/base.json" <<'JSON'
 {
   "version": 1,
-  "run": {"id":"run-1","role":"engineer","instance":"local","startedAt":100,"endedAt":200,"evidence":"run/1"},
+  "run": {"id":"run-1","role":"engineer","instance":"local","scoringVersion":"fixture-rubric-v1","startedAt":100,"endedAt":200,"evidence":"run/1"},
   "artifactsComplete": true,
   "selectionsComplete": true,
   "artifacts": [
@@ -29,6 +29,8 @@ cat > "$work/base.json" <<'JSON'
 }
 JSON
 passed=0
+# Run one valid-input case against the real calculator and fail on a mismatched result.
+# Arguments: case name, input jq transformation, expected output jq predicate.
 check() {
   local name=$1 change=$2 expected=$3
   jq "$change" "$work/base.json" > "$work/input.json"
@@ -40,6 +42,8 @@ check() {
   }
   passed=$((passed + 1))
 }
+# Require malformed evidence to fail without emitting a partial scorecard.
+# Arguments: case name and input jq transformation.
 reject() {
   local name=$1 change=$2
   jq "$change" "$work/base.json" > "$work/input.json"
@@ -61,9 +65,9 @@ check 'partial artifact census has no ratio' '.artifactsComplete=false' \
 check 'partial selection census remains visible even with measured observations' '.selectionsComplete=false' \
   '.selectionsComplete == false and .selections[0].state == "MEASURED"'
 check 'partial candidates cannot prove an oldest issue' '.selections[0].candidatesComplete=false' \
-  '.selections[0].state == "UNKNOWN" and .selections[0].oldestUnstarted == null'
+  '.selections[0].state == "UNKNOWN" and .selections[0].oldestUnstarted == null and .selections[0].candidatesComplete == false'
 check 'unknown actionability cannot be read as false' '.selections[0].candidates[0].actionable=null' \
-  '.selections[0].state == "UNKNOWN"'
+  '.selections[0].state == "UNKNOWN" and .selections[0].candidatesComplete == true'
 check 'unknown end state cannot be read as started' '.selections[0].candidates[0].startedByEnd=null' \
   '.selections[0].state == "UNKNOWN"'
 check 'work started later in the same run was not left unstarted' '.selections[0].candidates[0].startedByEnd=true' \
@@ -77,6 +81,11 @@ check 'zero artifacts does not create a zero percent ratio' '.artifacts=[]' \
 check 'equal-age candidates use a deterministic identifier tie-break' \
   '.selections[0].candidates += [{id:"aaa",createdAt:10,actionable:true,startedByEnd:false,evidence:"join/aaa"}]' \
   '.selections[0].oldestUnstarted.id == "aaa"'
+check 'scoring definition version survives output unchanged' '.run.scoringVersion="fixture-rubric-v2"' \
+  '.run.scoringVersion == "fixture-rubric-v2"'
+reject 'missing scoring definition version' 'del(.run.scoringVersion)'
+reject 'blank scoring definition version' '.run.scoringVersion="  "'
+reject 'non-string scoring definition version' '.run.scoringVersion=2'
 reject 'contradictory duplicate artifact classifications' '.artifacts[2].class="substantive"'
 reject 'duplicate selection IDs' '.selections += .selections'
 reject 'duplicate candidate IDs' '.selections[0].candidates += [.selections[0].candidates[0]]'
