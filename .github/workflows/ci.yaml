@@ -158,6 +158,9 @@ jobs:
         # before both their time and observation-volume floors are met.
         run: bash ./scripts/agent-improvement-contract.test.sh
 
+      - name: 🧪 Verify prioritization and flow measurements
+        run: bash ./scripts/agent-improvement-flow.test.sh
+
       - name: 🧪 Verify promotion readiness contracts
         # Each independently installable engineering skill must carry the full
         # readiness gate, and the portfolio loop must revalidate it at both
