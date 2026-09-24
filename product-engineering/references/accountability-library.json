@@ -137,12 +137,16 @@
   },
   "unknowns": [
     {
+      "id": "consumer-impact",
+      "targets": ["claim:impact"],
       "question": "Which consumers rely on the changed interpretation?",
       "impact": "A silent change may affect consumers absent from the test corpus",
       "nextStep": "Collect representative compatibility examples before proposing a contract change",
       "owner": "Library maintainer"
     },
     {
+      "id": "consumer-recovery",
+      "targets": ["rollback"],
       "question": "Will every supported consumer recover after a dependency revert?",
       "impact": "Persistent derived data may require separate repair",
       "nextStep": "Verify consumer recovery before authorizing adoption",

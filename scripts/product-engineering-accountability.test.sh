@@ -53,6 +53,26 @@ invalid 'duplicate evidence IDs' '.evidence += [.evidence[0]]'
 invalid 'unscoped guarantee' '.claims[0].scope=""'
 invalid 'unknown evidence asserted as result' '.evidence[0].result="unknown"'
 invalid 'unknown claim without follow-up' '.unknowns=[]'
+invalid 'unrelated follow-up cannot cover unknown claim' '.unknowns=[.unknowns[1]]'
+invalid 'unrelated follow-up cannot cover unproven recovery' '.unknowns=[.unknowns[0]]'
+invalid 'render-equivalent evidence identifiers' '.evidence += [(.evidence[0] | .id="late  ncy"), (.evidence[0] | .id="late ncy")]'
+invalid 'leading whitespace hides fictional source' '.synthetic=false | .evidence[].source |= " " + .'
+invalid 'case variants of fictional URI scheme' '.synthetic=false | .evidence[].source |= sub("example://";"EXAMPLE://")'
+invalid 'unknown evidence without a linked follow-up' '.evidence += [{id:"pending",source:"artifact://pending",revision:"candidate-search-2",kind:"live",basis:"UNKNOWN",observedAt:null,result:"unknown",finding:"Unavailable"}]'
+invalid 'missing follow-up targets' 'del(.unknowns[0].targets)'
+invalid 'empty follow-up targets' '.unknowns[0].targets=[]'
+invalid 'duplicate follow-up targets' '.unknowns[0].targets += [.unknowns[0].targets[0]]'
+invalid 'duplicate follow-up identifiers' '.unknowns += [.unknowns[0]]'
+invalid 'missing claim target' '.unknowns[0].targets=["claim:absent"]'
+invalid 'missing evidence target' '.unknowns[0].targets=["evidence:absent"]'
+invalid 'generic decision target cannot cover a specific gap' '.unknowns[0].targets=["decision"]'
+invalid 'known outcome cannot cover a different unknown' '.unknowns[0].targets=["claim:benefit"]'
+invalid 'noncanonical decision identifier' '.decision.id="search preview"'
+invalid 'noncanonical option identifier' '.comparison.options[0].id="current  choice" | .comparison.incumbent="current  choice"'
+invalid 'noncanonical claim identifier' '.claims[0].id="Speed"'
+invalid 'noncanonical follow-up identifier' '.unknowns[0].id="user benefit"'
+invalid 'trailing whitespace in source' '.evidence[0].source += " "'
+invalid 'multiline source' '.evidence[0].source += "\nfragment"'
 invalid 'future evidence' '.evidence[0].observedAt="2026-09-25T00:00:00Z"'
 invalid 'invalid calendar date' '.decision.asOf="2026-02-30T12:00:00Z"'
 invalid 'missing revision' '.evidence[0].revision=""'
@@ -74,13 +94,17 @@ invalid 'resolution reference is blank' '.humanDecisions[0].resolution={decision
 invalid 'resolution decision is blank' '.humanDecisions[0].resolution={decision:" ",reference:"artifact://decision/42"}'
 valid 'unproven rollback stays explicitly unknown' '.operations.rollback |= (.status="UNKNOWN" | .evidence=[])'
 valid 'observed recovery can be recorded' '.evidence[1].basis="OBSERVED" | .operations.rollback.status="PROVEN"'
-valid 'unknown evidence is allowed when labelled unknown' '.evidence[0] |= (.basis="UNKNOWN" | .result="unknown" | .observedAt=null) | .claims[0].basis="UNKNOWN" | .claims[1].basis="UNKNOWN"'
+valid 'unknown evidence is allowed when labelled and linked' '.evidence[0] |= (.basis="UNKNOWN" | .result="unknown" | .observedAt=null) | .claims[0].basis="UNKNOWN" | .claims[1].basis="UNKNOWN" | .unknowns[0].targets += ["evidence:latency","claim:speed"]'
 valid 'real records keep the same structural boundary' '.synthetic=false | .evidence[].source |= sub("^example://";"artifact://")'
-valid 'all evidence can remain explicitly unknown' '.evidence=[] | .claims[] |= (.basis="UNKNOWN" | .evidence=[]) | .operations.rollback |= (.status="UNKNOWN" | .evidence=[])'
+valid 'all evidence can remain explicitly unknown' '.evidence=[] | .claims[] |= (.basis="UNKNOWN" | .evidence=[]) | .operations.rollback |= (.status="UNKNOWN" | .evidence=[]) | .unknowns[0].targets += ["claim:speed"]'
 valid 'cited human decision' '.humanDecisions[0].resolution={decision:"Declined",reference:"artifact://decision/42"}'
 jq -e '.openHumanDecisions == 0' "$work/result.json" >/dev/null
 jq -sr --arg mode render -f "$filter" "$work/input.json" > "$work/render.md"
 grep -Fq 'Resolution: Declined. Reference: artifact://decision/42.' "$work/render.md"
+grep -Fq 'claim:live\-effect' "$work/render.md"
+grep -Fq 'live\-recovery [rollback]' "$work/render.md"
+valid 'one owned follow-up explicitly covers several gaps' '.unknowns[0].targets += ["rollback"] | .unknowns=[.unknowns[0]]'
+valid 'general decision uncertainty can be separately recorded' '.unknowns += [{id:"decision-scope",targets:["decision"],question:"Who is affected?",impact:"Scope incomplete",nextStep:"Review affected users",owner:"Product owner"}]'
 
 for mutation in '.decision=null' '.claims={}' '.evidence=null' '.unknowns=null' '.operations.failureModes=[]' '.humanDecisions={}' '.claims[0].evidence=[1]' '.synthetic="true"' '.decision.title="bad\u0007text"'; do
   invalid "wrong data shape: $mutation" "$mutation"

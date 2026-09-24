@@ -6,15 +6,17 @@ def shape($fields): type == "object" and (keys == ($fields | sort));
 def oneof($values): . as $v | $values | index($v) != null;
 def texts: type == "array" and all(.[]; text);
 def unique_values: length == (unique | length);
-def ids: map(.id) | unique_values;
-def refs: texts and unique_values;
+def token: type == "string" and test("^[a-z0-9]+(-[a-z0-9]+)*$");
+def ids: all(.[]; .id | token) and (map(.id) | unique_values);
+def refs: type == "array" and all(.[]; token) and unique_values;
+def source: text and (. == gsub("^\\s+|\\s+$"; "")) and (test("[\r\n]") | not);
 def utc: text and (try ((fromdateiso8601 | strftime("%Y-%m-%dT%H:%M:%SZ")) == .) catch false);
 def need($ok; $why): if $ok then . else error("invalid accountability brief: " + $why) end;
 def schema:
   shape(["schemaVersion","synthetic","decision","model","comparison","evidence","claims","operations","unknowns","humanDecisions"])
   and .schemaVersion == 1 and (.synthetic | type == "boolean")
   and (.decision | shape(["id","revision","asOf","title","owner","audience","summary","request"])
-    and ([.id,.revision,.title,.owner,.audience,.summary,.request] | all(.[]; text)) and (.asOf | utc))
+    and (.id | token) and ([.revision,.title,.owner,.audience,.summary,.request] | all(.[]; text)) and (.asOf | utc))
   and (.model | shape(["explanation","analogy","behavior","architecture"])
     and ([.explanation,.behavior,.architecture] | all(.[]; text))
     and (.analogy == null or (.analogy | shape(["description","limits"]) and ([.description,.limits] | all(.[]; text)))))
@@ -27,6 +29,7 @@ def schema:
   and (.evidence | type == "array" and ids and all(.[];
     shape(["id","source","revision","kind","basis","observedAt","result","finding"])
     and ([.id,.source,.revision,.finding] | all(.[]; text))
+    and (.source | source)
     and (.kind | oneof(["static","behavior","deployment","live","review","rollback","simulation"]))
     and (.basis | oneof(["OBSERVED","SIMULATED","UNKNOWN"]))
     and (.result | oneof(["pass","fail","unknown"]))
@@ -45,8 +48,9 @@ def schema:
     and (.rollback | shape(["status","action","verification","owner","evidence"])
       and ([.action,.verification,.owner] | all(.[]; text)) and (.evidence | refs)
       and (.status | oneof(["PROVEN","SIMULATED","UNKNOWN"]))))
-  and (.unknowns | type == "array" and all(.[]; shape(["question","impact","nextStep","owner"])
-    and ([.question,.impact,.nextStep,.owner] | all(.[]; text))))
+  and (.unknowns | type == "array" and ids and all(.[]; shape(["id","targets","question","impact","nextStep","owner"])
+    and ([.question,.impact,.nextStep,.owner] | all(.[]; text))
+    and (.targets | texts and length > 0 and unique_values)))
   and (.humanDecisions | type == "array" and all(.[]; shape(["question","owner","resolution"])
     and ([.question,.owner] | all(.[]; text))
     and (.resolution == null or (.resolution | shape(["decision","reference"])
@@ -56,7 +60,7 @@ def schema:
 def validate:
   need(schema; "schema, required fields, or labels")
   | . as $b
-  | need(.synthetic or all(.evidence[]; (.source | startswith("example://")) | not); "fictional sources must stay marked synthetic")
+  | need(.synthetic or all(.evidence[]; (.source | ascii_downcase | startswith("example://")) | not); "fictional sources must stay marked synthetic")
   | need(all([$b.comparison.incumbent,$b.comparison.selected][]; . as $id | any($b.comparison.options[]; .id == $id)); "alternatives must include incumbent and selected method")
   | need(all(.evidence[]; .observedAt == null or .observedAt <= $b.decision.asOf); "evidence is later than the brief")
   | need(all((.claims[].evidence[], .operations.rollback.evidence[]); . as $id | any($b.evidence[]; .id == $id)); "dangling evidence reference")
@@ -75,8 +79,13 @@ def validate:
           .kind == "rollback" and .result == "pass" and .revision == $b.decision.revision
           and .basis == (if $rollback.status == "PROVEN" then "OBSERVED" else "SIMULATED" end)) end);
       "rollback status exceeds evidence for this revision")
-  | need((any(.claims[]; .basis == "UNKNOWN") or any(.evidence[]; .basis == "UNKNOWN") or .operations.rollback.status != "PROVEN") | not or ($b.unknowns | length > 0);
-      "unknown outcomes or recovery need an owned follow-up");
+  | (["decision", "rollback"] + [.claims[] | "claim:" + .id] + [.evidence[] | "evidence:" + .id]) as $targets
+  | need(all(.unknowns[].targets[]; . as $target | $targets | index($target) != null); "dangling follow-up target")
+  | ([.claims[] | select(.basis == "UNKNOWN") | "claim:" + .id]
+      + [.evidence[] | select(.basis == "UNKNOWN") | "evidence:" + .id]
+      + (if .operations.rollback.status != "PROVEN" then ["rollback"] else [] end)) as $gaps
+  | need(all($gaps[]; . as $gap | any($b.unknowns[]; .targets | index($gap) != null));
+      "each unknown outcome or unproven recovery needs a linked owned follow-up");
 
 # Render values as plain inline text: normalize whitespace and escape Markdown and HTML syntax.
 def md: gsub("[[:space:]]+"; " ") | gsub("&"; "&amp;") | gsub("<"; "&lt;") | gsub(">"; "&gt;")
@@ -111,7 +120,7 @@ def render:
     "**\($b.operations.rollback.status)** — \($b.operations.rollback.action | md). Verify: \($b.operations.rollback.verification | md). Owner: \($b.operations.rollback.owner | md). Evidence: \($b.operations.rollback.evidence | references).",
     "## Unknowns",
     (if ($b.unknowns | length) == 0 then "None declared; the reviewer must challenge this." else
-      $b.unknowns[] | "- \(.question | md) Impact: \(.impact | md). Next step: \(.nextStep | md). Owner: \(.owner | md)." end),
+      $b.unknowns[] | "- \(.id | md) [\(.targets | references)]: \(.question | md) Impact: \(.impact | md). Next step: \(.nextStep | md). Owner: \(.owner | md)." end),
     "## Human-owned decisions",
     (if ($b.humanDecisions | length) == 0 then "None declared; existing authority boundaries still apply." else
       $b.humanDecisions[] | "- \(.question | md) Owner: \(.owner | md). Resolution: \(if .resolution == null then "OPEN" else (.resolution.decision | md) + ". Reference: " + (.resolution.reference | md) end)." end)

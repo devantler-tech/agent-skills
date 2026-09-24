@@ -120,6 +120,8 @@
   },
   "unknowns": [
     {
+      "id": "recovery-exercise",
+      "targets": ["claim:recovery-gap", "evidence:recovery", "rollback"],
       "question": "Can this candidate recover when replacement capacity is unavailable?",
       "impact": "The proposed batch could prolong an interruption",
       "nextStep": "Design and run an authorized recovery exercise in an isolated environment",

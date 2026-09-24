@@ -51,8 +51,8 @@
     "rollback": {"status": "SIMULATED", "action": "Restore the previous search configuration and disable suggestions", "verification": "Complete a normal search and confirm the previous request path and failure rate", "owner": "Search on-call", "evidence": ["recovery"]}
   },
   "unknowns": [
-    {"question": "Will real users find suggestions useful?", "impact": "A fast but irrelevant result may reduce successful searches", "nextStep": "If authorized, compare successful search completion in a bounded trial", "owner": "Search product owner"},
-    {"question": "Will recovery behave the same in the deployed environment?", "impact": "A simulated recovery is insufficient for a live rollout", "nextStep": "Verify the reviewed recovery procedure in the target environment before rollout", "owner": "Search on-call"}
+    {"id": "user-benefit", "targets": ["claim:live-effect", "claim:benefit"], "question": "Will real users find suggestions useful?", "impact": "A fast but irrelevant result may reduce successful searches", "nextStep": "If authorized, compare successful search completion in a bounded trial", "owner": "Search product owner"},
+    {"id": "live-recovery", "targets": ["rollback"], "question": "Will recovery behave the same in the deployed environment?", "impact": "A simulated recovery is insufficient for a live rollout", "nextStep": "Verify the reviewed recovery procedure in the target environment before rollout", "owner": "Search on-call"}
   ],
   "humanDecisions": [
     {"question": "Is the proposed trial worth its remaining risks?", "owner": "Search product owner", "resolution": null}

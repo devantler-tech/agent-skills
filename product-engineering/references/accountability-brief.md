@@ -39,7 +39,7 @@ chain-of-thought. A diagram or bounded analogy can help, but it cannot replace a
    recovery will be verified. Replace generic example actions with a concrete, accessible runbook
    or command appropriate to the deployment. Keep dangerous instructions in their protected
    runbook and link to it; the brief does not grant permission to run them.
-6. **Unknowns and human decisions.** Give each unknown an impact, next action, and owner. Keep open
+6. **Unknowns and human decisions.** Give each unknown an ID, linked targets, impact, next action, and owner. Keep open
    human decisions visibly open. A recorded decision must cite the actual human decision in its
    resolution; an agent's recommendation is not a human grant. An empty list means “none declared,”
    which the reviewer must challenge.
@@ -78,13 +78,18 @@ misspelling or unsupported authority field cannot silently disappear from the re
 | `evidence` | Unique IDs, source, revision, kind, basis, observation time, result, and finding. Allowed kinds: `static`, `behavior`, `deployment`, `live`, `review`, `rollback`, `simulation`. |
 | `claims` | Unique IDs, statements, one of the four claim labels, scope, limits, and unique evidence references. |
 | `operations` | Failure modes with signals/responses/owners; observation location and owner; stop trigger/action/owner; rollback status/action/verification/owner/evidence. |
-| `unknowns` | Question, impact, next step, and owner for each unresolved fact. |
+| `unknowns` | Unique ID, nonempty `targets`, question, impact, next step, and owner for each follow-up. |
 | `humanDecisions` | Question, owner, and either `resolution: null` for an open decision or `resolution: {"decision": "...", "reference": "..."}` with a nonblank factual decision and its actual human-decision reference. |
 
 Evidence basis is `OBSERVED`, `SIMULATED`, or `UNKNOWN`; its result is `pass`, `fail`, or `unknown`.
 Unknown evidence uses `observedAt: null` and `result: unknown`. Known observations have a canonical
 UTC timestamp no later than the brief's `asOf`. Sources and revision identifiers are printed as
 text; the helper neither fetches them nor verifies their truth, identity, freshness, or reachability.
+
+Decision, option, evidence, claim, and follow-up IDs use lowercase letters/digits separated by single
+hyphens, such as `live-effect`. Whitespace and other punctuation are rejected so distinct IDs cannot
+collapse to the same visible reference. Evidence sources must be single-line strings with no leading
+or trailing whitespace. The fictional `example://` scheme is recognized case-insensitively.
 
 Observed claims need observed evidence, simulated claims need simulated evidence, and inferences
 need known observations or simulations. Unknown claims may have no source. This checks consistency
@@ -94,7 +99,13 @@ an observed failure; a claim that it demonstrates success must be rejected by se
 Rollback status is `PROVEN`, `SIMULATED`, or `UNKNOWN`. The first two require successful rollback
 records for the decision's exact revision with the corresponding observed or simulated basis.
 `PROVEN` means the supplied record claims a successful scoped recovery; it never proves the record's
-authenticity or authorizes live use. Unknown outcomes or recovery require an owned follow-up.
+authenticity or authorizes live use. Each unknown outcome and unproven recovery needs a linked owned
+follow-up. A follow-up's `targets` names `claim:<id>`, `evidence:<id>`, `rollback`, or `decision` for a
+general decision question. Every target must exist. Every `UNKNOWN` claim/evidence item needs its
+specific target in at least one follow-up; a rollback that is not `PROVEN` needs `rollback`.
+One follow-up may explicitly cover several related gaps. A generic or unrelated follow-up cannot
+cover a missing link. The renderer prints the links; semantic review must still verify that the
+question, next step, and owner actually address those targets.
 Evidence freshness and any adoption thresholds remain part of the engineering evidence assessment.
 Resolved human decisions require a decision reference, which is rendered alongside the resolution.
 The reviewer must verify that the cited human decision is authentic and covers this scope; a
