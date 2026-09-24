@@ -69,11 +69,13 @@ require(type == "array" and length == 1; "use jq -s with exactly one evidence bu
 | . as $b
 | ($now | fromdateiso8601) as $time
 | def evidence($id; $kind): any($b.evidence[]; .id == $id and .kind == $kind);
-  def current:
+  # Expiry can revoke a positive verdict, but cannot erase a failure observed for this experiment.
+  # Keep revision/window binding separate; another candidate's failures are not this one's outcome.
+  def bound:
     .revision == $b.candidate.revision
     and (.kind != "measurement" or .baselineRevision == $b.baseline.revision)
-    and .observedAt >= $b.plan.startedAt and .observedAt <= $now and .expiresAt > $now;
-  def measured($id): any($b.evidence[]; .id == $id and .kind == "measurement" and current and .result != "unknown");
+    and .observedAt >= $b.plan.startedAt and .observedAt <= $now;
+  def measured($id): any($b.evidence[]; .id == $id and .kind == "measurement" and bound and .result != "unknown");
   def complete_values($o): all($b.plan.measures[]; .id as $id |
     any($o.values[]; .measure == $id and .baseline != null and .candidate != null));
   [$b.observations[] | select(measured(.evidenceId)) | .values[] | select(.baseline != null and .candidate != null) as $v
@@ -104,13 +106,14 @@ require(type == "array" and length == 1; "use jq -s with exactly one evidence bu
     ($b.evidence[] | select(.kind == "holdout" and .usedForTuning != false) | "holdout isolation is unproven"),
     if evidence($b.rollback.evidenceId; "rollback") then empty else "unproven rollback" end,
     if ($b.observation.nextCheck | fromdateiso8601) <= $time then "observation check is overdue" else empty end,
+    ($b.evidence[] | select(.expiresAt <= $b.observation.nextCheck) | "observation check must precede evidence expiry: \(.id)"),
     ($comparisons[] | if floor_proven(.measure; .value) then empty else "unproven protected floor: \(.measure.id)" end),
     ($comparisons[] | if .gain.low < (0 - .measure.maxRegression) then "possible material regression: \(.measure.id)" else empty end)
   ] | unique as $holds
 | [
-    ($b.evidence[] | select(current and .result == "fail") | "failed \(.kind) evidence: \(.id)"),
+    ($b.evidence[] | select(bound and .result == "fail") | "failed \(.kind) evidence: \(.id)"),
     ($b.assumptions[] | select(.state == "refuted") | .evidenceId as $id
-      | select(any($b.evidence[]; .id == $id and current)) | "refuted assumption: \(.statement)"),
+      | select(any($b.evidence[]; .id == $id and bound)) | "refuted assumption: \(.statement)"),
     ($comparisons[] | if floor_known_bad(.measure; .value) then "protected floor breached: \(.measure.id)" else empty end),
     ($comparisons[] | if .gain.high < (0 - .measure.maxRegression) then "material regression: \(.measure.id)" else empty end)
   ] | unique as $rejects

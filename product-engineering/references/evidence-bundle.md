@@ -89,7 +89,9 @@ If even optimistic endpoints breach a floor or regression allowance, the result 
 Intervals straddling a boundary are inconclusive. No field substitutes model confidence for observed
 evidence. Missing baseline/schema fields are invalid input; missing measurements or evidence remain
 incomplete. Unknown assumptions, expired evidence, future observations and mismatched revisions hold
-adoption. Known failures remain negative even when other evidence is missing.
+adoption. Known failures, refuted assumptions and measured regressions bound to this experiment remain
+negative even after their evidence expires or other evidence is missing. Evidence from another
+revision or outside this experiment's observation window cannot establish this candidate's outcome.
 
 ## Run the optional offline check
 
@@ -147,8 +149,9 @@ jq '.observations[].values[0].candidate = {lower:80,upper:100}' evidence-example
 ## Expiry and recovery
 
 Expiry is explicit per artifact; a changed revision, changed workload, failed assumption, new
-material regression or overdue observation invalidates the relevant decision earlier. Reassess at
-the next check and before increasing rollout. Missing current evidence never renews itself.
+material regression or overdue observation invalidates the relevant decision earlier. Schedule the
+next check strictly before the earliest evidence expiry; a check at or after expiry holds adoption.
+Reassess at the next check and before increasing rollout. Missing current evidence never renews itself.
 
 On invalidation, stop expansion and return the capability to its last proven method through the
 preauthorized, tested recovery procedure. If recovery would be unsafe or requires new permission,
