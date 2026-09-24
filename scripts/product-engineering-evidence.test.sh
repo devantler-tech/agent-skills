@@ -33,6 +33,12 @@ invalid() {
 }
 check 'complete repeatable improvement' ADOPT '.'
 check 'faster but less reliable' REJECT '.observations[].values[1].candidate = {lower:980000,upper:990000}'
+check 'floor breach survives unmeasured baseline' REJECT '.observations[0].values[1] |= (.baseline = null | .candidate = {lower:980000,upper:990000})' 'protected floor breached: reliability'
+check 'lower-is-better floor survives unmeasured baseline' REJECT '.observations[0].values[0] |= (.baseline = null | .candidate = {lower:130,upper:140})' 'protected floor breached: latency'
+check 'candidate floor does not depend on baseline revision' REJECT '.evidence[0].baselineRevision = "release-0" | .observations[0].values[1].candidate = {lower:980000,upper:990000}' 'protected floor breached: reliability'
+check 'uncertain candidate floor with missing baseline holds' HOLD '.observations[0].values[1] |= (.baseline = null | .candidate = {lower:994000,upper:999000})' 'unproven protected floor: reliability'
+check 'unknown candidate measurement cannot establish floor breach' HOLD '.evidence[0].result = "unknown" | .observations[0].values[1] |= (.baseline = null | .candidate = {lower:980000,upper:990000})' 'unknown result: run-a'
+check 'another candidate floor breach is not this outcome' HOLD '.evidence[0].revision = "release-3" | .observations[0].values[1] |= (.baseline = null | .candidate = {lower:980000,upper:990000})' 'revision mismatch: run-a'
 check 'unproven rollback' HOLD '.evidence |= map(select(.kind != "rollback"))'
 check 'failed rollback drill' REJECT '(.evidence[] | select(.kind == "rollback")).result = "fail"'
 check 'expired failed rollback stays negative' REJECT '(.evidence[] | select(.kind == "rollback")) |= (.result = "fail" | .expiresAt = "2026-09-23T00:00:00Z")' 'failed rollback evidence: rollback'

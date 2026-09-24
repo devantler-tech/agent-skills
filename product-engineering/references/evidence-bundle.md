@@ -94,6 +94,8 @@ coverage must be established by the preregistered method and checked against the
 
 The evaluator uses pessimistic interval endpoints for improvement, floors and regression allowance.
 If even optimistic endpoints breach a floor or regression allowance, the result is negative.
+An absolute protected floor uses the candidate interval independently of the baseline; a missing
+baseline value or mismatched baseline revision cannot erase that candidate's demonstrated breach.
 Intervals straddling a boundary are inconclusive. No field substitutes model confidence for observed
 evidence. Missing baseline/schema fields are invalid input; missing measurements or evidence remain
 incomplete. Unknown assumptions, expired evidence, future observations and mismatched revisions hold

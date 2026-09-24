@@ -76,10 +76,10 @@ require(type == "array" and length == 1; "use jq -s with exactly one evidence bu
 | def evidence($id; $kind): any($b.evidence[]; .id == $id and .kind == $kind);
   # Expiry can revoke a positive verdict, but cannot erase a failure observed for this experiment.
   # Keep revision/window binding separate; another candidate's failures are not this one's outcome.
-  def bound:
+  def candidate_bound:
     .revision == $b.candidate.revision
-    and (.kind != "measurement" or .baselineRevision == $b.baseline.revision)
     and .observedAt >= $b.plan.startedAt and .observedAt <= $now;
+  def bound: candidate_bound and (.kind != "measurement" or .baselineRevision == $b.baseline.revision);
   def measured($id): any($b.evidence[]; .id == $id and .kind == "measurement" and bound and .result != "unknown");
   def complete_values($o): all($b.plan.measures[]; .id as $id |
     any($o.values[]; .measure == $id and .baseline != null and .candidate != null));
@@ -95,6 +95,11 @@ require(type == "array" and length == 1; "use jq -s with exactly one evidence bu
     .id == $stage.deploymentEvidenceId and .kind == "deployment" and bound
     and .result == "pass" and .observedAt < $stage.observedAt);
   [$b.evidence[] | select(.id == $b.observation.evidenceId and .kind == "live")] as $window_evidence
+| [$b.observations[] | .evidenceId as $id
+    | select(any($b.evidence[]; .id == $id and .kind == "measurement" and candidate_bound and .result != "unknown"))
+    | .values[] | select(.candidate != null) as $v
+    | $b.plan.measures[] | select(.id == $v.measure) as $m
+    | {measure: $m, value: $v}] as $candidates
 | [$b.observations[] | select(measured(.evidenceId)) | .values[] | select(.baseline != null and .candidate != null) as $v
     | $b.plan.measures[] | select(.id == $v.measure) as $m
     | {measure: $m, value: $v, gain: gain($m; $v)}] as $comparisons
@@ -136,14 +141,14 @@ require(type == "array" and length == 1; "use jq -s with exactly one evidence bu
           and .observedAt <= $b.observation.window.startedAt) then empty else "observation window precedes deployment" end),
     if ($b.observation.nextCheck | fromdateiso8601) <= $time then "observation check is overdue" else empty end,
     ($b.evidence[] | select(.expiresAt <= $b.observation.nextCheck) | "observation check must precede evidence expiry: \(.id)"),
-    ($comparisons[] | if floor_proven(.measure; .value) then empty else "unproven protected floor: \(.measure.id)" end),
+    ($candidates[] | if floor_proven(.measure; .value) then empty else "unproven protected floor: \(.measure.id)" end),
     ($comparisons[] | if .gain.low < (0 - .measure.maxRegression) then "possible material regression: \(.measure.id)" else empty end)
   ] | unique as $holds
 | [
     ($b.evidence[] | select(bound and .result == "fail") | "failed \(.kind) evidence: \(.id)"),
     ($b.assumptions[] | select(.state == "refuted") | .evidenceId as $id
       | select(any($b.evidence[]; .id == $id and bound and .result != "unknown")) | "refuted assumption: \(.statement)"),
-    ($comparisons[] | if floor_known_bad(.measure; .value) then "protected floor breached: \(.measure.id)" else empty end),
+    ($candidates[] | if floor_known_bad(.measure; .value) then "protected floor breached: \(.measure.id)" else empty end),
     ($comparisons[] | if .gain.high < (0 - .measure.maxRegression) then "material regression: \(.measure.id)" else empty end)
   ] | unique as $rejects
 | [ $b.plan.measures[] | select(.objective) as $m
