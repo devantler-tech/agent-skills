@@ -15,8 +15,10 @@ def schema:
   | require((.outcome | text) and (.baseline.id | text) and (.baseline.revision | text)
       and (.candidate.id | text) and (.candidate.revision | text)
       and .baseline.id != .candidate.id and .baseline.revision != .candidate.revision; "outcome, baseline and distinct candidate required")
-  | require((.alternatives | type == "array" and length > 0)
-      and all(.alternatives[]; (.id | text) and (.reason | text)); "record alternatives and their disposition")
+  | .baseline.id as $baseline
+  | require((.alternatives | type == "array" and length > 0 and unique_ids)
+      and all(.alternatives[]; (.id | text) and (.reason | text))
+      and any(.alternatives[]; .id == $baseline); "record alternatives including retaining the baseline and their disposition")
   | require((.plan.record | text) and (.plan.registeredAt | stamp) and (.plan.startedAt | stamp)
       and (.plan.minRepeats | number) and .plan.minRepeats >= 2
       and .plan.minRepeats == (.plan.minRepeats | floor); "invalid preregistration or repeat floor")
@@ -37,7 +39,10 @@ def schema:
       and (.rollout.stopConditions | type == "array" and length > 0 and all(.[]; text))
       and (.rollback.procedure | text) and (.rollback.evidenceId | text) and (.rollback.trigger | text)
       and .rollback.targetRevision == .baseline.revision; "staged rollout and recovery to the baseline required")
-  | require((.observation.owner | text) and (.observation.window | text) and (.observation.nextCheck | stamp); "observation owner, window and next check required")
+  | require((.observation.owner | text) and (.observation.evidenceId | text)
+      and (.observation.window.startedAt | stamp) and (.observation.window.endedAt | stamp)
+      and .observation.window.startedAt < .observation.window.endedAt
+      and (.observation.nextCheck | stamp); "observation owner, evidence, ordered window bounds and next check required")
   | require((.evidence | type == "array" and unique_ids) and all(.evidence[];
       (.id | text) and (.kind as $kind | kinds | index($kind) != null)
       and .provenance == "observed" and (.revision | text) and (.uri | text)
@@ -78,7 +83,19 @@ require(type == "array" and length == 1; "use jq -s with exactly one evidence bu
   def measured($id): any($b.evidence[]; .id == $id and .kind == "measurement" and bound and .result != "unknown");
   def complete_values($o): all($b.plan.measures[]; .id as $id |
     any($o.values[]; .measure == $id and .baseline != null and .candidate != null));
-  [$b.observations[] | select(measured(.evidenceId)) | .values[] | select(.baseline != null and .candidate != null) as $v
+  def measurement_coverage: all($b.evidence[] | select(.kind == "measurement"); .id as $id |
+    ([$b.observations[] | select(.evidenceId == $id)] | length) == 1);
+  # A threshold miss is conclusive only once the declared measurement set is complete.
+  def measurements_complete:
+    ($b.observations | length) >= $b.plan.minRepeats and measurement_coverage
+    and all($b.observations[]; measured(.evidenceId) and complete_values(.))
+    and (($b.observations | length) == ([$b.observations[].evidenceId as $id |
+      $b.evidence[] | select(.id == $id) | .uri] | unique | length));
+  def deployed_before($stage): any($b.evidence[];
+    .id == $stage.deploymentEvidenceId and .kind == "deployment" and bound
+    and .result == "pass" and .observedAt < $stage.observedAt);
+  [$b.evidence[] | select(.id == $b.observation.evidenceId and .kind == "live")] as $window_evidence
+| [$b.observations[] | select(measured(.evidenceId)) | .values[] | select(.baseline != null and .candidate != null) as $v
     | $b.plan.measures[] | select(.id == $v.measure) as $m
     | {measure: $m, value: $v, gain: gain($m; $v)}] as $comparisons
 | [
@@ -99,12 +116,24 @@ require(type == "array" and length == 1; "use jq -s with exactly one evidence bu
     ($b.observations[] |
       if complete_values(.) then empty else "unmeasured dimension: \(.id)" end,
       if evidence(.evidenceId; "measurement") then empty else "missing measurement source: \(.id)" end),
+    ($b.evidence[] | select(.kind == "measurement") | .id as $id |
+      if any($b.observations[]; .evidenceId == $id) then empty else "missing observation for measurement: \($id)" end),
     ($b.assumptions[] |
       if .state == "unknown" then "unknown assumption: \(.statement)" else empty end,
       if .evidenceId as $id | any($b.evidence[]; .id == $id) then empty else "missing assumption evidence" end),
     if evidence($b.falsification.evidenceId; "review") then empty else "missing falsification review" end,
     ($b.evidence[] | select(.kind == "holdout" and .usedForTuning != false) | "holdout isolation is unproven"),
     if evidence($b.rollback.evidenceId; "rollback") then empty else "unproven rollback" end,
+    ($b.evidence[] | select(.kind == "live" or .kind == "rollback") |
+      if deployed_before(.) then empty else "deployment must precede \(.kind) evidence: \(.id)" end),
+    if $b.observation.window.startedAt < $b.plan.startedAt then "observation window starts before experiment" else empty end,
+    if $b.observation.window.endedAt > $now then "observation window has not elapsed" else empty end,
+    if ($window_evidence | length) == 0 then "missing observation window evidence" else empty end,
+    ($window_evidence[] |
+      if .observedAt >= $b.observation.window.endedAt then empty else "live evidence does not cover observation window" end,
+      .deploymentEvidenceId as $deployment |
+      if any($b.evidence[]; .id == $deployment and .kind == "deployment" and bound and .result == "pass"
+          and .observedAt <= $b.observation.window.startedAt) then empty else "observation window precedes deployment" end),
     if ($b.observation.nextCheck | fromdateiso8601) <= $time then "observation check is overdue" else empty end,
     ($b.evidence[] | select(.expiresAt <= $b.observation.nextCheck) | "observation check must precede evidence expiry: \(.id)"),
     ($comparisons[] | if floor_proven(.measure; .value) then empty else "unproven protected floor: \(.measure.id)" end),
@@ -113,7 +142,7 @@ require(type == "array" and length == 1; "use jq -s with exactly one evidence bu
 | [
     ($b.evidence[] | select(bound and .result == "fail") | "failed \(.kind) evidence: \(.id)"),
     ($b.assumptions[] | select(.state == "refuted") | .evidenceId as $id
-      | select(any($b.evidence[]; .id == $id and bound)) | "refuted assumption: \(.statement)"),
+      | select(any($b.evidence[]; .id == $id and bound and .result != "unknown")) | "refuted assumption: \(.statement)"),
     ($comparisons[] | if floor_known_bad(.measure; .value) then "protected floor breached: \(.measure.id)" else empty end),
     ($comparisons[] | if .gain.high < (0 - .measure.maxRegression) then "material regression: \(.measure.id)" else empty end)
   ] | unique as $rejects
@@ -121,6 +150,8 @@ require(type == "array" and length == 1; "use jq -s with exactly one evidence bu
     | [$comparisons[] | select(.measure.id == $m.id)] as $rows
     | {proven: (($rows | length) >= $b.plan.minRepeats and all($rows[]; .gain.low >= $m.minImprovement)),
        possible: all($rows[]; .gain.high >= $m.minImprovement)} ] as $objectives
+| (if measurements_complete and all($objectives[]; .possible | not)
+    then $rejects + ["no objective met its repeatable improvement threshold"] else $rejects end) as $rejects
 | if ($rejects | length) > 0 then {decision: "REJECT", reasons: ($rejects + $holds | unique)}
   elif ($holds | length) > 0 then {decision: "HOLD", reasons: $holds}
   elif any($objectives[]; .proven) then {decision: "ADOPT", reasons: []}

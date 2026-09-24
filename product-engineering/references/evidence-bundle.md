@@ -20,7 +20,7 @@ Never translate a protected outcome into a weighted score that another metric ca
 Record assumptions and how to falsify them; reserve end-to-end and holdout cases that will not be used
 for tuning. Identify an independent evaluator or an explicitly adversarial evaluation procedure,
 staged rollout, stop conditions, the last proven revision and an executable recovery procedure.
-Specify the observation window, owner and next check. Two repeats are the format's minimum, **not a
+Specify the observation window's UTC start and end, owner and next check. Two repeats are the format's minimum, **not a
 claim of statistical power**: choose sufficient independent trials before collecting results.
 
 Changing thresholds, units, workloads or protected dimensions after seeing results creates a new
@@ -30,7 +30,8 @@ preregistered experiment. Preserve the original result. Do not relabel an old ru
 
 Compare the baseline and candidate on comparable workloads, dependencies, hardware, time windows
 and measurement methods. Retain raw artifacts, sample sizes, uncertainty calculations and failed
-attempts in the referenced evidence. Use separate source identifiers for independent repeats.
+attempts in the referenced evidence. Use separate source identifiers for independent repeats, and
+include numeric observations for every recorded measurement artifact exactly once.
 
 Keep these evidence types distinct:
 
@@ -67,18 +68,25 @@ decision rule live together in [check-evidence.jq](../scripts/check-evidence.jq)
 
 | Field | Meaning |
 | --- | --- |
-| `outcome`, `baseline`, `candidate`, `alternatives` | Desired result, distinct method IDs and immutable revisions, and considered alternatives with reasons |
+| `outcome`, `baseline`, `candidate`, `alternatives` | Desired result, distinct method IDs and immutable revisions, and unique considered alternatives with reasons, including the baseline ID |
 | `plan.record`, `registeredAt`, `startedAt` | Immutable plan artifact; registration strictly before the earliest implementation/experiment activity |
 | `plan.minRepeats`, `plan.measures[]` | Integer repeat floor ≥2; unique IDs, units, `higher`/`lower` direction, objective flag, positive objective `minImprovement`, nonnegative `maxRegression`, protected flag and numeric `floor`, method, environment, uncertainty method |
 | `assumptions[]` | Statement, `supported`/`unknown`/`refuted` state and evidence ID |
 | `falsification` | `independent`/`adversarial` approach, evaluator, attempted falsification and review evidence ID |
 | `rollout`, `rollback` | Stages and stop conditions; baseline target revision, executable procedure URI, trigger and restoration evidence ID |
-| `observation` | Owner, declared observation window and next-check timestamp |
+| `observation` | Owner, live `evidenceId`, window `{startedAt,endedAt}` and next-check timestamp |
 | `evidence[]` | Unique ID, kind, `observed` provenance, immutable candidate revision, source URI, observation/expiry timestamps, and `pass`/`fail`/`unknown` result |
 | `observations[]` | Unique repeat ID, measurement evidence ID, and measure values with baseline/candidate uncertainty intervals `{lower,upper}`; `null` means unmeasured |
 
 Measurement evidence additionally pins `baselineRevision`. Holdout evidence declares
 `usedForTuning: false`; absent or true holds adoption. All timestamps use UTC `YYYY-MM-DDTHH:MM:SSZ`.
+Live and rollback evidence name their `deploymentEvidenceId`: a passing deployment of the same
+candidate must have been observed strictly before the outcome or restoration drill. The declared
+observation window must start at or after that deployment and experiment start, finish after its
+start and no later than evaluation time, and be covered by the referenced live artifact's observation
+timestamp. Missing links or incomplete windows hold adoption. Verify that the source artifact actually
+covers the whole declared interval; a timestamp alone cannot prove continuous observation.
+
 Thresholds are absolute values in each measure's declared unit. Prefer scaled integer units such as
 microseconds or successful responses per million when decimal rounding could decide a boundary.
 An interval is not automatically a confidence interval: its meaning, estimator, sample size and
@@ -92,6 +100,10 @@ incomplete. Unknown assumptions, expired evidence, future observations and misma
 adoption. Known failures, refuted assumptions and measured regressions bound to this experiment remain
 negative even after their evidence expires or other evidence is missing. Evidence from another
 revision or outside this experiment's observation window cannot establish this candidate's outcome.
+A refuted assumption needs conclusive supporting evidence; an explicitly unknown result stays on
+hold. If the complete measurement set conclusively misses every objective, unrelated missing evidence
+does not erase that negative result. Incomplete measurement sets or an objective whose uncertainty
+still permits improvement remain inconclusive.
 
 ## Run the optional offline check
 
