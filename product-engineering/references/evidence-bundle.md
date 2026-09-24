@@ -34,7 +34,7 @@ attempts in the referenced evidence. Use separate source identifiers for indepen
 
 Keep these evidence types distinct:
 
-| Kind | What must be observed |
+| Kind | What it demonstrates |
 | --- | --- |
 | `measurement` | Baseline/candidate comparison, both revisions, raw samples and uncertainty |
 | `static` | CI, lint, schema and other static validity checks at the candidate revision |

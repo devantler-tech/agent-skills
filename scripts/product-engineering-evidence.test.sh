@@ -8,15 +8,21 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 now=2026-09-24T00:00:00Z
 passed=0
+# Run a named fixture mutation and verify its decision plus an optional specific diagnostic.
+# The diagnostic prevents another missing prerequisite from masking removal of the intended guard.
 check() {
-  local name=$1 expected=$2 mutation=$3
+  local name=$1 expected=$2 mutation=$3 reason=${4:-}
   jq "$mutation" "$example" > "$work/input.json"
   jq -s --arg now "$now" -f "$filter" "$work/input.json" > "$work/output.json"
-  jq -e --arg expected "$expected" '.decision == $expected and (.reasons | type == "array")' "$work/output.json" >/dev/null || {
+  jq -e --arg expected "$expected" --arg reason "$reason" '
+    .decision == $expected and (.reasons | type == "array")
+    and ($reason == "" or (.reasons | index($reason) != null))
+  ' "$work/output.json" >/dev/null || {
     printf 'FAIL %s\n' "$name"; cat "$work/output.json"; exit 1;
   }
   passed=$((passed + 1))
 }
+# Assert that a malformed bundle fails evaluation, rather than emitting a successful assessment.
 invalid() {
   local name=$1 mutation=$2
   jq "$mutation" "$example" > "$work/input.json"
@@ -31,12 +37,12 @@ check 'unproven rollback' HOLD '.evidence |= map(select(.kind != "rollback"))'
 check 'failed rollback drill' REJECT '(.evidence[] | select(.kind == "rollback")).result = "fail"'
 check 'missing live observation' HOLD '.evidence |= map(select(.kind != "live"))'
 check 'CI alone is insufficient' HOLD '.evidence |= map(select(.kind == "static"))'
-check 'stale evidence' HOLD '.evidence[0].expiresAt = "2026-09-23T00:00:00Z"'
-check 'expiry boundary' HOLD '.evidence[0].expiresAt = "2026-09-24T00:00:00Z"'
-check 'future observation' HOLD '.evidence[0].observedAt = "2026-09-25T00:00:00Z"'
-check 'wrong candidate revision' HOLD '.evidence[0].revision = "release-3"'
+check 'stale evidence' HOLD '.evidence[0].expiresAt = "2026-09-23T00:00:00Z"' 'expired evidence: run-a'
+check 'expiry boundary' HOLD '.evidence[0].expiresAt = "2026-09-24T00:00:00Z"' 'expired evidence: run-a'
+check 'future observation' HOLD '.evidence[0].observedAt = "2026-09-25T00:00:00Z"' 'observation outside experiment window: run-a'
+check 'wrong candidate revision' HOLD '.evidence[0].revision = "release-3"' 'revision mismatch: run-a'
 check 'failure from another revision is not this candidate outcome' HOLD '.evidence[0].revision = "release-3" | .evidence[0].result = "fail" | .observations[0].values[1].candidate = {lower:980000,upper:990000}'
-check 'wrong baseline revision' HOLD '.evidence[0].baselineRevision = "release-0"'
+check 'wrong baseline revision' HOLD '.evidence[0].baselineRevision = "release-0"' 'baseline mismatch: run-a'
 check 'post-hoc registration' HOLD '.plan.registeredAt = "2026-09-03T00:00:00Z"'
 check 'unmeasured protected floor' HOLD '.observations[0].values |= map(select(.measure != "reliability"))'
 check 'unknown baseline measurement' HOLD '.observations[0].values[0].baseline = null'
@@ -45,7 +51,7 @@ check 'repeat IDs do not create new evidence' HOLD '.observations[1].evidenceId 
 check 'uncertainty erases improvement' HOLD '.observations[].values[0].candidate = {lower:80,upper:100}'
 check 'improvement must repeat' REJECT '.observations[1].values[0].candidate = {lower:99,upper:100}'
 check 'unprotected regression still matters' REJECT '.plan.measures[1].protected = false | .observations[].values[1].candidate = {lower:980000,upper:990000}'
-check 'unknown result' HOLD '.evidence[0].result = "unknown"'
+check 'unknown result' HOLD '.evidence[0].result = "unknown"' 'unknown result: run-a'
 check 'unknown assumption' HOLD '.assumptions[0].state = "unknown"'
 check 'refuted assumption' REJECT '.assumptions[0].state = "refuted"'
 check 'overdue observation' HOLD '.observation.nextCheck = "2026-09-20T00:00:00Z"'
