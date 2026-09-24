@@ -73,6 +73,12 @@ Issues are the unit of advance work — this is where new work enters the queue.
 
 ## 3. Plan & implement — oldest-actionable-first
 
+When a user requests a human accountability brief, or the consumer selects one for an unfamiliar
+decision, use [the brief format and semantic review rubric](references/accountability-brief.md).
+Prepare it alongside the proposal: explain the outcome, evidence limits, failure signals, operators,
+recovery, and human-owned decisions. Its optional offline checker validates structure only; human
+comprehension and the existing adoption, authorization, and promotion gates remain separate.
+
 1. **Pick the oldest *actionable* open issue — "big" is not a reason to skip it.** Skip an older
    issue only when you can point to one of: (a) it already has an open PR; (b) it is blocked on a
    named, live-verified external dependency you can cite; (c) it is too under-specified to begin.

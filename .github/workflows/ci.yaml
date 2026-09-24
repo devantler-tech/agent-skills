@@ -199,6 +199,9 @@ jobs:
         # gh stub and asserts both the exit status and whether a publish actually happened.
         run: ./scripts/publish-skills-release.test.sh
 
+      - name: 🧪 Verify human accountability brief checks and rendering
+        run: bash ./scripts/product-engineering-accountability.test.sh
+
   ci-required-checks:
     name: CI - Required Checks
     if: always()
