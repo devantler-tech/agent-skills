@@ -118,6 +118,8 @@ shellcheck scripts/*.sh
 ./scripts/agent-improvement-contract.test.sh   # pins rate-hypothesis baseline comparability,
                                                # post-change evidence floors, writer-provenance gates,
                                                # and the state-metric carve-out
+bash ./scripts/agent-improvement-flow.test.sh # exercises the shipped offline flow calculator:
+                                             # attribution, age, deduplication, and unknown evidence
 ./scripts/promotion-readiness-contract.test.sh # pins the complete promotion gate in each standalone
                                                # engineering skill and fresh revalidation before
                                                # both self-promotion and merge

@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "run": {
+    "id": "synthetic-run",
+    "role": "engineer",
+    "instance": "example-instance",
+    "scoringVersion": "synthetic-rubric-v1",
+    "startedAt": 100,
+    "endedAt": 200,
+    "evidence": "synthetic/run"
+  },
+  "artifactsComplete": true,
+  "selectionsComplete": true,
+  "artifacts": [
+    {"id": "repair", "class": "substantive", "evidence": "synthetic/repair"},
+    {"id": "status", "class": "easy", "evidence": "synthetic/status"},
+    {"id": "status", "class": "easy", "evidence": "synthetic/revisit"}
+  ],
+  "selections": [{
+    "id": "selection-1",
+    "at": 110,
+    "selectedId": "small-task",
+    "selectedClass": "easy",
+    "evidence": "synthetic/selection",
+    "candidatesComplete": true,
+    "candidates": [
+      {"id": "old-task", "createdAt": 10, "actionable": true, "startedByEnd": false, "evidence": "synthetic/old-task"},
+      {"id": "small-task", "createdAt": 100, "actionable": true, "startedByEnd": true, "evidence": "synthetic/small-task"},
+      {"id": "blocked-task", "createdAt": 0, "actionable": false, "startedByEnd": false, "evidence": "synthetic/blocked-task"}
+    ]
+  }]
+}
