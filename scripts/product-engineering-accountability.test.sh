@@ -68,11 +68,19 @@ invalid 'failed rollback claimed successful' '.evidence[1].result="fail"'
 invalid 'unknown operator' '.operations.observe.owner=null'
 invalid 'human decision has no owner' '.humanDecisions[0].owner=""'
 invalid 'empty resolution pretends decision' '.humanDecisions[0].resolution=""'
+invalid 'uncited resolution pretends decision' '.humanDecisions[0].resolution="Approved"'
+invalid 'resolution reference is missing' '.humanDecisions[0].resolution={decision:"Approved"}'
+invalid 'resolution reference is blank' '.humanDecisions[0].resolution={decision:"Approved",reference:" "}'
+invalid 'resolution decision is blank' '.humanDecisions[0].resolution={decision:" ",reference:"artifact://decision/42"}'
 valid 'unproven rollback stays explicitly unknown' '.operations.rollback |= (.status="UNKNOWN" | .evidence=[])'
 valid 'observed recovery can be recorded' '.evidence[1].basis="OBSERVED" | .operations.rollback.status="PROVEN"'
 valid 'unknown evidence is allowed when labelled unknown' '.evidence[0] |= (.basis="UNKNOWN" | .result="unknown" | .observedAt=null) | .claims[0].basis="UNKNOWN" | .claims[1].basis="UNKNOWN"'
 valid 'real records keep the same structural boundary' '.synthetic=false | .evidence[].source |= sub("^example://";"artifact://")'
 valid 'all evidence can remain explicitly unknown' '.evidence=[] | .claims[] |= (.basis="UNKNOWN" | .evidence=[]) | .operations.rollback |= (.status="UNKNOWN" | .evidence=[])'
+valid 'cited human decision' '.humanDecisions[0].resolution={decision:"Declined",reference:"artifact://decision/42"}'
+jq -e '.openHumanDecisions == 0' "$work/result.json" >/dev/null
+jq -sr --arg mode render -f "$filter" "$work/input.json" > "$work/render.md"
+grep -Fq 'Resolution: Declined. Reference: artifact://decision/42.' "$work/render.md"
 
 for mutation in '.decision=null' '.claims={}' '.evidence=null' '.unknowns=null' '.operations.failureModes=[]' '.humanDecisions={}' '.claims[0].evidence=[1]' '.synthetic="true"' '.decision.title="bad\u0007text"'; do
   invalid "wrong data shape: $mutation" "$mutation"
@@ -102,10 +110,19 @@ if jq -s --arg mode publish -f "$filter" "$example" > "$work/result" 2> "$work/e
 jq '.decision.title="[click](https://example.invalid) <script>\n# fake ~~strike~~"' "$example" > "$work/input.json"
 jq -sr --arg mode render -f "$filter" "$work/input.json" > "$work/render.md"
 grep -Fq 'Synthetic example' "$work/render.md"
-grep -Fq '\[click\]\(https://example.invalid\) &lt;script&gt; # fake' "$work/render.md"
+grep -Fq '\[click\]\(https://example\.invalid\) &lt;script&gt; \# fake' "$work/render.md"
 grep -Fq '\~\~strike\~\~' "$work/render.md"
 if grep -q '^# fake' "$work/render.md"; then exit 1; fi
 grep -Fq 'SIMULATED' "$work/render.md"
 grep -Fq 'UNKNOWN' "$work/render.md"
 passed=$((passed + 1))
+# Standalone fields must not become headings, lists, or thematic breaks.
+for value in '# Forged heading' '- Forged item' '+ Forged item' '1. Forged item' '---' '==='; do
+  jq --arg value "$value" '.decision.summary=$value | .model.explanation=$value | .comparison.whySelected=$value' "$example" > "$work/input.json"
+  jq -sr --arg mode render -f "$filter" "$work/input.json" > "$work/render.md"
+  if grep -Fxq -- "$value" "$work/render.md"; then
+    printf 'FAIL standalone Markdown structure: %s\n' "$value"; exit 1
+  fi
+  passed=$((passed + 1))
+done
 printf 'accountability brief: PASS (%s cases)\n' "$passed"

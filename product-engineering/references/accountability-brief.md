@@ -79,7 +79,7 @@ misspelling or unsupported authority field cannot silently disappear from the re
 | `claims` | Unique IDs, statements, one of the four claim labels, scope, limits, and unique evidence references. |
 | `operations` | Failure modes with signals/responses/owners; observation location and owner; stop trigger/action/owner; rollback status/action/verification/owner/evidence. |
 | `unknowns` | Question, impact, next step, and owner for each unresolved fact. |
-| `humanDecisions` | Question, owner, and either `resolution: null` for an open decision or a factual resolution with its decision reference. |
+| `humanDecisions` | Question, owner, and either `resolution: null` for an open decision or `resolution: {"decision": "...", "reference": "..."}` with a nonblank factual decision and its actual human-decision reference. |
 
 Evidence basis is `OBSERVED`, `SIMULATED`, or `UNKNOWN`; its result is `pass`, `fail`, or `unknown`.
 Unknown evidence uses `observedAt: null` and `result: unknown`. Known observations have a canonical
@@ -96,6 +96,9 @@ records for the decision's exact revision with the corresponding observed or sim
 `PROVEN` means the supplied record claims a successful scoped recovery; it never proves the record's
 authenticity or authorizes live use. Unknown outcomes or recovery require an owned follow-up.
 Evidence freshness and any adoption thresholds remain part of the engineering evidence assessment.
+Resolved human decisions require a decision reference, which is rendered alongside the resolution.
+The reviewer must verify that the cited human decision is authentic and covers this scope; a
+nonblank reference does not establish permission.
 
 ## Worked examples
 

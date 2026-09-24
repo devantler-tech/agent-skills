@@ -48,7 +48,9 @@ def schema:
   and (.unknowns | type == "array" and all(.[]; shape(["question","impact","nextStep","owner"])
     and ([.question,.impact,.nextStep,.owner] | all(.[]; text))))
   and (.humanDecisions | type == "array" and all(.[]; shape(["question","owner","resolution"])
-    and ([.question,.owner] | all(.[]; text)) and (.resolution == null or (.resolution | text))));
+    and ([.question,.owner] | all(.[]; text))
+    and (.resolution == null or (.resolution | shape(["decision","reference"])
+      and ([.decision,.reference] | all(.[]; text))))));
 
 # Validate associations and evidence labels, without claiming to interpret the supporting artifacts.
 def validate:
@@ -78,7 +80,7 @@ def validate:
 
 # Render values as plain inline text: normalize whitespace and escape Markdown and HTML syntax.
 def md: gsub("[[:space:]]+"; " ") | gsub("&"; "&amp;") | gsub("<"; "&lt;") | gsub(">"; "&gt;")
-  | gsub("(?<mark>[\\\\`*_{}\\[\\]()!|~])"; "\\\(.mark)");
+  | gsub("(?<mark>[\\\\`*_{}\\[\\]()!|~#+.=-])"; "\\\(.mark)");
 def references: if length == 0 then "none" else map(md) | join(", ") end;
 def render:
   . as $b | [
@@ -112,7 +114,7 @@ def render:
       $b.unknowns[] | "- \(.question | md) Impact: \(.impact | md). Next step: \(.nextStep | md). Owner: \(.owner | md)." end),
     "## Human-owned decisions",
     (if ($b.humanDecisions | length) == 0 then "None declared; existing authority boundaries still apply." else
-      $b.humanDecisions[] | "- \(.question | md) Owner: \(.owner | md). Resolution: \((.resolution // "OPEN") | md)." end)
+      $b.humanDecisions[] | "- \(.question | md) Owner: \(.owner | md). Resolution: \(if .resolution == null then "OPEN" else (.resolution.decision | md) + ". Reference: " + (.resolution.reference | md) end)." end)
   ] | join("\n\n") + "\n";
 
 need(type == "array" and length == 1; "supply exactly one JSON brief with jq -s")
