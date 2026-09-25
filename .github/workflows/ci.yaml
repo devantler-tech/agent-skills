@@ -175,6 +175,12 @@ jobs:
         # decision-irrelevant, while stale or incomplete evidence still surveys.
         run: ./scripts/portfolio-maintenance-survey-gate.test.sh
 
+      - name: 🧪 Verify maintainer-PR driving contract
+        # Whether a PR under the maintainer's own login may be driven is the Trust gate's
+        # declared fact, defaulting to hands-off — never an absolute the skill imposes on
+        # every deployment, and never a grant an undeclared deployment receives silently.
+        run: ./scripts/portfolio-maintenance-driving-contract.test.sh
+
       - name: 🧪 Self-test the installer
         # Pins install.sh's own contracts the index guard doesn't assert: --list
         # (and -l) print sorted, de-duplicated `<repo> <skill>` parsed only from
