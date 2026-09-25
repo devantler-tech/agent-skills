@@ -9,14 +9,15 @@ def unique_values: length == (unique | length);
 def token: type == "string" and test("^[a-z0-9]+(-[a-z0-9]+)*$");
 def ids: all(.[]; .id | token) and (map(.id) | unique_values);
 def refs: type == "array" and all(.[]; token) and unique_values;
-def source: text and (. == gsub("^\\s+|\\s+$"; "")) and (test("[\r\n]") | not);
+# Printed identifiers render losslessly: visible characters joined by single ASCII spaces only.
+def exact: text and test("^[^\\s\\p{Z}\\p{C}]+( [^\\s\\p{Z}\\p{C}]+)*$");
 def utc: text and (try ((fromdateiso8601 | strftime("%Y-%m-%dT%H:%M:%SZ")) == .) catch false);
 def need($ok; $why): if $ok then . else error("invalid accountability brief: " + $why) end;
 def schema:
   shape(["schemaVersion","synthetic","decision","model","comparison","evidence","claims","operations","unknowns","humanDecisions"])
   and .schemaVersion == 1 and (.synthetic | type == "boolean")
   and (.decision | shape(["id","revision","asOf","title","owner","audience","summary","request"])
-    and (.id | token) and ([.revision,.title,.owner,.audience,.summary,.request] | all(.[]; text)) and (.asOf | utc))
+    and (.id | token) and (.revision | exact) and ([.title,.owner,.audience,.summary,.request] | all(.[]; text)) and (.asOf | utc))
   and (.model | shape(["explanation","analogy","behavior","architecture"])
     and ([.explanation,.behavior,.architecture] | all(.[]; text))
     and (.analogy == null or (.analogy | shape(["description","limits"]) and ([.description,.limits] | all(.[]; text)))))
@@ -28,8 +29,8 @@ def schema:
       shape(["condition","response","owner"]) and ([.condition,.response,.owner] | all(.[]; text)))))
   and (.evidence | type == "array" and ids and all(.[];
     shape(["id","source","revision","kind","basis","observedAt","result","finding"])
-    and ([.id,.source,.revision,.finding] | all(.[]; text))
-    and (.source | source)
+    and ([.id,.finding] | all(.[]; text))
+    and ([.source,.revision] | all(.[]; exact))
     and (.kind | oneof(["static","behavior","deployment","live","review","rollback","simulation"]))
     and (.basis | oneof(["OBSERVED","SIMULATED","UNKNOWN"]))
     and (.result | oneof(["pass","fail","unknown"]))

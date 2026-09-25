@@ -73,6 +73,12 @@ invalid 'noncanonical claim identifier' '.claims[0].id="Speed"'
 invalid 'noncanonical follow-up identifier' '.unknowns[0].id="user benefit"'
 invalid 'trailing whitespace in source' '.evidence[0].source += " "'
 invalid 'multiline source' '.evidence[0].source += "\nfragment"'
+for mark in '​' '⁠' '﻿' ' '; do
+  invalid "invisible prefix $mark hides fictional source" ".synthetic=false | .evidence[].source |= \"$mark\" + sub(\"example://\";\"EXAMPLE://\")"
+done
+for revision in 'candidate  search-2' 'candidate\tsearch-2' 'candidate\nsearch-2' 'candidate​search-2' 'candidate search-2' ' candidate-search-2'; do
+  invalid "render-equivalent revision: $revision" ".decision.revision=\"$revision\" | .evidence[].revision=\"$revision\""
+done
 invalid 'future evidence' '.evidence[0].observedAt="2026-09-25T00:00:00Z"'
 invalid 'invalid calendar date' '.decision.asOf="2026-02-30T12:00:00Z"'
 invalid 'missing revision' '.evidence[0].revision=""'
@@ -104,6 +110,11 @@ grep -Fq 'Resolution: Declined. Reference: artifact://decision/42.' "$work/rende
 grep -Fq 'claim:live\-effect' "$work/render.md"
 grep -Fq 'live\-recovery [rollback]' "$work/render.md"
 valid 'one owned follow-up explicitly covers several gaps' '.unknowns[0].targets += ["rollback"] | .unknowns=[.unknowns[0]]'
+valid 'single spaces keep revisions and sources exact' '.decision.revision="candidate search 2" | .evidence[].revision="candidate search 2" | .synthetic=false | .evidence[].source |= sub("^example://";"artifact://") | .evidence[0].source="artifact://run 42"'
+jq -sr --arg mode render -f "$filter" "$work/input.json" > "$work/render.md"
+grep -Fq 'Revision: candidate search 2 ·' "$work/render.md"
+grep -Fq 'revision=candidate search 2,' "$work/render.md"
+grep -Fq 'Source: artifact://run 42.' "$work/render.md"
 valid 'general decision uncertainty can be separately recorded' '.unknowns += [{id:"decision-scope",targets:["decision"],question:"Who is affected?",impact:"Scope incomplete",nextStep:"Review affected users",owner:"Product owner"}]'
 
 for mutation in '.decision=null' '.claims={}' '.evidence=null' '.unknowns=null' '.operations.failureModes=[]' '.humanDecisions={}' '.claims[0].evidence=[1]' '.synthetic="true"' '.decision.title="bad\u0007text"'; do

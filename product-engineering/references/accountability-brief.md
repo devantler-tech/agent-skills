@@ -88,8 +88,10 @@ text; the helper neither fetches them nor verifies their truth, identity, freshn
 
 Decision, option, evidence, claim, and follow-up IDs use lowercase letters/digits separated by single
 hyphens, such as `live-effect`. Whitespace and other punctuation are rejected so distinct IDs cannot
-collapse to the same visible reference. Evidence sources must be single-line strings with no leading
-or trailing whitespace. The fictional `example://` scheme is recognized case-insensitively.
+collapse to the same visible reference. Evidence sources and the decision and evidence revisions must
+render exactly as recorded: visible characters separated by single ASCII spaces, with no other
+whitespace, no invisible formatting characters, and nothing leading or trailing. The fictional
+`example://` scheme is recognized case-insensitively.
 
 Observed claims need observed evidence, simulated claims need simulated evidence, and inferences
 need known observations or simulations. Unknown claims may have no source. This checks consistency
