@@ -73,10 +73,12 @@ invalid 'noncanonical claim identifier' '.claims[0].id="Speed"'
 invalid 'noncanonical follow-up identifier' '.unknowns[0].id="user benefit"'
 invalid 'trailing whitespace in source' '.evidence[0].source += " "'
 invalid 'multiline source' '.evidence[0].source += "\nfragment"'
-for mark in '​' '⁠' '﻿' ' '; do
+for mark in '\u200b' '\u2060' '\ufeff' '\u00a0'; do
   invalid "invisible prefix $mark hides fictional source" ".synthetic=false | .evidence[].source |= \"$mark\" + sub(\"example://\";\"EXAMPLE://\")"
 done
-for revision in 'candidate  search-2' 'candidate\tsearch-2' 'candidate\nsearch-2' 'candidate​search-2' 'candidate search-2' ' candidate-search-2'; do
+invalid 'visible prefix hides fictional source' '.synthetic=false | .evidence[].source |= "see " + sub("example://";"EXAMPLE://")'
+invalid 'visible prefix hides fictional decision reference' '.synthetic=false | .evidence[].source |= sub("^example://";"artifact://") | .humanDecisions[0].resolution={decision:"Approved",reference:"see example://decision/1"}'
+for revision in 'candidate  search-2' 'candidate\tsearch-2' 'candidate\nsearch-2' 'candidate\u200bsearch-2' 'candidate\u00a0search-2' ' candidate-search-2'; do
   invalid "render-equivalent revision: $revision" ".decision.revision=\"$revision\" | .evidence[].revision=\"$revision\""
 done
 invalid 'future evidence' '.evidence[0].observedAt="2026-09-25T00:00:00Z"'
@@ -101,7 +103,7 @@ invalid 'resolution decision is blank' '.humanDecisions[0].resolution={decision:
 for scheme in 'example://' 'EXAMPLE://'; do
   invalid "fictional decision reference $scheme passed off as real" ".synthetic=false | .evidence[].source |= sub(\"^example://\";\"artifact://\") | .humanDecisions[0].resolution={decision:\"Approved\",reference:\"${scheme}decision/1\"}"
 done
-for reference in ' artifact://decision/42' 'artifact://decision/42 ' '​artifact://decision/42' 'artifact://decision  42' 'artifact://decision\n42'; do
+for reference in ' artifact://decision/42' 'artifact://decision/42 ' '\u200bartifact://decision/42' 'artifact://decision  42' 'artifact://decision\n42'; do
   invalid "render-equivalent decision reference: $reference" ".humanDecisions[0].resolution={decision:\"Approved\",reference:\"$reference\"}"
 done
 valid 'unproven rollback stays explicitly unknown' '.operations.rollback |= (.status="UNKNOWN" | .evidence=[])'

@@ -92,7 +92,7 @@ collapse to the same visible reference. Evidence sources, human-decision referen
 and evidence revisions must render exactly as recorded: visible characters separated by single ASCII
 spaces, with no other whitespace, no invisible formatting characters, and nothing leading or
 trailing. The fictional `example://` scheme is recognized case-insensitively, and a brief that is not
-marked synthetic cannot use it for an evidence source or a human-decision reference.
+marked synthetic cannot use it anywhere in an evidence source or a human-decision reference.
 
 Observed claims need observed evidence, simulated claims need simulated evidence, and inferences
 need known observations or simulations. Unknown claims may have no source. This checks consistency
