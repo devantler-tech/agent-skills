@@ -161,6 +161,9 @@ jobs:
       - name: 🧪 Verify prioritization and flow measurements
         run: bash ./scripts/agent-improvement-flow.test.sh
 
+      - name: 🧪 Verify engineering evidence decisions
+        run: bash ./scripts/product-engineering-evidence.test.sh
+
       - name: 🧪 Verify promotion readiness contracts
         # Each independently installable engineering skill must carry the full
         # readiness gate, and the portfolio loop must revalidate it at both

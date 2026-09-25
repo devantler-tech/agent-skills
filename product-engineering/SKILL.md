@@ -97,6 +97,13 @@ comprehension and the existing adoption, authorization, and promotion gates rema
    design, write or extend a design note/ADR first and link it. In a repository that uses ADRs,
    every ADR lives under **`docs/adr/`**; do not create or keep ADRs in another folder. This rule does
    not require a repository without ADRs to introduce them.
+   When proposing to replace a proven method with an unfamiliar one, use the
+   [evidence-bundle protocol](references/evidence-bundle.md) before implementation or experiments:
+   freeze the baseline, measures, material improvement thresholds, protected floors, and recovery
+   criteria, then collect independent or adversarial evaluation. Its optional offline checker
+   distinguishes proven, negative, inconclusive, and incomplete evidence; an assessment never
+   grants deployment authority or replaces the readiness gate. Ordinary fixes keep their normal
+   validation process; do not manufacture an experiment for every edit.
 3. **Feature-flag-first for non-trivial features.** Build every new non-trivial feature behind a
    flag, **default-off, tested in both states**; flip it on only after validation, as a separate,
    reversible step. Use the standard, tool-neutral flag mechanism the product's **Portfolio map**
