@@ -129,6 +129,9 @@ bash ./scripts/product-engineering-evidence.test.sh # exercises the optional evi
                                                     # complete fresh higher-rung preemption result
                                                     # makes it decision-irrelevant, while stale or
                                                     # incomplete evidence still surveys
+./scripts/portfolio-maintenance-driving-contract.test.sh # pins that driving a maintainer-login PR
+                                                         # follows the Trust gate's declared fact,
+                                                         # defaulting to hands-off
 bash ./scripts/product-engineering-accountability.test.sh # checks and renders optional human briefs:
                                                          # evidence labels, ownership, recovery and escaping
 bash ./scripts/self-improvement-evidence.test.sh # runs the procedure example through the canonical
