@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "synthetic": true,
+  "decision": {
+    "id": "worker-drain",
+    "revision": "candidate-drain-2",
+    "asOf": "2026-09-24T12:00:00Z",
+    "title": "Keep the current maintenance procedure until recovery is demonstrated",
+    "owner": "Platform maintainer",
+    "audience": "Operator accountable for application availability",
+    "summary": "A proposed maintenance sequence could replace workers sooner. Simulation leaves one application unavailable, and recovery has not been demonstrated. Keep the existing sequence while investigating. No change to the live cluster is authorized by this brief.",
+    "request": "Confirm who owns the recovery experiment and which service interruption is unacceptable before considering a new trial."
+  },
+  "model": {
+    "explanation": "Workers host application replicas. Replacing several workers together can remove the replicas an application needs.",
+    "analogy": {
+      "description": "Think of closing checkout lanes while customers are still waiting.",
+      "limits": "Replicas can have storage and placement constraints; spare capacity alone does not guarantee recovery."
+    },
+    "behavior": "The incumbent drains one worker at a time and verifies application health before proceeding.",
+    "architecture": "The proposed scheduler would batch drains; application health and replacement capacity remain separate prerequisites."
+  },
+  "comparison": {
+    "incumbent": "serial",
+    "selected": "serial",
+    "options": [
+      {
+        "id": "serial",
+        "description": "Drain and verify one worker at a time",
+        "disposition": "retained",
+        "tradeoff": "Longer maintenance, with existing recovery experience."
+      },
+      {
+        "id": "batch",
+        "description": "Drain multiple workers concurrently",
+        "disposition": "rejected for now",
+        "tradeoff": "Shorter maintenance if capacity and recovery work; larger interruption when they do not."
+      }
+    ],
+    "whySelected": "The faster candidate has a simulated availability failure and no demonstrated recovery. Speed cannot compensate for that gap.",
+    "falsifiers": [
+      {
+        "condition": "The incumbent itself fails to preserve the declared availability floor",
+        "response": "Stop maintenance, recover service through the approved procedure, and reopen the decision",
+        "owner": "Platform maintainer"
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "id": "availability",
+      "source": "example://infrastructure/drain-simulation",
+      "revision": "candidate-drain-2",
+      "kind": "simulation",
+      "basis": "SIMULATED",
+      "observedAt": "2026-09-24T10:00:00Z",
+      "result": "fail",
+      "finding": "A synthetic application has no available replica while workers are drained together."
+    },
+    {
+      "id": "recovery",
+      "source": "example://infrastructure/recovery-not-run",
+      "revision": "candidate-drain-2",
+      "kind": "rollback",
+      "basis": "UNKNOWN",
+      "observedAt": null,
+      "result": "unknown",
+      "finding": "No completed recovery experiment is available."
+    }
+  ],
+  "claims": [
+    {
+      "id": "availability-risk",
+      "statement": "Concurrent drains can interrupt an application in the model",
+      "basis": "SIMULATED",
+      "scope": "The synthetic placement and workload",
+      "evidence": [
+        "availability"
+      ],
+      "limits": "No live interruption has been observed by this example."
+    },
+    {
+      "id": "recovery-gap",
+      "statement": "Recovery of the candidate is unproven",
+      "basis": "UNKNOWN",
+      "scope": "The candidate maintenance procedure",
+      "evidence": [
+        "recovery"
+      ],
+      "limits": "A written rollback command is not evidence that data and availability recover."
+    }
+  ],
+  "operations": {
+    "failureModes": [
+      {
+        "failure": "An application loses all available replicas",
+        "signal": "Availability checks fail or available replica count reaches zero",
+        "response": "Stop further drains and follow the existing incident recovery procedure",
+        "owner": "Platform on-call"
+      }
+    ],
+    "observe": {
+      "where": "Application availability checks and pending-workload dashboard throughout maintenance",
+      "owner": "Platform on-call"
+    },
+    "stop": {
+      "when": "Availability falls below the declared floor or replacement capacity does not arrive",
+      "action": "Pause further drain operations using the reviewed maintenance controller",
+      "owner": "Platform on-call"
+    },
+    "rollback": {
+      "status": "UNKNOWN",
+      "action": "Proposed recovery: stop new drains and restore the previous worker scheduling configuration; use the incident procedure if replacement capacity is unavailable",
+      "verification": "Recover the declared application availability and verify storage integrity before resuming",
+      "owner": "Platform on-call",
+      "evidence": [
+        "recovery"
+      ]
+    }
+  },
+  "unknowns": [
+    {
+      "id": "recovery-exercise",
+      "targets": ["claim:recovery-gap", "evidence:recovery", "rollback"],
+      "question": "Can this candidate recover when replacement capacity is unavailable?",
+      "impact": "The proposed batch could prolong an interruption",
+      "nextStep": "Design and run an authorized recovery exercise in an isolated environment",
+      "owner": "Platform maintainer"
+    }
+  ],
+  "humanDecisions": [
+    {
+      "question": "Who will own and authorize the recovery exercise?",
+      "owner": "Platform maintainer",
+      "resolution": null
+    }
+  ]
+}

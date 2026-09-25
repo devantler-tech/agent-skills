@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "synthetic": true,
+  "decision": {
+    "id": "search-preview",
+    "revision": "candidate-search-2",
+    "asOf": "2026-09-24T12:00:00Z",
+    "title": "Try faster search suggestions for a small group",
+    "owner": "Search product owner",
+    "audience": "Maintainer responsible for search reliability",
+    "summary": "A small trial would show suggestions while people type. A simulation suggests faster results, but no customer benefit has been observed. Keep the current search available. Stop the trial if requests fail more often or results become misleading.",
+    "request": "Decide whether to authorize a limited trial after reviewing the failure signals and recovery procedure."
+  },
+  "model": {
+    "explanation": "Suggestions come from a short-lived copy of the search index; submitting a search still uses the current service.",
+    "analogy": {
+      "description": "The suggestions act like a small index card beside the full catalogue.",
+      "limits": "The card can be out of date. This analogy does not guarantee freshness or relevance."
+    },
+    "behavior": "People may see suggested results before submitting a query. Empty or failed suggestions leave the regular search available.",
+    "architecture": "The suggestion endpoint reads a cached index. The existing search endpoint remains responsible for submitted queries."
+  },
+  "comparison": {
+    "incumbent": "current",
+    "selected": "trial",
+    "options": [
+      {"id": "current", "description": "Keep search-on-submit", "disposition": "fallback", "tradeoff": "Known behavior and no added freshness risk; no early suggestions."},
+      {"id": "trial", "description": "Trial cached suggestions", "disposition": "proposed", "tradeoff": "Potentially earlier feedback, with additional freshness and relevance risk."}
+    ],
+    "whySelected": "The simulation justifies considering a bounded trial, not replacing the incumbent. Real user benefit remains unknown.",
+    "falsifiers": [
+      {"condition": "The trial does not improve successful search completion, or increases failed requests", "response": "Stop the trial and retain search-on-submit", "owner": "Search product owner"}
+    ]
+  },
+  "evidence": [
+    {"id": "latency", "source": "example://search/simulation", "revision": "candidate-search-2", "kind": "simulation", "basis": "SIMULATED", "observedAt": "2026-09-24T10:00:00Z", "result": "pass", "finding": "The synthetic workload returned suggestions earlier than its search-on-submit control."},
+    {"id": "recovery", "source": "example://search/recovery-simulation", "revision": "candidate-search-2", "kind": "rollback", "basis": "SIMULATED", "observedAt": "2026-09-24T11:00:00Z", "result": "pass", "finding": "Disabling suggestions in the simulation restored the original request path."}
+  ],
+  "claims": [
+    {"id": "speed", "statement": "Suggestions arrived earlier in the synthetic workload", "basis": "SIMULATED", "scope": "The supplied synthetic workload only", "evidence": ["latency"], "limits": "This does not establish live latency or customer benefit."},
+    {"id": "benefit", "statement": "The change may improve successful search completion", "basis": "INFERRED", "scope": "Hypothesis for the proposed trial", "evidence": ["latency"], "limits": "Earlier suggestions can still be irrelevant or distracting."},
+    {"id": "live-effect", "statement": "The effect on real search completion is unknown", "basis": "UNKNOWN", "scope": "Real users", "evidence": [], "limits": "No live trial has run."}
+  ],
+  "operations": {
+    "failureModes": [
+      {"failure": "Suggestions become stale or misleading", "signal": "Relevance complaints or mismatches against current search results", "response": "Disable suggestions and inspect index freshness", "owner": "Search on-call"},
+      {"failure": "The suggestion service adds request failures", "signal": "Failed-request rate rises against the trial control", "response": "Stop the trial and verify the existing search still works", "owner": "Search on-call"}
+    ],
+    "observe": {"where": "Trial dashboard for failed requests, successful searches, and index freshness", "owner": "Search on-call"},
+    "stop": {"when": "Either failure signal appears", "action": "Disable the suggestion trial using the deployment's reviewed feature switch", "owner": "Search on-call"},
+    "rollback": {"status": "SIMULATED", "action": "Restore the previous search configuration and disable suggestions", "verification": "Complete a normal search and confirm the previous request path and failure rate", "owner": "Search on-call", "evidence": ["recovery"]}
+  },
+  "unknowns": [
+    {"id": "user-benefit", "targets": ["claim:live-effect", "claim:benefit"], "question": "Will real users find suggestions useful?", "impact": "A fast but irrelevant result may reduce successful searches", "nextStep": "If authorized, compare successful search completion in a bounded trial", "owner": "Search product owner"},
+    {"id": "live-recovery", "targets": ["rollback"], "question": "Will recovery behave the same in the deployed environment?", "impact": "A simulated recovery is insufficient for a live rollout", "nextStep": "Verify the reviewed recovery procedure in the target environment before rollout", "owner": "Search on-call"}
+  ],
+  "humanDecisions": [
+    {"question": "Is the proposed trial worth its remaining risks?", "owner": "Search product owner", "resolution": null}
+  ]
+}

@@ -1,0 +1,163 @@
+{
+  "schemaVersion": 1,
+  "synthetic": true,
+  "decision": {
+    "id": "parser-replacement",
+    "revision": "candidate-parser-2",
+    "asOf": "2026-09-24T12:00:00Z",
+    "title": "Retain the compatible parser despite a faster alternative",
+    "owner": "Library maintainer",
+    "audience": "Maintainers responsible for downstream compatibility",
+    "summary": "A proposed parser is faster in a synthetic benchmark but changes how valid existing documents are interpreted. Keep the current parser. A faster implementation can be reconsidered when it preserves the supported input contract and has a verified recovery path.",
+    "request": "Confirm the supported input contract and the owner of any future compatibility change."
+  },
+  "model": {
+    "explanation": "A parser turns a document into data used by callers. The same output shape can hide a change in meaning.",
+    "analogy": null,
+    "behavior": "Current callers continue to receive the existing interpretation of supported documents.",
+    "architecture": "The candidate replaces the parsing function behind the same library interface; downstream callers would otherwise receive changed values without changing their code."
+  },
+  "comparison": {
+    "incumbent": "compatible",
+    "selected": "compatible",
+    "options": [
+      {
+        "id": "compatible",
+        "description": "Retain the current parser",
+        "disposition": "retained",
+        "tradeoff": "Slower on the synthetic benchmark but preserves the supported behavior."
+      },
+      {
+        "id": "fast",
+        "description": "Replace it with the faster parser",
+        "disposition": "rejected",
+        "tradeoff": "Lower measured time on synthetic inputs but changed interpretation for a supported input."
+      }
+    ],
+    "whySelected": "The compatibility floor is unmet. The benchmark cannot justify silently changing downstream behavior.",
+    "falsifiers": [
+      {
+        "condition": "The candidate preserves all supported meanings on independent compatibility inputs and improves representative workloads",
+        "response": "Reopen the proposal with those results and recovery evidence",
+        "owner": "Library maintainer"
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "id": "benchmark",
+      "source": "example://library/benchmark",
+      "revision": "candidate-parser-2",
+      "kind": "simulation",
+      "basis": "SIMULATED",
+      "observedAt": "2026-09-24T09:00:00Z",
+      "result": "pass",
+      "finding": "The synthetic benchmark completes earlier with the candidate."
+    },
+    {
+      "id": "compatibility",
+      "source": "example://library/compatibility",
+      "revision": "candidate-parser-2",
+      "kind": "behavior",
+      "basis": "SIMULATED",
+      "observedAt": "2026-09-24T10:00:00Z",
+      "result": "fail",
+      "finding": "The synthetic compatibility case produces a different value for a supported document."
+    },
+    {
+      "id": "recovery",
+      "source": "example://library/revert-simulation",
+      "revision": "candidate-parser-2",
+      "kind": "rollback",
+      "basis": "SIMULATED",
+      "observedAt": "2026-09-24T11:00:00Z",
+      "result": "pass",
+      "finding": "Reverting the dependency in the simulation restores the previous interpretation."
+    }
+  ],
+  "claims": [
+    {
+      "id": "faster",
+      "statement": "The candidate is faster on the supplied synthetic inputs",
+      "basis": "SIMULATED",
+      "scope": "The supplied benchmark only",
+      "evidence": [
+        "benchmark"
+      ],
+      "limits": "No downstream workload improvement has been demonstrated."
+    },
+    {
+      "id": "incompatible",
+      "statement": "The candidate changes a supported document interpretation",
+      "basis": "SIMULATED",
+      "scope": "The supplied compatibility case",
+      "evidence": [
+        "compatibility"
+      ],
+      "limits": "The example does not establish how many real consumers depend on that case."
+    },
+    {
+      "id": "impact",
+      "statement": "Downstream callers may silently change behavior",
+      "basis": "INFERRED",
+      "scope": "Callers relying on the changed interpretation",
+      "evidence": [
+        "compatibility"
+      ],
+      "limits": "The affected population is unknown."
+    }
+  ],
+  "operations": {
+    "failureModes": [
+      {
+        "failure": "A caller receives a changed value without an API error",
+        "signal": "Compatibility fixtures differ or consumers report changed interpretation",
+        "response": "Stop adoption and retain or restore the previous dependency",
+        "owner": "Library maintainer"
+      }
+    ],
+    "observe": {
+      "where": "Compatibility suite results and consumer issue reports for the exact revision",
+      "owner": "Library maintainer"
+    },
+    "stop": {
+      "when": "Any supported input changes meaning unexpectedly",
+      "action": "Stop the release or downstream adoption through the existing release process",
+      "owner": "Release owner"
+    },
+    "rollback": {
+      "status": "SIMULATED",
+      "action": "Restore the prior library revision using the reviewed dependency rollback process",
+      "verification": "Run the compatibility suite and the affected consumer workflow after the restore",
+      "owner": "Release owner",
+      "evidence": [
+        "recovery"
+      ]
+    }
+  },
+  "unknowns": [
+    {
+      "id": "consumer-impact",
+      "targets": ["claim:impact"],
+      "question": "Which consumers rely on the changed interpretation?",
+      "impact": "A silent change may affect consumers absent from the test corpus",
+      "nextStep": "Collect representative compatibility examples before proposing a contract change",
+      "owner": "Library maintainer"
+    },
+    {
+      "id": "consumer-recovery",
+      "targets": ["rollback"],
+      "question": "Will every supported consumer recover after a dependency revert?",
+      "impact": "Persistent derived data may require separate repair",
+      "nextStep": "Verify consumer recovery before authorizing adoption",
+      "owner": "Release owner"
+    }
+  ],
+  "humanDecisions": [
+    {
+      "question": "Should the supported input contract change in a future breaking release?",
+      "owner": "Library maintainer",
+      "resolution": null
+    }
+  ]
+}

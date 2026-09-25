@@ -129,6 +129,8 @@ bash ./scripts/product-engineering-evidence.test.sh # exercises the optional evi
                                                     # complete fresh higher-rung preemption result
                                                     # makes it decision-irrelevant, while stale or
                                                     # incomplete evidence still surveys
+bash ./scripts/product-engineering-accountability.test.sh # checks and renders optional human briefs:
+                                                         # evidence labels, ownership, recovery and escaping
 
 # 4. (local only) Lint changed workflows.
 actionlint
