@@ -98,6 +98,12 @@ invalid 'uncited resolution pretends decision' '.humanDecisions[0].resolution="A
 invalid 'resolution reference is missing' '.humanDecisions[0].resolution={decision:"Approved"}'
 invalid 'resolution reference is blank' '.humanDecisions[0].resolution={decision:"Approved",reference:" "}'
 invalid 'resolution decision is blank' '.humanDecisions[0].resolution={decision:" ",reference:"artifact://decision/42"}'
+for scheme in 'example://' 'EXAMPLE://'; do
+  invalid "fictional decision reference $scheme passed off as real" ".synthetic=false | .evidence[].source |= sub(\"^example://\";\"artifact://\") | .humanDecisions[0].resolution={decision:\"Approved\",reference:\"${scheme}decision/1\"}"
+done
+for reference in ' artifact://decision/42' 'artifact://decision/42 ' '​artifact://decision/42' 'artifact://decision  42' 'artifact://decision\n42'; do
+  invalid "render-equivalent decision reference: $reference" ".humanDecisions[0].resolution={decision:\"Approved\",reference:\"$reference\"}"
+done
 valid 'unproven rollback stays explicitly unknown' '.operations.rollback |= (.status="UNKNOWN" | .evidence=[])'
 valid 'observed recovery can be recorded' '.evidence[1].basis="OBSERVED" | .operations.rollback.status="PROVEN"'
 valid 'unknown evidence is allowed when labelled and linked' '.evidence[0] |= (.basis="UNKNOWN" | .result="unknown" | .observedAt=null) | .claims[0].basis="UNKNOWN" | .claims[1].basis="UNKNOWN" | .unknowns[0].targets += ["evidence:latency","claim:speed"]'

@@ -55,13 +55,14 @@ def schema:
   and (.humanDecisions | type == "array" and all(.[]; shape(["question","owner","resolution"])
     and ([.question,.owner] | all(.[]; text))
     and (.resolution == null or (.resolution | shape(["decision","reference"])
-      and ([.decision,.reference] | all(.[]; text))))));
+      and (.decision | text) and (.reference | exact)))));
 
 # Validate associations and evidence labels, without claiming to interpret the supporting artifacts.
 def validate:
   need(schema; "schema, required fields, or labels")
   | . as $b
-  | need(.synthetic or all(.evidence[]; (.source | ascii_downcase | startswith("example://")) | not); "fictional sources must stay marked synthetic")
+  | need(.synthetic or all(.evidence[].source, (.humanDecisions[].resolution | objects | .reference);
+      ascii_downcase | startswith("example://") | not); "fictional sources must stay marked synthetic")
   | need(all([$b.comparison.incumbent,$b.comparison.selected][]; . as $id | any($b.comparison.options[]; .id == $id)); "alternatives must include incumbent and selected method")
   | need(all(.evidence[]; .observedAt == null or .observedAt <= $b.decision.asOf); "evidence is later than the brief")
   | need(all((.claims[].evidence[], .operations.rollback.evidence[]); . as $id | any($b.evidence[]; .id == $id)); "dangling evidence reference")
