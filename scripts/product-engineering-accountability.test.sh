@@ -29,6 +29,7 @@ invalid() {
 }
 valid 'synthetic proposal with unknowns' '.'
 valid 'analogy is optional' '.model.analogy = null'
+valid 'tab and line feed in prose render as spaces' '.model.explanation="line one\n\tline two"'
 valid 'incumbent can remain selected' '.comparison.selected = "current"'
 valid 'recording a failed observation is valid' '.evidence[0] |= (.basis="OBSERVED" | .kind="behavior" | .result="fail") | .claims[0].basis="OBSERVED"'
 invalid 'empty input object' '{}'
@@ -70,6 +71,7 @@ invalid 'known outcome cannot cover a different unknown' '.unknowns[0].targets=[
 invalid 'noncanonical decision identifier' '.decision.id="search preview"'
 invalid 'bidi override hides rendered text' '.decision.summary="safe \u202e txet lieh"'
 invalid 'zero-width character hides rendered text' '.model.explanation="approved\u200bnot"'
+invalid 'C1 control character hides rendered text' '.model.explanation="approved\u0085\u009bnot"'
 invalid 'identifier with a trailing newline' '.decision.id |= . + "\n"'
 invalid 'exact value with a trailing newline' '.humanDecisions[0].resolution={decision:"Approve the trial",reference:"PR-12\n"}'
 invalid 'noncanonical option identifier' '.comparison.options[0].id="current  choice" | .comparison.incumbent="current  choice"'

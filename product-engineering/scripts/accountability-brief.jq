@@ -1,8 +1,9 @@
 # Offline jq 1.6+ checker and Markdown renderer. Slurp exactly one brief; no external reads.
 # jq -s --arg mode check -f accountability-brief.jq brief.json
 # jq -sr --arg mode render -f accountability-brief.jq brief.json
-# Format controls (bidi overrides, zero-width characters) render invisibly and can reorder or hide claims.
-def text: type == "string" and test("\\S") and (test("[\u0000-\u0008\u000b-\u001f\u007f]|\\p{Cf}") | not);
+# Tab and line feed render as spaces; every other C0 or C1 control and every format control
+# (bidi overrides, zero-width characters) renders invisibly and can reorder or hide claims.
+def text: type == "string" and test("\\S") and (test("[\u0000-\u0008\u000b-\u001f\u007f-\u009f]|\\p{Cf}") | not);
 def shape($fields): type == "object" and (keys == ($fields | sort));
 def oneof($values): . as $v | $values | index($v) != null;
 def texts: type == "array" and all(.[]; text);
