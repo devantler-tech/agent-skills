@@ -1,16 +1,17 @@
 # Offline jq 1.6+ checker and Markdown renderer. Slurp exactly one brief; no external reads.
 # jq -s --arg mode check -f accountability-brief.jq brief.json
 # jq -sr --arg mode render -f accountability-brief.jq brief.json
-def text: type == "string" and test("\\S") and (test("[\u0000-\u0008\u000b-\u001f\u007f]") | not);
+# Format controls (bidi overrides, zero-width characters) render invisibly and can reorder or hide claims.
+def text: type == "string" and test("\\S") and (test("[\u0000-\u0008\u000b-\u001f\u007f]|\\p{Cf}") | not);
 def shape($fields): type == "object" and (keys == ($fields | sort));
 def oneof($values): . as $v | $values | index($v) != null;
 def texts: type == "array" and all(.[]; text);
 def unique_values: length == (unique | length);
-def token: type == "string" and test("^[a-z0-9]+(-[a-z0-9]+)*$");
+def token: type == "string" and test("\\A[a-z0-9]+(-[a-z0-9]+)*\\z");
 def ids: all(.[]; .id | token) and (map(.id) | unique_values);
 def refs: type == "array" and all(.[]; token) and unique_values;
 # Printed identifiers render losslessly: visible characters joined by single ASCII spaces only.
-def exact: text and test("^[^\\s\\p{Z}\\p{C}]+( [^\\s\\p{Z}\\p{C}]+)*$");
+def exact: text and test("\\A[^\\s\\p{Z}\\p{C}]+( [^\\s\\p{Z}\\p{C}]+)*\\z");
 def utc: text and (try ((fromdateiso8601 | strftime("%Y-%m-%dT%H:%M:%SZ")) == .) catch false);
 def need($ok; $why): if $ok then . else error("invalid accountability brief: " + $why) end;
 def schema:
