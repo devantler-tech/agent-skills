@@ -1,0 +1,250 @@
+{
+  "schemaVersion": 1,
+  "outcome": "Reduce request latency without losing successful responses",
+  "baseline": {
+    "id": "current",
+    "revision": "release-1"
+  },
+  "candidate": {
+    "id": "batched",
+    "revision": "release-2"
+  },
+  "alternatives": [
+    {
+      "id": "current",
+      "reason": "Retain unless the candidate proves repeatable latency improvement within every protected floor"
+    },
+    {
+      "id": "larger-cache",
+      "reason": "Not selected: exceeds the declared memory budget"
+    }
+  ],
+  "plan": {
+    "record": "fixture://immutable-plan/1",
+    "registeredAt": "2026-09-01T10:00:00Z",
+    "startedAt": "2026-09-02T10:00:00Z",
+    "minRepeats": 2,
+    "measures": [
+      {
+        "id": "latency",
+        "unit": "ms",
+        "direction": "lower",
+        "objective": true,
+        "minImprovement": 10,
+        "maxRegression": 0,
+        "protected": true,
+        "floor": 120,
+        "method": "p95 of representative requests",
+        "environment": "fixed load and hardware",
+        "uncertaintyMethod": "predeclared interval estimator"
+      },
+      {
+        "id": "reliability",
+        "unit": "successful responses per million",
+        "direction": "higher",
+        "objective": false,
+        "minImprovement": 0,
+        "maxRegression": 1000,
+        "protected": true,
+        "floor": 995000,
+        "method": "successful responses / all requests",
+        "environment": "same workload and failures",
+        "uncertaintyMethod": "predeclared interval estimator"
+      }
+    ]
+  },
+  "assumptions": [
+    {
+      "statement": "The held-out workload represents the intended users",
+      "state": "supported",
+      "evidenceId": "holdout"
+    }
+  ],
+  "falsification": {
+    "approach": "adversarial",
+    "evaluator": "separate evaluator",
+    "evidenceId": "review",
+    "attempt": "Try overload, failure recovery, and holdout workloads that were not used for tuning"
+  },
+  "rollout": {
+    "stages": [
+      "disposable trial",
+      "bounded canary",
+      "replacement after observation"
+    ],
+    "stopConditions": [
+      "any protected floor breached",
+      "evidence expires or assumptions fail"
+    ]
+  },
+  "rollback": {
+    "targetRevision": "release-1",
+    "procedure": "fixture://restore-release-1",
+    "evidenceId": "rollback",
+    "trigger": "floor violation, stale evidence, or invalid assumptions"
+  },
+  "observation": {
+    "owner": "delivery owner",
+    "evidenceId": "live",
+    "window": {
+      "startedAt": "2026-09-04T10:00:00Z",
+      "endedAt": "2026-09-05T10:00:00Z"
+    },
+    "nextCheck": "2026-09-26T00:00:00Z"
+  },
+  "evidence": [
+    {
+      "id": "run-a",
+      "kind": "measurement",
+      "provenance": "observed",
+      "revision": "release-2",
+      "baselineRevision": "release-1",
+      "uri": "fixture://run-a",
+      "observedAt": "2026-09-03T10:00:00Z",
+      "expiresAt": "2026-09-30T00:00:00Z",
+      "result": "pass"
+    },
+    {
+      "id": "run-b",
+      "kind": "measurement",
+      "provenance": "observed",
+      "revision": "release-2",
+      "baselineRevision": "release-1",
+      "uri": "fixture://run-b",
+      "observedAt": "2026-09-04T10:00:00Z",
+      "expiresAt": "2026-09-30T00:00:00Z",
+      "result": "pass"
+    },
+    {
+      "id": "static",
+      "kind": "static",
+      "provenance": "observed",
+      "revision": "release-2",
+      "uri": "fixture://ci",
+      "observedAt": "2026-09-03T10:00:00Z",
+      "expiresAt": "2026-09-30T00:00:00Z",
+      "result": "pass"
+    },
+    {
+      "id": "behavior",
+      "kind": "behavior",
+      "provenance": "observed",
+      "revision": "release-2",
+      "uri": "fixture://end-to-end",
+      "observedAt": "2026-09-03T10:00:00Z",
+      "expiresAt": "2026-09-30T00:00:00Z",
+      "result": "pass"
+    },
+    {
+      "id": "deployment",
+      "kind": "deployment",
+      "provenance": "observed",
+      "revision": "release-2",
+      "uri": "fixture://revision-readback",
+      "observedAt": "2026-09-04T10:00:00Z",
+      "expiresAt": "2026-09-30T00:00:00Z",
+      "result": "pass"
+    },
+    {
+      "id": "live",
+      "kind": "live",
+      "deploymentEvidenceId": "deployment",
+      "provenance": "observed",
+      "revision": "release-2",
+      "uri": "fixture://canary-outcome",
+      "observedAt": "2026-09-05T10:00:00Z",
+      "expiresAt": "2026-09-30T00:00:00Z",
+      "result": "pass"
+    },
+    {
+      "id": "review",
+      "kind": "review",
+      "provenance": "observed",
+      "revision": "release-2",
+      "uri": "fixture://adversarial-report",
+      "observedAt": "2026-09-05T10:00:00Z",
+      "expiresAt": "2026-09-30T00:00:00Z",
+      "result": "pass"
+    },
+    {
+      "id": "holdout",
+      "kind": "holdout",
+      "provenance": "observed",
+      "revision": "release-2",
+      "uri": "fixture://untuned-holdout",
+      "observedAt": "2026-09-05T10:00:00Z",
+      "expiresAt": "2026-09-30T00:00:00Z",
+      "result": "pass",
+      "usedForTuning": false
+    },
+    {
+      "id": "rollback",
+      "kind": "rollback",
+      "deploymentEvidenceId": "deployment",
+      "provenance": "observed",
+      "revision": "release-2",
+      "uri": "fixture://restore-drill",
+      "observedAt": "2026-09-05T10:00:00Z",
+      "expiresAt": "2026-09-30T00:00:00Z",
+      "result": "pass"
+    }
+  ],
+  "observations": [
+    {
+      "id": "repeat-a",
+      "evidenceId": "run-a",
+      "values": [
+        {
+          "measure": "latency",
+          "baseline": {
+            "lower": 100,
+            "upper": 102
+          },
+          "candidate": {
+            "lower": 80,
+            "upper": 85
+          }
+        },
+        {
+          "measure": "reliability",
+          "baseline": {
+            "lower": 998000,
+            "upper": 999000
+          },
+          "candidate": {
+            "lower": 998000,
+            "upper": 999000
+          }
+        }
+      ]
+    },
+    {
+      "id": "repeat-b",
+      "evidenceId": "run-b",
+      "values": [
+        {
+          "measure": "latency",
+          "baseline": {
+            "lower": 101,
+            "upper": 103
+          },
+          "candidate": {
+            "lower": 81,
+            "upper": 86
+          }
+        },
+        {
+          "measure": "reliability",
+          "baseline": {
+            "lower": 998000,
+            "upper": 999000
+          },
+          "candidate": {
+            "lower": 998000,
+            "upper": 999000
+          }
+        }
+      ]
+    }
+  ]
+}
