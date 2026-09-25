@@ -131,6 +131,8 @@ bash ./scripts/product-engineering-evidence.test.sh # exercises the optional evi
                                                     # incomplete evidence still surveys
 bash ./scripts/product-engineering-accountability.test.sh # checks and renders optional human briefs:
                                                          # evidence labels, ownership, recovery and escaping
+bash ./scripts/self-improvement-evidence.test.sh # runs the procedure example through the canonical
+                                                # companion evaluator, including negative outcomes
 
 # 4. (local only) Lint changed workflows.
 actionlint

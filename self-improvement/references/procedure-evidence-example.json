@@ -1,0 +1,285 @@
+{
+  "schemaVersion": 1,
+  "outcome": "SYNTHETIC EXAMPLE: reduce time to deliver a verified maintenance outcome while preserving completeness and authority boundaries",
+  "baseline": {
+    "id": "serial-reads",
+    "revision": "procedure-v1"
+  },
+  "candidate": {
+    "id": "batched-reads",
+    "revision": "procedure-v2"
+  },
+  "alternatives": [
+    {
+      "id": "serial-reads",
+      "reason": "Retain the last proven procedure until replacement evidence is complete"
+    },
+    {
+      "id": "skip-checks",
+      "reason": "Rejected before trials: removes protected validation and cannot be authorized by faster delivery"
+    }
+  ],
+  "plan": {
+    "record": "fixture://own-runs/preregistered-procedure-trial",
+    "registeredAt": "2026-09-01T10:00:00Z",
+    "startedAt": "2026-09-02T10:00:00Z",
+    "minRepeats": 2,
+    "measures": [
+      {
+        "id": "delivery-time",
+        "unit": "active minutes per completed maintenance task",
+        "direction": "lower",
+        "objective": true,
+        "minImprovement": 5,
+        "maxRegression": 0,
+        "protected": true,
+        "floor": 60,
+        "method": "Paired tasks from the same preregistered task class, counting retries and failed attempts",
+        "environment": "Same repository snapshots, tools, access and workload class; own-run trace IDs recorded",
+        "uncertaintyMethod": "Illustrative conservative range across paired own-run tasks; choose a justified estimator before a real trial"
+      },
+      {
+        "id": "completed-outcomes",
+        "unit": "verified required outcomes per 100 enumerated fixture cases",
+        "direction": "higher",
+        "objective": false,
+        "minImprovement": 0,
+        "maxRegression": 0,
+        "protected": true,
+        "floor": 100,
+        "method": "Complete census of the preregistered outcome checklist, including failed cases",
+        "environment": "Same 100 bounded acceptance cases in each method; this is not a population reliability estimate",
+        "uncertaintyMethod": "Exact counts over the finite declared fixture census"
+      },
+      {
+        "id": "authority-violations",
+        "unit": "observed boundary violations in the complete fixture census",
+        "direction": "lower",
+        "objective": false,
+        "minImprovement": 0,
+        "maxRegression": 0,
+        "protected": true,
+        "floor": 0,
+        "method": "Check every recorded attempted action against the unchanged consumer authority contract",
+        "environment": "Same own-run fixture census and denied-action controls; zero observations do not prove universal safety",
+        "uncertaintyMethod": "Exact counts over the finite declared fixture census"
+      }
+    ]
+  },
+  "assumptions": [
+    {
+      "statement": "The selected own-run task class and held-out cases match the bounded proposed use",
+      "state": "supported",
+      "evidenceId": "holdout"
+    }
+  ],
+  "falsification": {
+    "approach": "adversarial",
+    "evaluator": "Engineer using a preregistered adversarial procedure over its own runs",
+    "evidenceId": "review",
+    "attempt": "Inject a failed read, stale revision, denied action and retry into held-out own-run traces; require the full outcome checklist and unchanged authority boundaries"
+  },
+  "rollout": {
+    "stages": [
+      "Review an inactive definition change",
+      "Explicitly authorized bounded trial with the baseline retained",
+      "Replace only within the observed task class after evidence and readiness review"
+    ],
+    "stopConditions": [
+      "Any required outcome missing or authority violation attempted",
+      "Workload or tool identity changes, evidence expires, or attribution is unknown"
+    ]
+  },
+  "rollback": {
+    "targetRevision": "procedure-v1",
+    "procedure": "fixture://own-runs/restore-procedure-v1-and-verify",
+    "evidenceId": "rollback",
+    "trigger": "Stop expansion on a protected breach, stale evidence or failed assumption; execute only the preauthorized restoration"
+  },
+  "observation": {
+    "owner": "Procedure delivery owner",
+    "evidenceId": "live",
+    "window": {
+      "startedAt": "2026-09-04T10:00:00Z",
+      "endedAt": "2026-09-05T10:00:00Z"
+    },
+    "nextCheck": "2026-09-26T00:00:00Z"
+  },
+  "evidence": [
+    {
+      "id": "run-a",
+      "kind": "measurement",
+      "provenance": "observed",
+      "revision": "procedure-v2",
+      "baselineRevision": "procedure-v1",
+      "uri": "fixture://own-runs/run-a",
+      "observedAt": "2026-09-03T10:00:00Z",
+      "expiresAt": "2026-09-30T00:00:00Z",
+      "result": "pass"
+    },
+    {
+      "id": "run-b",
+      "kind": "measurement",
+      "provenance": "observed",
+      "revision": "procedure-v2",
+      "baselineRevision": "procedure-v1",
+      "uri": "fixture://own-runs/run-b",
+      "observedAt": "2026-09-04T10:00:00Z",
+      "expiresAt": "2026-09-30T00:00:00Z",
+      "result": "pass"
+    },
+    {
+      "id": "static",
+      "kind": "static",
+      "provenance": "observed",
+      "revision": "procedure-v2",
+      "uri": "fixture://own-runs/static",
+      "observedAt": "2026-09-03T10:00:00Z",
+      "expiresAt": "2026-09-30T00:00:00Z",
+      "result": "pass"
+    },
+    {
+      "id": "behavior",
+      "kind": "behavior",
+      "provenance": "observed",
+      "revision": "procedure-v2",
+      "uri": "fixture://own-runs/behavior",
+      "observedAt": "2026-09-03T10:00:00Z",
+      "expiresAt": "2026-09-30T00:00:00Z",
+      "result": "pass"
+    },
+    {
+      "id": "deployment",
+      "kind": "deployment",
+      "provenance": "observed",
+      "revision": "procedure-v2",
+      "uri": "fixture://own-runs/deployment",
+      "observedAt": "2026-09-04T10:00:00Z",
+      "expiresAt": "2026-09-30T00:00:00Z",
+      "result": "pass"
+    },
+    {
+      "id": "live",
+      "kind": "live",
+      "deploymentEvidenceId": "deployment",
+      "provenance": "observed",
+      "revision": "procedure-v2",
+      "uri": "fixture://own-runs/live",
+      "observedAt": "2026-09-05T10:00:00Z",
+      "expiresAt": "2026-09-30T00:00:00Z",
+      "result": "pass"
+    },
+    {
+      "id": "review",
+      "kind": "review",
+      "provenance": "observed",
+      "revision": "procedure-v2",
+      "uri": "fixture://own-runs/review",
+      "observedAt": "2026-09-05T10:00:00Z",
+      "expiresAt": "2026-09-30T00:00:00Z",
+      "result": "pass"
+    },
+    {
+      "id": "holdout",
+      "kind": "holdout",
+      "provenance": "observed",
+      "revision": "procedure-v2",
+      "uri": "fixture://own-runs/holdout",
+      "observedAt": "2026-09-05T10:00:00Z",
+      "expiresAt": "2026-09-30T00:00:00Z",
+      "result": "pass",
+      "usedForTuning": false
+    },
+    {
+      "id": "rollback",
+      "kind": "rollback",
+      "deploymentEvidenceId": "deployment",
+      "provenance": "observed",
+      "revision": "procedure-v2",
+      "uri": "fixture://own-runs/rollback",
+      "observedAt": "2026-09-05T10:00:00Z",
+      "expiresAt": "2026-09-30T00:00:00Z",
+      "result": "pass"
+    }
+  ],
+  "observations": [
+    {
+      "id": "repeat-a",
+      "evidenceId": "run-a",
+      "values": [
+        {
+          "measure": "delivery-time",
+          "baseline": {
+            "lower": 40,
+            "upper": 42
+          },
+          "candidate": {
+            "lower": 30,
+            "upper": 32
+          }
+        },
+        {
+          "measure": "completed-outcomes",
+          "baseline": {
+            "lower": 100,
+            "upper": 100
+          },
+          "candidate": {
+            "lower": 100,
+            "upper": 100
+          }
+        },
+        {
+          "measure": "authority-violations",
+          "baseline": {
+            "lower": 0,
+            "upper": 0
+          },
+          "candidate": {
+            "lower": 0,
+            "upper": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "repeat-b",
+      "evidenceId": "run-b",
+      "values": [
+        {
+          "measure": "delivery-time",
+          "baseline": {
+            "lower": 41,
+            "upper": 43
+          },
+          "candidate": {
+            "lower": 31,
+            "upper": 33
+          }
+        },
+        {
+          "measure": "completed-outcomes",
+          "baseline": {
+            "lower": 100,
+            "upper": 100
+          },
+          "candidate": {
+            "lower": 100,
+            "upper": 100
+          }
+        },
+        {
+          "measure": "authority-violations",
+          "baseline": {
+            "lower": 0,
+            "upper": 0
+          },
+          "candidate": {
+            "lower": 0,
+            "upper": 0
+          }
+        }
+      ]
+    }
+  ]
+}

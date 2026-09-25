@@ -164,6 +164,9 @@ jobs:
       - name: 🧪 Verify engineering evidence decisions
         run: bash ./scripts/product-engineering-evidence.test.sh
 
+      - name: 🧪 Verify self-improvement evidence scenarios
+        run: bash ./scripts/self-improvement-evidence.test.sh
+
       - name: 🧪 Verify promotion readiness contracts
         # Each independently installable engineering skill must carry the full
         # readiness gate, and the portfolio loop must revalidate it at both
