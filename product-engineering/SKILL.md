@@ -4,7 +4,7 @@ description: >-
   The ADVANCE playbook for an autonomous AI engineer — how to move a product
   forward once it is healthy: product strategy and roadmap stewardship, issue
   triage and decomposition, oldest-actionable-first implementation, test
-  coverage, benchmarking and performance, refactoring and code quality,
+  coverage, benchmarking and performance, refactoring, tool maturation and code quality,
   documentation sync, and security posture — all shipped as evidence-backed
   draft PRs self-promoted on genuine readiness. Use after operate work
   (keeping things healthy) is satisfied and you are picking proactive
@@ -149,6 +149,28 @@ code. **Never mix a refactor with a behaviour change** in one PR — reviewers m
 the diff is a no-op. Keep diffs reviewable (split large refactors into incremental PRs); run the
 product's linter/formatter and full test suite first; if tests are thin in the area, add them first
 in a separate PR so the refactor is safe.
+
+### Tool maturation — bash → Go program → CLI
+
+Use three distinct rungs: a small, simple **bash** job; a **repository-local Go program** when
+branching, error handling or reuse makes a script hard to maintain; and a **CLI product** when
+people deliberately invoke it across repositories and it needs an independent interface and
+lifetime. The consuming deployment's scripting/stack contract governs permitted languages and
+host-mandated exceptions. Complexity can justify the second rung; **audience and lifetime, not
+line count, justify the third**. A large CI-only program can remain repository-local.
+
+**Prefer a compatible existing CLI before creating a new one.** Establish fit with its purpose,
+users, interface, permission model and distribution; technical ability to host a command is
+insufficient. When no existing tool fits, document the rejected alternatives and create a new
+first-class product only within the consumer's authority: its own repository, portfolio-map entry,
+product card, roadmap, health checks, and release/distribution path. Creating that product is a
+feature decision, not a behavior-preserving refactor.
+
+For a scripting survey or migration, use [the tool-maturation decision procedure](references/tool-maturation.md).
+Record every in-scope candidate's observed callers, destination, fit rationale and unknowns in the
+issue tracker. Preserve behavior, compatibility and recovery; exercise the installed command from
+a real caller before claiming migration. A survey, suggested destination or new binary alone is
+not a completed migration, and none replaces the normal readiness or adoption gates.
 
 ## 7. Documentation — sync and improve
 
