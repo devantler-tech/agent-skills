@@ -93,7 +93,7 @@ if [[ $FAIL_GIT_COMMAND == selected-blob && " $* " == *' cat-file -e '* ]]; then
 exec "$REAL_GIT" "$@"
 STUB
 chmod +x "$tmp/bin/git"
-for operation in ls-tree cat-file selected-blob; do
+for operation in ls-tree cat-file selected-blob --no-lazy-fetch; do
   REAL_GIT="$git_bin" FAIL_GIT_COMMAND="$operation" PATH="$tmp/bin:$PATH" \
     refuse --inspect --repo-dir "$tmp/repo" --revision "$revision"
 done

@@ -35,7 +35,12 @@ bash /absolute/installed/product-engineering/scripts/inspect-shell-helpers.sh \
   --inspect --repo-dir /absolute/repository/root --revision FULL_COMMIT
 ```
 
-The helper needs Bash, Git, jq and iconv. It examines the named local commit, including when the
+The helper needs Bash, jq, iconv and Git supporting
+[`--no-lazy-fetch`](https://git-scm.com/docs/git/2.45.0#Documentation/git.txt---no-lazy-fetch).
+An unsupported Git refuses inspection instead of silently ignoring a no-fetch setting. The
+installed Git binary and repository metadata remain within the consumer's existing trust boundary;
+this observation does not audit Git configuration or grant trust to an untrusted branch.
+It examines the named local commit, including when the
 working tree is dirty, without checking out or executing its files. Its conservative selection
 `tracked-shell-paths-v1` includes every tracked regular `*.sh` path except `*.test.sh`; it does not
 apply a size threshold or decide which files are non-trivial. Each path carries its committed blob
