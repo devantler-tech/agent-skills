@@ -44,7 +44,7 @@ if [ "$count" -eq 0 ]; then
 fi
 
 # 2. Parsed count must equal the number of Skills-table rows.
-rows=$(awk '/^## Skills[[:space:]]*$/{in_skills=1; next} /^## /{in_skills=0} in_skills' README.md | grep -cE '^\| `' || true)
+rows=$(bash "$script_dir/readme-index.sh" --row-count)
 if [ "$count" -ne "$rows" ]; then
   echo "::error::README index drift: parsed $count install entries but the Skills tables have $rows row(s) — a row's \`gh skill install\` command is malformed or duplicated."
   exit 1
@@ -58,7 +58,7 @@ while IFS= read -r skill_md; do
   dir=$(dirname "$skill_md")
   dir=${dir#./}
   [ -n "$dir" ] || continue
-  if ! grep -qxF "devantler-tech/agent-skills $dir" <<<"$entries"; then
+  if ! LC_ALL=C awk -v skill="$dir" 'tolower($1) == "devantler-tech/agent-skills" && $2 == skill {found=1} END {exit !found}' <<<"$entries"; then
     echo "::error::in-house skill '$dir' is missing from the README index."
     missing=1
   fi
@@ -74,65 +74,13 @@ while IFS= read -r entry; do
   [ -n "$entry" ] || continue
   repo=${entry%% *}
   skill=${entry##* }
-  [ "$repo" = "devantler-tech/agent-skills" ] || continue
+  [ "$(printf '%s' "$repo" | LC_ALL=C tr '[:upper:]' '[:lower:]')" = "devantler-tech/agent-skills" ] || continue
   if [ ! -f "$skill/SKILL.md" ]; then
     echo "::error::in-house index entry '$repo $skill' does not resolve — no '$skill/SKILL.md' on disk."
     unresolved=1
   fi
 done <<<"$entries"
 
-# 5. Cross-column consistency: within every Skills-table row, the Install command
-# must agree with the Skill name and the Upstream link. Checks 1-4 and the
-# scheduled upstream-resolution gate (check-upstream-skills.sh) each parse only
-# ONE column — the Install command (column 3) and the Upstream URL (column 2)
-# respectively — so neither catches a row whose columns DISAGREE: e.g. an Upstream
-# link to `owner/repo` but an `gh skill install owner/typo` command, or an install
-# slug that doesn't match the named skill. Such a desync passes count-lockstep AND
-# upstream resolution (which validates the correct column-2 URL) yet ships a broken
-# install command to every consumer. Assert, per row: install owner/repo ==
-# Upstream-link owner/repo == Upstream-URL owner/repo, and install slug ==
-# Skill name == Upstream-URL trailing path segment. String comparison only (no
-# network), so it gates PRs alongside checks 1-4.
-inconsistent=0
-while IFS= read -r row; do
-  [ -n "$row" ] || continue
-  # Strip the markdown code-span backticks up front so the field patterns below
-  # never need a literal backtick (which shellcheck flags as SC2016); they carry
-  # no meaning for the extraction.
-  row=$(printf '%s' "$row" | tr -d '`')
-  IFS='|' read -r _ c_skill c_up c_inst _ <<<"$row"
-  skill_name=$(printf '%s' "$c_skill" | tr -d ' ')
-  link_repo=$(printf '%s' "$c_up" | sed -n 's/.*\[\([^]]*\)\].*/\1/p')
-  url=$(printf '%s' "$c_up" | sed -n 's#.*](\(https://github\.com/[^)]*\)).*#\1#p')
-  url_repo=$(printf '%s' "$url" | sed -n 's#https://github\.com/\([^/][^/]*/[^/][^/]*\)/tree/.*#\1#p')
-  url_tail=${url##*/}
-  inst=$(printf '%s' "$c_inst" | sed -n 's/.*gh skill install \(.*\)/\1/p')
-  # Intentional word-splitting: `gh skill install <repo> <skill> [flags]`.
-  # shellcheck disable=SC2086
-  set -- $inst
-  inst_repo=${1:-}
-  inst_skill=${2:-}
-  if [ -z "$skill_name" ] || [ -z "$link_repo" ] || [ -z "$url_repo" ] || [ -z "$inst_repo" ] || [ -z "$inst_skill" ]; then
-    echo "::error::README row could not be parsed into Skill/Upstream/Install cells: $row"
-    inconsistent=1
-    continue
-  fi
-  if [ "$link_repo" != "$url_repo" ]; then
-    echo "::error::Upstream column mismatch for '$skill_name': link text \`$link_repo\` != URL repo '$url_repo'."
-    inconsistent=1
-  fi
-  if [ "$inst_repo" != "$link_repo" ]; then
-    echo "::error::Install/Upstream repo mismatch for '$skill_name': \`gh skill install $inst_repo …\` != Upstream \`$link_repo\` — a consumer would install from the wrong repo."
-    inconsistent=1
-  fi
-  if [ "$inst_skill" != "$skill_name" ]; then
-    echo "::error::Install slug mismatch: row names skill '$skill_name' but installs '$inst_skill'."
-    inconsistent=1
-  fi
-  if [ "$url_tail" != "$skill_name" ]; then
-    echo "::error::Upstream URL for '$skill_name' points at trailing segment '$url_tail' — it must equal the skill name."
-    inconsistent=1
-  fi
-done < <(awk '/^## Skills[[:space:]]*$/{in_skills=1; next} /^## /{in_skills=0} in_skills' README.md | grep -E '^\| `')
-
-[ "$missing" -eq 0 ] && [ "$unresolved" -eq 0 ] && [ "$inconsistent" -eq 0 ]
+# Row consistency and destination collisions were checked by the shared parser
+# before any entries were emitted. Keep only the repository-specific disk checks here.
+[ "$missing" -eq 0 ] && [ "$unresolved" -eq 0 ]

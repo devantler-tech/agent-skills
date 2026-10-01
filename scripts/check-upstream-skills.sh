@@ -79,13 +79,10 @@ resolve_target() {
   return 2
 }
 
-# Scope to the `## Skills` section, keep only table rows that carry an Upstream
-# github tree URL, and drop the in-house `devantler-tech/agent-skills` self-pointers
-# (covered offline by check-readme-index.sh).
-rows=$(awk '/^## Skills[[:space:]]*$/{in_skills=1; next} /^## /{in_skills=0} in_skills' README.md \
-  | grep -E '^\| ' \
-  | grep 'https://github.com/' \
-  | grep -v 'devantler-tech/agent-skills' || true)
+# Use the installer's validated table interpretation. Refuse a partial catalogue
+# before resolving any source. In-house targets remain the offline guard's job.
+catalogue=$(bash "$script_dir/readme-index.sh" --targets)
+rows=$(printf '%s\n' "$catalogue" | LC_ALL=C awk 'tolower($1) != "devantler-tech/agent-skills"')
 
 if [ -z "$rows" ]; then
   echo "::error::No upstream skill rows parsed from the README '## Skills' index — the tables or parser drifted."
@@ -96,26 +93,11 @@ checked=0
 drift=0
 warned=0
 invalid=0
-while IFS= read -r row; do
-  [ -n "$row" ] || continue
-  url=$(printf '%s' "$row" | grep -oE 'https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/tree/[^ )]+' | head -n1)
-  if [ -z "$url" ]; then
-    echo "::error::could not parse an Upstream tree URL from index row: $row"
-    drift=1
-    continue
-  fi
-  rest=${url#https://github.com/}
-  owner=${rest%%/*}
-  rest=${rest#*/}
-  repo=${rest%%/*}
-  rest=${rest#*/tree/}
-  ref=${rest%%/*}
-  path=${rest#*/}
-  if [ -z "$owner" ] || [ -z "$repo" ] || [ -z "$ref" ] || [ -z "$path" ] || [ "$path" = "$rest" ]; then
-    echo "::error::malformed Upstream tree URL '$url' in index row: $row"
-    drift=1
-    continue
-  fi
+# Tree links explicitly name github.com regardless of the operator's default.
+export GH_HOST=github.com
+while read -r source ref path _skill; do
+  owner=${source%%/*}
+  repo=${source#*/}
 
   checked=$((checked + 1))
   if detail=$(resolve_target "$owner" "$repo" "$ref" "$path"); then

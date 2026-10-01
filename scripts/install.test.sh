@@ -37,6 +37,7 @@ make_root() { # root  <<skills_table_body
   rm -rf "$root"
   mkdir -p "$root/scripts"
   cp "$here/install.sh" "$root/scripts/"
+  cp "$here/readme-index.sh" "$here/readme-index.awk" "$root/scripts/"
   {
     printf '# Test catalogue\n\n## Skills\n\n'
     printf '| Skill | Upstream | Install |\n|-------|----------|---------|\n'
@@ -305,6 +306,68 @@ GH_UNAVAILABLE=1 run_install "$two" codex
 check 'unavailable gh skill fails' test "$rc" -eq 1
 printf '<skill><--help>\n' > "$tmp/expected"
 check 'unsupported gh never reaches install' diff -u "$tmp/expected" "$GH_CALLS"
+
+# The entire table must be understood before any installation can mutate user
+# scope. A missing command used to disappear from the grep-based parser, while
+# contradictory columns installed the command's source rather than the named one.
+bad="$tmp/bad-catalogue"
+for broken in missing-command wrong-repo wrong-slug wrong-url truncated-slug; do
+  # Intentional literal Markdown and shell-looking text; never interpolate it.
+  # shellcheck disable=SC2016
+  case "$broken" in
+    missing-command) row='| `beta` | [`fixture/two`](https://github.com/fixture/two/tree/main/beta) | missing |' ;;
+    wrong-repo) row='| `beta` | [`fixture/two`](https://github.com/fixture/two/tree/main/beta) | `gh skill install fixture/other beta` |' ;;
+    wrong-slug) row='| `beta` | [`fixture/two`](https://github.com/fixture/two/tree/main/beta) | `gh skill install fixture/two other` |' ;;
+    wrong-url) row='| `beta` | [`fixture/two`](https://github.com/fixture/other/tree/main/beta) | `gh skill install fixture/two beta` |' ;;
+    truncated-slug) row='| `beta` | [`fixture/two`](https://github.com/fixture/two/tree/main/beta) | `gh skill install fixture/two beta$(touch marker)` |' ;;
+  esac
+  # Markdown and shell-looking strings are data supplied through stdin.
+  make_root "$bad" <<EOF
+| \`alpha\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/alpha) | \`gh skill install fixture/one alpha\` |
+$row
+EOF
+  for mode in --list codex; do
+    run_install "$bad" "$mode"
+    check "$broken refuses $mode" test "$rc" -eq 1
+    check "$broken never calls gh" test ! -s "$GH_CALLS"
+    check "$broken emits no partial success" test ! -s "$tmp/stdout"
+    check "$broken reports catalogue error" grep -q 'error:' "$tmp/stderr"
+  done
+done
+
+# An explanatory command in the Skills section is not a curated row.
+example_root="$tmp/inline-example"
+make_root "$example_root" <<'EOF'
+| `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/alpha) | `gh skill install fixture/one alpha` |
+
+Example only: `gh skill install fixture/unintended extra`
+EOF
+expect_list 'commands outside table cells are ignored' "$example_root" 'fixture/one alpha'
+
+fenced_root="$tmp/fenced-example"
+make_root "$fenced_root" <<'EOF'
+| `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/alpha) | `gh skill install fixture/one alpha` |
+
+````markdown
+```
+| `extra` | [`fixture/unintended`](https://github.com/fixture/unintended/tree/main/extra) | `gh skill install fixture/unintended extra` |
+````
+EOF
+expect_list 'fenced examples require a matching full-width closing fence' "$fenced_root" 'fixture/one alpha'
+
+hidden_root="$tmp/hidden-path"
+make_root "$hidden_root" <<'EOF'
+| `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/.claude/skills/alpha) | `gh skill install fixture/one alpha --allow-hidden-dirs` |
+EOF
+expect_list 'hidden upstream directories and documented flags remain supported' "$hidden_root" 'fixture/one alpha'
+
+crlf_root="$tmp/crlf"
+make_root "$crlf_root" <<'EOF'
+| `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/alpha) | `gh skill install fixture/one alpha` |
+EOF
+awk '{printf "%s\r\n", $0}' "$crlf_root/README.md" > "$tmp/crlf-readme"
+mv "$tmp/crlf-readme" "$crlf_root/README.md"
+expect_list 'CRLF checkout retains the same catalogue' "$crlf_root" 'fixture/one alpha'
 
 if [ "$fail" -ne 0 ]; then
   printf '❌ install.sh self-test FAILED\n' >&2

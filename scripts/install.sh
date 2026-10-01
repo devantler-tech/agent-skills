@@ -86,40 +86,16 @@ if [ ! -f "$readme" ]; then
   exit 1
 fi
 
-# Extract "<owner/repo> <skill>" from every `gh skill install <owner/repo> <skill>`
-# occurrence in the curated index, ignoring any trailing flags, and de-duplicate.
-# GitHub repository casing aliases identify the same source; skill names stay literal.
-# Scope the scan to the "## Skills" section (up to the next "## " heading) so
-# example commands elsewhere in the README — e.g. under "## Installing" — are
-# never picked up as installable entries. Parse before the gh check so `--list`
-# can validate the index on its own.
+# Validate the complete table before listing or invoking gh. A failed parser
+# must not be hidden in process substitution or leave a partial install list.
+catalogue=$(bash "$script_dir/readme-index.sh")
 entries=()
 while IFS= read -r entry; do
   [ -n "$entry" ] && entries+=("$entry")
-done < <(
-  awk '/^## Skills[[:space:]]*$/{in_skills=1; next} /^## /{in_skills=0} in_skills' "$readme" \
-    | grep -oE 'gh skill install [A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+ [A-Za-z0-9_.-]+' \
-    | awk '{print $4, $5}' \
-    | LC_ALL=C sort -u \
-    | LC_ALL=C awk '!seen[tolower($1) SUBSEP $2]++'
-)
+done <<<"$catalogue"
 
 if [ ${#entries[@]} -eq 0 ]; then
   echo "error: no skills found in $readme" >&2
-  exit 1
-fi
-
-# gh installs by skill name within each agent directory. Distinct upstreams
-# sharing that name would overwrite each other under --force. Reject the whole
-# catalogue before listing or invoking gh, so CI and installation agree.
-collisions=$(printf '%s\n' "${entries[@]}" | awk '
-  $2 in sources && sources[$2] != $1 {
-    printf "error: skill name %s is shared by %s and %s\n", $2, sources[$2], $1
-  }
-  { sources[$2] = $1 }
-')
-if [ -n "$collisions" ]; then
-  printf '%s\n' "$collisions" >&2
   exit 1
 fi
 
