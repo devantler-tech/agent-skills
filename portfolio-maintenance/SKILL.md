@@ -291,8 +291,9 @@ draft is unfinished work to clear first.
    extra conditions, comes from the **Trust gate** — when the consumer contract does not grant it,
    never merge it.
    **Preserve wanted dependency updates during check refresh.** Never close a Dependabot PR just
-   to trigger checks: closure records the release as unwanted, and reopening does not prove that
-   rejection was withdrawn. Use the consumer-permitted refresh route, guarded by the observed
+   to trigger checks: closing can suppress a wanted update. If a wanted PR was closed, reopening
+   un-ignores the update; verify the PR's state and head afterward, then verify its checks. Use
+   the consumer-permitted refresh route, guarded by the observed
    head, retaining all authored adaptation commits and merge settings. Verify inclusion of the
    current named base branch, rather than trusting a PR's associated base revision; after a head
    moves, require fresh CI and a review of that new head. Recreating a provider's PR is acceptable
