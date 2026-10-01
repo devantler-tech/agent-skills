@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Observe a declared shell-path scope in local Git objects; never run its helpers.
 set -euo pipefail
+# Report an incomplete observation without emitting a successful census.
 unknown() { printf 'UNKNOWN: %s\n' "$*" >&2; exit 2; }
 enabled=false
 repo=
@@ -37,6 +38,7 @@ repo=$(cd "$repo" 2>/dev/null && pwd -P) || unknown 'repository directory is una
 export GIT_NO_LAZY_FETCH=1
 unset GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR GIT_INDEX_FILE GIT_OBJECT_DIRECTORY \
   GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_NAMESPACE
+# Read the selected repository without replacements or optional index locks.
 read_git() { git --no-replace-objects --no-optional-locks -C "$repo" "$@"; }
 top=$(read_git rev-parse --show-toplevel 2>/dev/null) || unknown 'not a worktree repository'
 top=$(cd "$top" && pwd -P) || unknown 'repository root is unavailable'

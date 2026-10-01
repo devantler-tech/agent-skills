@@ -2,11 +2,16 @@
 # Regression targets: false empty census, working-tree leakage, implicit inspection,
 # shell execution, path splitting and replacement-object substitution.
 set -euo pipefail
+unset GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR GIT_INDEX_FILE GIT_OBJECT_DIRECTORY \
+  GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_NAMESPACE GIT_PREFIX
 inspect=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/inspect-shell-helpers.sh
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
+# Report the violated behavior and stop the fixture suite.
 fail() { printf 'FAIL: %s\n' "$*" >&2; exit 1; }
+# Exercise the actual installed command while retaining both output streams.
 run() { bash "$inspect" "$@" > "$tmp/out" 2> "$tmp/err"; }
+# A refused observation must return UNKNOWN without a success payload.
 refuse() {
   local code=0
   run "$@" || code=$?
