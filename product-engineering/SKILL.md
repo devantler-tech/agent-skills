@@ -134,6 +134,12 @@ and scaffolding. Add **meaningful** tests that assert real behaviour and edge ca
 past bug as a regression test. Never weaken an assertion, add a vacuous test, or skip-mark a failing
 test to make numbers move — a coverage PR with weak tests is worse than none.
 
+For evidence collectors and validation gates, test **incomplete observations alongside clean
+ones**, including a dependency that emits plausible partial output before failing. Counting and
+classification must use the same complete observation; a clean result elsewhere cannot clear a
+failed read. Use [the partial-failure regression procedure](references/partial-failure-regressions.md)
+when changing these paths, retaining the consumer's distinction between rejected and UNKNOWN evidence.
+
 ## 5. Benchmarking & performance
 
 Optimise with evidence, never guesswork. **Baseline first** with the product's benchmark tooling
