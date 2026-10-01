@@ -133,7 +133,7 @@ jobs:
           persist-credentials: false
 
       - name: 🐚 ShellCheck scripts
-        run: shellcheck scripts/*.sh
+        run: shellcheck scripts/*.sh product-engineering/scripts/*.sh
 
       - name: 🔗 Smoke-test the README index parser
         # Proves the load-bearing lockstep between the curated README index and
@@ -213,6 +213,9 @@ jobs:
 
       - name: 🧪 Verify human accountability brief checks and rendering
         run: bash ./scripts/product-engineering-accountability.test.sh
+
+      - name: 🧪 Verify read-only tool inventories
+        run: bash ./product-engineering/scripts/inspect-shell-helpers.test.sh
 
   ci-required-checks:
     name: CI - Required Checks

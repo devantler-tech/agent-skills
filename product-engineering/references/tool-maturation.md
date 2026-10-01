@@ -25,6 +25,36 @@ the date. Include all Go helper programs and all scripts meeting that rule; do n
 portfolio-wide survey from a convenient subset. Missing repositories or unresolved caller data
 are explicit coverage gaps.
 
+For a reproducible first shell-path observation, the installed skill includes
+[`inspect-shell-helpers.sh`](../scripts/inspect-shell-helpers.sh). It is disabled until explicitly
+invoked with `--inspect`; installing the skill does not start inspection. Run it only against a
+repository the consumer is authorized to read:
+
+```sh
+bash /absolute/installed/product-engineering/scripts/inspect-shell-helpers.sh \
+  --inspect --repo-dir /absolute/repository/root --revision FULL_COMMIT
+```
+
+The helper needs Bash, jq, iconv and Git supporting
+[`--no-lazy-fetch`](https://git-scm.com/docs/git/2.45.0#Documentation/git.txt---no-lazy-fetch).
+An unsupported Git refuses inspection instead of silently ignoring a no-fetch setting. The
+installed Git binary and repository metadata remain within the consumer's existing trust boundary;
+this observation does not audit Git configuration or grant trust to an untrusted branch.
+It examines the named local commit, including when the
+working tree is dirty, without checking out or executing its files. Its conservative selection
+`tracked-shell-paths-v1` includes every tracked regular `*.sh` path except `*.test.sh`; it does not
+apply a size threshold or decide which files are non-trivial. Each path carries its committed blob
+identifier and executable bit. Tree/object read failures, selected symlinks and paths that cannot
+be represented faithfully in UTF-8 JSON produce exit `2` (`UNKNOWN`) with no success payload.
+Exit `0` with `DISABLED` performs no inspection; exit `0` with `OBSERVED` records only the declared
+shell-path scope, including a genuinely empty scope.
+
+Retain the repository identity, revision, date and JSON in the consumer's appropriate evidence
+store. Compare the selected paths with the commit's tree before using the observation. Callers
+remain `UNKNOWN` and destinations `UNASSESSED`; Go programs, scripts without a `.sh` suffix and
+portfolio completeness are not examined. Trace those separately under an explicit selection rule.
+This helper is an inventory aid with no migration, execution or readiness authority.
+
 Trace callers from build tasks, workflows, documentation and code. Distinguish a program invoked
 only by CI from a maintainer command or a tool used by another product. A filename, executable bit,
 line count or hypothetical future user is not usage evidence. Inspect branch content only within

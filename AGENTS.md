@@ -137,6 +137,9 @@ bash ./scripts/product-engineering-evidence.test.sh # exercises the optional evi
                                                          # defaulting to hands-off
 bash ./scripts/product-engineering-accountability.test.sh # checks and renders optional human briefs:
                                                          # evidence labels, ownership, recovery and escaping
+bash ./product-engineering/scripts/inspect-shell-helpers.test.sh # exercises the optional installed shell census:
+                                                               # exact Git objects, default-off and failed reads
+shellcheck product-engineering/scripts/*.sh
 bash ./scripts/self-improvement-evidence.test.sh # runs the procedure example through the canonical
                                                 # companion evaluator, including negative outcomes
 

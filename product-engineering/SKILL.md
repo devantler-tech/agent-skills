@@ -168,6 +168,8 @@ product card, roadmap, health checks, and release/distribution path. Creating th
 feature decision, not a behavior-preserving refactor.
 
 For a scripting survey or migration, use [the tool-maturation decision procedure](references/tool-maturation.md).
+Its optional read-only helper records committed shell paths at an exact revision with caller
+coverage left unknown; opt in explicitly and retain its declared scope before assessing use.
 Record every in-scope candidate's observed callers, destination, fit rationale and unknowns in the
 issue tracker. Preserve behavior, compatibility and recovery; exercise the installed command from
 a real caller before claiming migration. A survey, suggested destination or new binary alone is
