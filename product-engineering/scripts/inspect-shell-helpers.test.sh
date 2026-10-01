@@ -117,3 +117,12 @@ git -C "$tmp/repo" commit -qm symlink
 link_revision=$(git -C "$tmp/repo" --no-replace-objects rev-parse HEAD)
 refuse --inspect --repo-dir "$tmp/repo" --revision "$link_revision"
 printf 'PASS: selected symlinks refuse unsupported coverage\n'
+
+# Exercise this fixture harness as a caller with a redirected index. Removing
+# its initial environment scrub must fail instead of writing that caller file.
+if [[ ${INVENTORY_TEST_CONTEXT_CHILD:-0} != 1 ]]; then
+  GIT_INDEX_FILE="$tmp/caller-index" INVENTORY_TEST_CONTEXT_CHILD=1 \
+    bash "${BASH_SOURCE[0]}" > "$tmp/inherited-output" 2>&1 || fail 'inherited Git context broke the fixture harness'
+  [[ ! -e $tmp/caller-index ]] || fail 'fixture commands wrote the caller index'
+  printf 'PASS: inherited caller index remains untouched by the fixture harness\n'
+fi
