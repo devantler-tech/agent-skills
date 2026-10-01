@@ -290,6 +290,17 @@ draft is unfinished work to clear first.
    or execute its branch code locally and never enable auto-merge; whether it may be merged, and under which
    extra conditions, comes from the **Trust gate** — when the consumer contract does not grant it,
    never merge it.
+   **Preserve wanted dependency updates during check refresh.** Never close a Dependabot PR just
+   to trigger checks: closing can suppress a wanted update. If a wanted PR was closed, reopening
+   un-ignores the update; verify the PR's state and head afterward, then verify its checks. Use
+   the consumer-permitted refresh route, guarded by the observed
+   head, retaining all authored adaptation commits and merge settings. Verify inclusion of the
+   current named base branch, rather than trusting a PR's associated base revision; after a head
+   moves, require fresh CI and a review of that new head. Recreating a provider's PR is acceptable
+   only when you have proved it will not discard authored adaptations. Failed updates, incomplete
+   readback or concurrent movement remain named blockers, never inferred green. The **Trust gate**
+   still governs branch execution and writes; none of these routes permits running untrusted
+   branch code locally. Deliberately rejecting an unwanted update is a separate decision.
 3. **Contributor-facing** — triage and label new issues and PRs; answer the oldest un-commented item.
 4. **Confident trivial fixes** — a typo, dead link, or one-line misconfig may go straight to a small
    PR (the issue-first carve-out). Any **non-trivial** find is filed as a well-formed issue first.
