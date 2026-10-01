@@ -61,7 +61,14 @@ Run these commands from a clone of this repository:
 AGENTS="github-copilot claude-code cursor" ./scripts/install.sh   # any gh skill agents
 ```
 
-The script reads its install commands directly from the README catalogue. `--help` (`-h`) and
+The script validates the complete README catalogue before printing a preview or starting an
+installation. Every table row must have an install command matching its skill name and source
+link. A malformed or contradictory row exits 1 without installing anything or printing a partial
+preview. Prose commands and fenced examples are excluded. Installation, the offline index check,
+and upstream target checking share this interpretation; the offline check also verifies maintained
+skill directories and rejects duplicate rows.
+
+`--help` (`-h`) and
 `--list` (`-l`) are standalone modes and need no authentication or network access. Do not combine
 them with agent names.
 
@@ -69,6 +76,7 @@ All catalogue sources are on github.com. The script sets `GH_HOST=github.com` fo
 its GitHub CLI calls, so an enterprise host in your environment does not redirect
 these installations. For a catalogue command run directly, prefix it with
 `GH_HOST=github.com` if your default host is an enterprise instance.
+The upstream target checker also uses github.com independently of that default.
 
 Each installed skill name must identify one source repository. If the catalogue
 lists the same name from different repositories, installation and `--list` exit 1

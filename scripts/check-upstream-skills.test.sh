@@ -45,6 +45,7 @@ for a in "$@"; do
 done
 if [ "${3:-}" = --jq ]; then filter="$4"; fi
 printf '%s\n' "$target" >> "$UPSTREAM_CALL_LOG"
+printf '%s\n' "${GH_HOST:-unset}" >> "$UPSTREAM_HOST_LOG"
 path=${target#*/contents/}
 path=${path%%\?*}
 case "$target" in
@@ -80,6 +81,7 @@ export PATH="$stub_bin:$PATH"
 # instantly (the script defaults this to the real `sleep`).
 export UPSTREAM_RETRY_SLEEP=true
 export UPSTREAM_CALL_LOG="$tmp/calls"
+export UPSTREAM_HOST_LOG="$tmp/hosts"
 
 run_guard() { # root
   bash "$1/scripts/check-upstream-skills.sh"
@@ -111,6 +113,7 @@ make_root() { # root  <<rows
   rm -rf "$root"
   mkdir -p "$root/scripts"
   cp "$here/check-upstream-skills.sh" "$root/scripts/"
+  cp "$here/readme-index.sh" "$here/readme-index.awk" "$root/scripts/"
   {
     printf '# Test catalogue\n\n## Skills\n\n'
     printf '| Skill | Upstream | Install |\n|-------|----------|---------|\n'
@@ -185,8 +188,8 @@ pass_case "persistent 5xx is a transient warning, not drift (still exits 0)" "$c
 for shape in directory null-body empty-body malformed wrong-name wrong-path symlink missing-type; do
   c="$tmp/$shape"
   make_root "$c" <<EOF
-| alpha | [test/present](https://github.com/test/present/tree/main/skills/alpha) | install |
-| bad | [test/$shape](https://github.com/test/$shape/tree/main/skills/bad) | install |
+| alpha | [test/present](https://github.com/test/present/tree/main/skills/alpha) | gh skill install test/present alpha |
+| bad | [test/$shape](https://github.com/test/$shape/tree/main/skills/bad) | gh skill install test/$shape bad |
 EOF
   : > "$UPSTREAM_CALL_LOG"
   rc=0
@@ -205,7 +208,7 @@ done
 for transport in flaky limited recover; do
   c="$tmp/retry-$transport"
   make_root "$c" <<EOF
-| alpha | [test/$transport](https://github.com/test/$transport/tree/main/skills/alpha) | install |
+| alpha | [test/$transport](https://github.com/test/$transport/tree/main/skills/alpha) | gh skill install test/$transport alpha |
 EOF
   : > "$UPSTREAM_CALL_LOG"
   rc=0
@@ -221,8 +224,32 @@ EOF
   fi
 done
 
+# Verify the named github.com target even if the operator defaults to Enterprise.
+: > "$UPSTREAM_HOST_LOG"
+GH_HOST=enterprise.example run_guard "$good" >/dev/null 2>&1
+if [ "$(cat "$UPSTREAM_HOST_LOG")" = github.com ]; then
+  printf '  ✅ upstream requests bind the catalogue host\n'
+else
+  printf '  ❌ upstream requests used a different host\n'; fail=1
+fi
+
+# A contradictory row must stop the entire check before any source is queried.
+c="$tmp/inconsistent-catalogue"
+make_root "$c" <<'EOF'
+| `alpha` | [`test/present`](https://github.com/test/present/tree/main/skills/alpha) | `gh skill install test/present alpha` |
+| `beta` | [`test/present`](https://github.com/test/present/tree/main/skills/beta) | `gh skill install test/other beta` |
+EOF
+: > "$UPSTREAM_CALL_LOG"
+rc=0
+run_guard "$c" > "$tmp/inconsistent-output" 2>&1 || rc=$?
+if [ "$rc" -eq 1 ] && [ ! -s "$UPSTREAM_CALL_LOG" ]; then
+  printf '  ✅ inconsistent catalogue refuses all upstream requests\n'
+else
+  printf '  ❌ inconsistent catalogue reached upstream requests\n'; fail=1
+fi
+
 if [ "$fail" -ne 0 ]; then
   printf '❌ check-upstream-skills self-test FAILED\n' >&2
   exit 1
 fi
-printf '✅ check-upstream-skills self-test passed (17 cases)\n'
+printf '✅ check-upstream-skills self-test passed\n'

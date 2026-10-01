@@ -57,6 +57,7 @@ make_root() { # root  skills_csv  <<rows
   rm -rf "$root"
   mkdir -p "$root/scripts"
   cp "$here/check-readme-index.sh" "$here/install.sh" "$root/scripts/"
+  cp "$here/readme-index.sh" "$here/readme-index.awk" "$root/scripts/"
   # Intentional word-splitting over the space-separated skill list.
   # shellcheck disable=SC2086
   for s in $skills; do
@@ -83,6 +84,16 @@ make_root "$good" "beta" <<'EOF'
 | `beta` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/main/beta) | `gh skill install devantler-tech/agent-skills beta` |
 EOF
 pass_case "fully-consistent fixture" "$good"
+
+c="$tmp/fenced-row"
+make_root "$c" "beta" <<'EOF'
+| `beta` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/main/beta) | `gh skill install devantler-tech/agent-skills beta` |
+
+```markdown
+| `example` | [`fixture/source`](https://github.com/fixture/source/tree/main/example) | `gh skill install fixture/source example` |
+```
+EOF
+pass_case 'fenced table examples do not change the catalogue row count' "$c"
 
 # Individually consistent columns must not hide two upstreams targeting one
 # installed directory. The shared parser rejects this before the count check.
@@ -176,4 +187,4 @@ if [ "$fail" -ne 0 ]; then
   printf '❌ check-readme-index self-test FAILED\n' >&2
   exit 1
 fi
-printf '✅ check-readme-index self-test passed (10 cases)\n'
+printf '✅ check-readme-index self-test passed\n'
