@@ -185,6 +185,11 @@ This is a release operation. Pre-PR validation runs the hermetic
 `publish-skills-release.test.sh` above, which uses real temporary Git checkouts and an offline GitHub
 stub without publishing.
 
+Tag existence comes from one complete HTTP response for the exact tag endpoint; diagnostic prose
+cannot prove absence. Checkout verification refuses unterminated tree/index records and repeats
+after skill validation, before reserving a remote tag, so validation cannot silently substitute
+different release bytes.
+
 ## Maintenance (autonomous AI assistant)
 
 These conventions guide the autonomous **Agentic Engineer** — and any agentic tool — doing
