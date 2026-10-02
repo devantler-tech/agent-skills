@@ -4,6 +4,10 @@ Suggest a skill by opening an issue, or add it to the [catalogue](../README.md#s
 
 Read [AGENTS.md](../AGENTS.md#validation) for the validation commands, release process, and repository conventions. The catalogue drives automated installation, so every row must keep its skill name, source link, and install command consistent.
 
+The [tool ownership assessment](tool-ownership.md) records the source helpers' callers, existing
+CLI and library reuse, and the boundary between repository maintenance and installed skill resources.
+Consult it before proposing a helper migration or a new shared tool.
+
 ## Inclusion criteria
 
 Before adding a row, check the skill clears the bar this index is curated to. These criteria are
