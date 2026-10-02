@@ -171,6 +171,37 @@ if [ "$tag_exists" = no ]; then
     exit 1
   }
 
+  # Status compares cleaned content. Validate the actual disk bytes against
+  # immutable blobs so filters or newline conversion cannot hide a different skill.
+  tracked_files=$(mktemp) || exit 1
+  trap 'rm -f "$tracked_files"' EXIT
+  git --no-replace-objects ls-tree -r --full-tree -z "$expected_commit" >"$tracked_files" || exit 1
+  while IFS= read -r -d '' record; do
+    header=${record%%$'\t'*}
+    path=${record#*$'\t'}
+    [[ "$header" =~ ^(100644|100755|120000)\ blob\ ([0-9a-f]{40})$ ]] || {
+      printf 'publish-skills-release: unsupported tracked object; refusing publication.\n' >&2
+      exit 1
+    }
+    mode=${BASH_REMATCH[1]}
+    expected_blob=${BASH_REMATCH[2]}
+    if [ "$mode" = 120000 ]; then
+      [ -L "./$path" ] || exit 1
+      link=$(readlink "./$path" && printf '.') || exit 1
+      link=${link%.}; link=${link%$'\n'}
+      actual_blob=$(printf '%s' "$link" | git --no-replace-objects hash-object --stdin) || exit 1
+    else
+      [ -f "./$path" ] && [ ! -L "./$path" ] || exit 1
+      actual_blob=$(git --no-replace-objects hash-object --no-filters -- "./$path") || exit 1
+    fi
+    [ "$actual_blob" = "$expected_blob" ] || {
+      printf 'publish-skills-release: tracked disk bytes differ from the expected release commit; refusing publication.\n' >&2
+      exit 1
+    }
+  done <"$tracked_files"
+  rm -f "$tracked_files"
+  trap - EXIT
+
   # gh skill publish --tag targets a branch name, or the default branch for a
   # detached checkout. Validate with the skill CLI, then name the immutable
   # commit explicitly when creating the GitHub release. The topic check remains
