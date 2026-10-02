@@ -47,11 +47,12 @@ source owner; none receives a separate command product or release lifecycle.
 | [`product-engineering/scripts/check-evidence.jq`](../product-engineering/scripts/check-evidence.jq) | The installed [evidence procedure](../product-engineering/references/evidence-bundle.md) evaluates a preregistered evidence bundle. Keep its decision policy with product-engineering. |
 | [`product-engineering/scripts/accountability-brief.jq`](../product-engineering/scripts/accountability-brief.jq) | The installed [accountability procedure](../product-engineering/references/accountability-brief.md) checks and renders human-readable briefs. Keep its schema and rendering contract with the skill. A render is not evidence that a maintainer understood it. |
 
-The entrypoint parser and Agent Plugins' `scripts/gh-json-go/main.go` both use `go/parser`, `go/ast`
-and `go/token`. The common syntax mechanism already has a supported standard-library owner.
+The entrypoint parser uses `go/parser`, `go/ast` and `go/token`. The separately examined
+[Agent Plugins guidance decoder at its frozen revision](https://github.com/devantler-tech/agent-plugins/blob/00519de5b7836402c087e99c3e498e8e3ab97ed2/scripts/gh-json-go/main.go)
+uses the same standard library; it is a tool in that other repository, not a consumer of this parser.
 Their policies differ: one classifies entrypoint declarations; the other decodes bounded comments,
-string literals and command-argument guidance. Reuse the existing library and retain those policies
-locally. Similar AST traversal is insufficient evidence for a new module.
+string literals and command-argument guidance. Reuse the existing syntax library and retain those
+policies locally. Neither similar AST traversal nor these distinct tools establishes extraction demand.
 
 Bundled copies in Agent Plugins are a distribution path for the same skill source, not a second
 independent product requirement. Neither copied helper files nor extra test invocations satisfy
@@ -75,5 +76,20 @@ the selected paths and supported call structure, not portfolio-wide migration or
 Changing one of these decisions requires a delivery issue with the real caller, compatibility,
 failure behavior, installation and recovery requirements. A source implementation change must
 publish through the source release and normal marketplace sync; a bundled copy is never hand-edited.
-Until a replacement is actually released and adopted, the existing invocation remains the recovery
-path. The umbrella roadmap remains open for its unsurveyed repositories and migration requirements.
+Until a replacement is actually released and adopted, retain the existing interfaces. Source-release
+publication uses the CD workflow's publisher from a clean repository-root checkout at the full
+release commit, with `origin` identifying this repository:
+
+```bash
+./scripts/publish-skills-release.sh --tag "$tag" \
+  --repo devantler-tech/agent-skills --expected-commit "$release_commit"
+```
+
+A reserved tag without a matching non-draft release is a partial failure; rerunning this command
+alone will refuse it. An authorized release operator must first freshly verify that the tag still
+resolves to the intended release commit and that the release is absent, revalidate that clean checkout
+with `gh skill publish --dry-run`, and complete the missing non-draft GitHub release for that verified
+tag and commit using the existing publication permissions. Then rerun the publisher above to verify
+both remote facts. Unreadable state, a different tag target or a conflicting release remains a hold;
+do not automatically delete or move the reserved tag. The umbrella roadmap remains open for its
+unsurveyed repositories and migration requirements.
