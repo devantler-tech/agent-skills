@@ -29,8 +29,45 @@ function comment_start(s, i,j,k,width,closing) {
   }
   return 0
 }
+function html_end(s) {
+  if (html == "blank") return s ~ /^[ \t]*$/
+  if (html == "processing") return index(s, "?>") > 0
+  if (html == "declaration") return index(s, ">") > 0
+  if (html == "cdata") return index(s, "]]>") > 0
+  return index(tolower(s), "</" html ">") > 0
+}
+function html_start(s, lower, tags, attr, open_tag) {
+  lower=tolower(s); sub(/^ {0,3}/, "", lower)
+  if (lower ~ /^<(script|pre|style|textarea)([ \t>]|$)/) {
+    sub(/^</, "", lower); sub(/[ \t>].*$/, "", lower); return lower
+  }
+  if (s ~ /^ ? ? ?<\?/) return "processing"
+  if (s ~ /^ ? ? ?<![A-Z]/) return "declaration"
+  if (s ~ /^ ? ? ?<!\[CDATA\[/) return "cdata"
+  tags="address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul"
+  if (lower ~ ("^</?(" tags ")([ \t>]|/>|$)")) return "blank"
+  # A complete custom tag starts a block only outside a paragraph.
+  attr="[a-z_:][a-z0-9_.:-]*([ \t]*=[ \t]*(\"[^\"]*\"|'[^']*'|[^ \t\"'=<>`]+))?"
+  open_tag="<[a-z][a-z0-9-]*([ \t]+" attr ")*[ \t]*/?>"
+  if (!paragraph && lower ~ ("^(" open_tag "|</[a-z][a-z0-9-]*[ \t]*>)[ \t]*$")) return "blank"
+  return ""
+}
 {
   sub(/\r$/, "")
+  if (html) {
+    if (html_end($0)) html=""
+    paragraph=0
+    next
+  }
+  if (!fence && !comment) {
+    html=html_start($0)
+    if (html) {
+      if (html_end($0)) html=""
+      paragraph=0
+      next
+    }
+  }
+  paragraph=($0 !~ /^[ \t]*$/ && $0 !~ /^ *(#+[ \t]|\||>|[-+*] |[0-9]+[.)] )/)
   # Hidden Markdown comments never describe installable catalogue entries. Do
   # this outside code fences: example comment delimiters are literal code.
   if (!fence && (comment || $0 !~ /^ ? ? ?(```|~~~)/)) {
@@ -58,9 +95,14 @@ function comment_start(s, i,j,k,width,closing) {
     while (substr(stripped, width+1, 1) == mark) width++
   }
   if (width >= 3) {
-    if (!fence) { fence=mark; fence_width=width }
-    else if (mark == fence && width >= fence_width && trim(substr(stripped, width+1)) == "") fence=""
-    next
+    if (!fence) {
+      if (mark == "~" || index(substr(stripped, width+1), "`") == 0) {
+        fence=mark; fence_width=width; paragraph=0; next
+      }
+    } else {
+      if (mark == fence && width >= fence_width && trim(substr(stripped, width+1)) == "") { fence=""; paragraph=0 }
+      next
+    }
   }
   if (fence) next
 }

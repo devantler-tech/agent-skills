@@ -235,7 +235,7 @@ check 'conflicting modes never call gh' test ! -s "$GH_CALLS"
 
 run_install "$alias_root" codex
 check 'repository casing aliases install successfully' test "$rc" -eq 0
-printf '<skill><--help>\n<skill><install><Fixture/One><alpha><--agent><codex><--scope><user><--force><--allow-hidden-dirs>\n' > "$tmp/expected"
+printf '<skill><--help>\n<skill><install><Fixture/One><alpha><--pin><main><--agent><codex><--scope><user><--force><--allow-hidden-dirs>\n' > "$tmp/expected"
 check 'repository casing aliases install only once' diff -u "$tmp/expected" "$GH_CALLS"
 
 # Different upstreams with the same destination name must be rejected before
@@ -261,8 +261,8 @@ expected_calls() {
   printf '<skill><--help>\n'
   local agent
   for agent in "$@"; do
-    printf '<skill><install><devantler-tech/agent-skills><beta><--agent><%s><--scope><user><--force><--allow-hidden-dirs>\n' "$agent"
-    printf '<skill><install><fluxcd/agent-skills><alpha><--agent><%s><--scope><user><--force><--allow-hidden-dirs>\n' "$agent"
+    printf '<skill><install><devantler-tech/agent-skills><beta><--pin><main><--agent><%s><--scope><user><--force><--allow-hidden-dirs>\n' "$agent"
+    printf '<skill><install><fluxcd/agent-skills><alpha><--pin><main><--agent><%s><--scope><user><--force><--allow-hidden-dirs>\n' "$agent"
   done
 }
 expected_calls github-copilot claude-code > "$tmp/expected"
@@ -368,6 +368,57 @@ EOF
 awk '{printf "%s\r\n", $0}' "$crlf_root/README.md" > "$tmp/crlf-readme"
 mv "$tmp/crlf-readme" "$crlf_root/README.md"
 expect_list 'CRLF checkout retains the same catalogue' "$crlf_root" 'fixture/one alpha'
+
+# Raw HTML and invalid Markdown fences must not rewrite the installation catalogue.
+for tag in pre script style textarea; do
+  html_root="$tmp/html-$tag"
+  make_root "$html_root" <<EOF
+| \`alpha\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/alpha) | \`gh skill install fixture/one alpha\` |
+
+<$tag>
+| \`hidden\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/hidden) | \`gh skill install fixture/one hidden\` |
+</$tag>
+
+| \`beta\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/beta) | \`gh skill install fixture/one beta\` |
+EOF
+  expect_list "$tag examples are excluded and following rows remain visible" "$html_root" $'fixture/one alpha\nfixture/one beta'
+done
+for delimiters in declaration processing cdata block custom; do
+  case "$delimiters" in
+    declaration) open='<!DOCTYPE html'; close='>' ;;
+    processing) open='<?example'; close='?>' ;;
+    cdata) open='<![CDATA['; close=']]>' ;;
+    block) open='<div>'; close='</div>' ;;
+    custom) open='<example-widget data-kind="example">'; close='</example-widget>' ;;
+  esac
+  html_root="$tmp/html-$delimiters"
+  make_root "$html_root" <<EOF
+| \`alpha\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/alpha) | \`gh skill install fixture/one alpha\` |
+
+$open
+| \`hidden\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/hidden) | \`gh skill install fixture/one hidden\` |
+$close
+
+| \`beta\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/beta) | \`gh skill install fixture/one beta\` |
+EOF
+  expect_list "$delimiters HTML examples are excluded" "$html_root" $'fixture/one alpha\nfixture/one beta'
+done
+make_root "$tmp/invalid-fence" <<'EOF'
+| `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/alpha) | `gh skill install fixture/one alpha` |
+EOF
+# shellcheck disable=SC2016 # Literal invalid Markdown fence, not command substitution.
+{ printf '%s\n\n' '```not`a-fence'; cat "$tmp/invalid-fence/README.md"; } > "$tmp/fenced-readme"
+mv "$tmp/fenced-readme" "$tmp/invalid-fence/README.md"
+expect_list 'backtick info cannot contain a backtick or hide real headings' "$tmp/invalid-fence" 'fixture/one alpha'
+pin_root="$tmp/pinned-source"
+make_root "$pin_root" <<'EOF'
+| `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/reviewed/alpha) | `gh skill install fixture/one alpha` |
+| `beta` | [`fixture/one`](https://github.com/fixture/one/tree/v1.2.3/beta) | `gh skill install fixture/one beta` |
+EOF
+run_install "$pin_root" codex
+printf '<skill><--help>\n<skill><install><fixture/one><alpha><--pin><reviewed><--agent><codex><--scope><user><--force><--allow-hidden-dirs>\n<skill><install><fixture/one><beta><--pin><v1.2.3><--agent><codex><--scope><user><--force><--allow-hidden-dirs>\n' > "$tmp/expected"
+check 'each installation uses the catalogue named branch or tag' diff -u "$tmp/expected" "$GH_CALLS"
+expect_list 'named refs do not change the public list interface' "$pin_root" $'fixture/one alpha\nfixture/one beta'
 
 if [ "$fail" -ne 0 ]; then
   printf '❌ install.sh self-test FAILED\n' >&2
