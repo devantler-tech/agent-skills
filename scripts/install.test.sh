@@ -476,6 +476,14 @@ An actual paragraph
 | `beta` | [`fixture/one`](https://github.com/fixture/one/tree/main/beta) | `gh skill install fixture/one beta` |
 EOF
 expect_list 'custom HTML cannot interrupt an actual paragraph' "$tmp/paragraph-custom" $'fixture/one alpha\nfixture/one beta'
+make_root "$tmp/paragraph-hgroup" <<'EOF'
+| `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/alpha) | `gh skill install fixture/one alpha` |
+
+An actual paragraph
+<hgroup>
+| `beta` | [`fixture/one`](https://github.com/fixture/one/tree/main/beta) | `gh skill install fixture/one beta` |
+EOF
+expect_list 'hgroup follows the custom-tag paragraph rule' "$tmp/paragraph-hgroup" $'fixture/one alpha\nfixture/one beta'
 make_root "$tmp/invalid-fence" <<'EOF'
 | `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/alpha) | `gh skill install fixture/one alpha` |
 EOF
@@ -483,6 +491,32 @@ EOF
 { printf '%s\n\n' '```not`a-fence'; cat "$tmp/invalid-fence/README.md"; } > "$tmp/fenced-readme"
 mv "$tmp/fenced-readme" "$tmp/invalid-fence/README.md"
 expect_list 'backtick info cannot contain a backtick or hide real headings' "$tmp/invalid-fence" 'fixture/one alpha'
+
+for title in '"title"' "'title'" '(title)'; do
+  html_root="$tmp/reference-title-$RANDOM"
+  make_root "$html_root" <<EOF
+| \`alpha\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/alpha) | \`gh skill install fixture/one alpha\` |
+
+[example]: /url
+  $title
+<example-widget>
+| \`hidden\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/hidden) | \`gh skill install fixture/one hidden\` |
+</example-widget>
+
+| \`beta\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/beta) | \`gh skill install fixture/one beta\` |
+EOF
+  expect_list "reference title $title remains outside a paragraph" "$html_root" $'fixture/one alpha\nfixture/one beta'
+done
+make_root "$tmp/invalid-fence-comment" <<'EOF'
+| `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/alpha) | `gh skill install fixture/one alpha` |
+
+```bad`info <!--
+| `hidden` | [`fixture/one`](https://github.com/fixture/one/tree/main/hidden) | `gh skill install fixture/one hidden` |
+-->
+
+| `beta` | [`fixture/one`](https://github.com/fixture/one/tree/main/beta) | `gh skill install fixture/one beta` |
+EOF
+expect_list 'invalid backtick fence still parses multiline comments' "$tmp/invalid-fence-comment" $'fixture/one alpha\nfixture/one beta'
 
 if [ "$fail" -ne 0 ]; then
   printf '❌ install.sh self-test FAILED\n' >&2

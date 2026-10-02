@@ -79,9 +79,27 @@ function paragraph_line(s, previous, compact) {
       next
     }
   }
-  # Hidden Markdown comments never describe installable catalogue entries. Do
-  # this outside code fences: example comment delimiters are literal code.
-  if (!fence && (comment || $0 !~ /^ ? ? ?(```|~~~)/)) {
+  # Validate the raw fence before deciding that comment delimiters are code.
+  # Invalid backtick info remains ordinary Markdown and can start a comment.
+  stripped=$0; sub(/^ */, "", stripped)
+  indent=length($0)-length(stripped); mark=substr(stripped, 1, 1)
+  width=0
+  if (!comment && indent <= 3 && (mark == "`" || mark == "~")) {
+    while (substr(stripped, width+1, 1) == mark) width++
+  }
+  if (width >= 3) {
+    if (!fence) {
+      if (mark == "~" || index(substr(stripped, width+1), "`") == 0) {
+        fence=mark; fence_width=width; paragraph=0; next
+      }
+    } else {
+      if (mark == fence && width >= fence_width && trim(substr(stripped, width+1)) == "") { fence=""; paragraph=0 }
+      next
+    }
+  }
+  if (fence) next
+  # Hidden Markdown comments never describe installable catalogue entries.
+  if (!fence) {
     visible=""; remaining=$0
     while (length(remaining)) {
       if (comment) {
@@ -97,26 +115,11 @@ function paragraph_line(s, previous, compact) {
     }
     $0=visible
   }
+  if (reference_title && $0 ~ /^[ \t]*("[^"]*"|'[^']*'|\([^)]*\))[ \t]*$/) {
+    reference_title=0; paragraph=0; next
+  }
+  reference_title=(!paragraph && $0 ~ /^ ? ? ?\[[^]]+\]:[ \t]*[^ \t]+[ \t]*$/)
   paragraph=paragraph_line($0, paragraph)
-  # A shorter run or the other fence character inside a code example is data.
-  # Track fences outside Skills too, so example headings cannot create a section.
-  stripped=$0; sub(/^ */, "", stripped)
-  indent=length($0)-length(stripped); mark=substr(stripped, 1, 1)
-  width=0
-  if (indent <= 3 && (mark == "`" || mark == "~")) {
-    while (substr(stripped, width+1, 1) == mark) width++
-  }
-  if (width >= 3) {
-    if (!fence) {
-      if (mark == "~" || index(substr(stripped, width+1), "`") == 0) {
-        fence=mark; fence_width=width; paragraph=0; next
-      }
-    } else {
-      if (mark == fence && width >= fence_width && trim(substr(stripped, width+1)) == "") { fence=""; paragraph=0 }
-      next
-    }
-  }
-  if (fence) next
 }
 /^## Skills[ \t]*$/ {
   if (seen_section++) refuse("multiple Skills sections")
