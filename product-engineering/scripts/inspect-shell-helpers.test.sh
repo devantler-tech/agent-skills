@@ -33,7 +33,7 @@ git -C "$tmp/repo" config commit.gpgsign false
 mkdir "$tmp/repo/scripts"
 printf '#!/usr/bin/env bash\nexit 91\n' > "$tmp/repo/scripts/a.sh"
 printf 'test-only\n' > "$tmp/repo/scripts/a.test.sh"
-printf 'not-shell\n' > "$tmp/repo/scripts/not.go"
+printf 'package helper\n' > "$tmp/repo/scripts/not.go"
 weird=$'scripts/quoted" tab\tline\n.sh'
 printf 'do not run\n' > "$tmp/repo/$weird"
 chmod +x "$tmp/repo/scripts/a.sh"
@@ -121,8 +121,134 @@ printf 'PASS: selected symlinks refuse unsupported coverage\n'
 # Exercise this fixture harness as a caller with a redirected index. Removing
 # its initial environment scrub must fail instead of writing that caller file.
 if [[ ${INVENTORY_TEST_CONTEXT_CHILD:-0} != 1 ]]; then
+parser_dir=$(dirname "$inspect")
+GOENV=off GOWORK=off GO111MODULE=off GOTOOLCHAIN=local GOFLAGS='' CGO_ENABLED=0 \
+  go test "$parser_dir/go-entrypoint.go" "$parser_dir/go-entrypoint_test.go"
   GIT_INDEX_FILE="$tmp/caller-index" INVENTORY_TEST_CONTEXT_CHILD=1 \
     bash "${BASH_SOURCE[0]}" > "$tmp/inherited-output" 2>&1 || fail 'inherited Git context broke the fixture harness'
   [[ ! -e $tmp/caller-index ]] || fail 'fixture commands wrote the caller index'
-  printf 'PASS: inherited caller index remains untouched by the fixture harness\n'
+printf 'PASS: inherited caller index remains untouched by the fixture harness\n'
+fi
+
+# The optional Go observation parses committed syntax, including constrained
+# entrypoints, rather than matching main-shaped text or executing init/main.
+if [[ ${INVENTORY_TEST_CONTEXT_CHILD:-0} != 1 ]]; then
+git init -q "$tmp/go-repo"
+git -C "$tmp/go-repo" config user.name test
+git -C "$tmp/go-repo" config user.email test@example.invalid
+git -C "$tmp/go-repo" config commit.gpgsign false
+mkdir -p "$tmp/go-repo/cmd" "$tmp/go-repo/lib"
+printf 'package main\nfunc main() { panic("must not execute") }\n' > "$tmp/go-repo/cmd/main.go"
+go_weird=$'cmd/quoted" tab\tline\n.go'
+printf '//go:build imaginaryplatform\n\npackage main\nfunc main() {}\n' > "$tmp/go-repo/$go_weird"
+printf 'package helper\n// package main; func main() {}\nconst text = "func main() {}"\n' > "$tmp/go-repo/lib/helper.go"
+printf 'package main\nfunc helper() {}\n' > "$tmp/go-repo/cmd/helper.go"
+printf 'package main\nfunc main() {\n' > "$tmp/go-repo/cmd/broken_test.go"
+printf 'package helper\ntype T struct{}\nfunc (T) main() {}\n' > "$tmp/go-repo/lib/method.go"
+printf 'exit 92\n' > "$tmp/go-repo/task.sh"
+git -C "$tmp/go-repo" add -- cmd lib task.sh
+git -C "$tmp/go-repo" commit -qm go-fixture
+go_revision=$(git -C "$tmp/go-repo" rev-parse HEAD)
+go_blob=$(git -C "$tmp/go-repo" rev-parse "$go_revision:cmd/main.go")
+last_go_blob=$(git -C "$tmp/go-repo" rev-parse "$go_revision:$go_weird")
+git -C "$tmp/go-repo" status --porcelain=v1 > "$tmp/go-status"
+git -C "$tmp/go-repo" show-ref > "$tmp/go-refs"
+git -C "$tmp/go-repo" ls-files --stage > "$tmp/go-index"
+run --inspect --include-go --repo-dir "$tmp/go-repo" --revision "$go_revision" || fail 'explicit Go inspection must observe entrypoints'
+jq -e --arg revision "$go_revision" --arg blob "$go_blob" --arg weird "$go_weird" '
+  .version == 2 and .status == "OBSERVED" and .authority == "NONE" and .revision == $revision and
+  .selection == "tracked-shell-and-go-entrypoints-v1" and .coverage.selectedPaths == 3 and
+  .coverage.goFilesExamined == 5 and .coverage.goPrograms == "ENTRYPOINT_FILES_ONLY" and
+  .coverage.buildability == "NOT_ASSERTED" and .coverage.callers == "UNKNOWN" and
+  .coverage.portfolio == "NOT_ASSERTED" and
+  ([.candidates[].path]|sort) == (["cmd/main.go",$weird,"task.sh"]|sort) and
+  any(.candidates[]; .path == "cmd/main.go" and .blob == $blob and .kind == "go-entrypoint") and
+  all(.candidates[]; .callers == "UNKNOWN" and .destination == "UNASSESSED")
+' "$tmp/out" >/dev/null || fail 'Go syntax observation or evidence boundary is wrong'
+cp "$tmp/out" "$tmp/go-observed"
+git -C "$tmp/go-repo" status --porcelain=v1 > "$tmp/go-status-after"
+git -C "$tmp/go-repo" show-ref > "$tmp/go-refs-after"
+git -C "$tmp/go-repo" ls-files --stage > "$tmp/go-index-after"
+if ! cmp "$tmp/go-status" "$tmp/go-status-after" || ! cmp "$tmp/go-refs" "$tmp/go-refs-after" ||
+  ! cmp "$tmp/go-index" "$tmp/go-index-after"; then fail 'inspection modified caller state'; fi
+printf 'PASS: parsed Go entrypoints, constrained and escaped paths, no source execution or caller mutation\n'
+printf 'invalid dirty content\n' > "$tmp/go-repo/cmd/main.go"
+printf 'package main\nfunc main() {}\n' > "$tmp/go-repo/untracked.go"
+run --inspect --include-go --repo-dir "$tmp/go-repo" --revision "$go_revision"
+cmp "$tmp/out" "$tmp/go-observed" || fail 'dirty Go source changed committed evidence'
+printf 'PASS: Go observation excludes dirty and untracked source\n'
+PATH="$tmp/empty-path" "$bash_bin" "$inspect" --include-go > "$tmp/out"
+jq -e '.status == "DISABLED" and .authority == "NONE"' "$tmp/out" >/dev/null
+printf 'PASS: Go opt-in cannot implicitly enable repository inspection\n'
+cat > "$tmp/bin/git" <<'STUB'
+#!/usr/bin/env bash
+if [[ " $* " == *' ls-tree '* && $FAIL_GIT_COMMAND == truncated-tree ]]; then
+  printf '100644 blob %040d\tcmd/main.go' 0
+  exit 0
+fi
+if [[ " $* " == *' ls-tree '* && $FAIL_GIT_COMMAND == empty-tree ]]; then exit 0; fi
+if [[ " $* " == *' ls-tree '* && $FAIL_GIT_COMMAND == prefix-tree ]]; then
+  "$REAL_GIT" "$@" > "$PREFIX_OUTPUT" || exit $?
+  for ((index=0; index<2; index++)); do
+    IFS= read -r -d '' entry || exit 74
+    printf '%s\0' "$entry"
+  done < "$PREFIX_OUTPUT"
+  exit 0
+fi
+if [[ " $* " == *' diff-tree '* ]]; then
+  case $FAIL_GIT_COMMAND in
+    empty-diff) exit 0 ;;
+    truncated-diff) printf ':000000 100644'; exit 0 ;;
+    prefix-diff)
+      "$REAL_GIT" "$@" > "$PREFIX_OUTPUT" || exit $?
+      for ((index=0; index<4; index++)); do
+        IFS= read -r -d '' entry || exit 74
+        printf '%s\0' "$entry"
+      done < "$PREFIX_OUTPUT"
+      exit 0 ;;
+  esac
+fi
+if [[ " $* " == *" cat-file blob $TARGET_BLOB "* ]]; then
+  case $FAIL_GIT_COMMAND in
+    failed-source) exit 73 ;;
+    partial-source) printf 'package helper\n'; exit 0 ;;
+    record-source) touch "$READ_MARKER" ;;
+  esac
+fi
+exec "$REAL_GIT" "$@"
+STUB
+for operation in truncated-tree empty-tree prefix-tree empty-diff truncated-diff prefix-diff failed-source partial-source; do
+  REAL_GIT="$git_bin" TARGET_BLOB="$last_go_blob" PREFIX_OUTPUT="$tmp/prefix-tree" FAIL_GIT_COMMAND="$operation" PATH="$tmp/bin:$PATH" \
+    refuse --inspect --include-go --repo-dir "$tmp/go-repo" --revision "$go_revision"
+done
+for operation in truncated-tree empty-tree prefix-tree empty-diff truncated-diff prefix-diff; do
+  REAL_GIT="$git_bin" PREFIX_OUTPUT="$tmp/prefix-tree" FAIL_GIT_COMMAND="$operation" PATH="$tmp/bin:$PATH" \
+    refuse --inspect --repo-dir "$tmp/go-repo" --revision "$go_revision"
+done
+printf 'PASS: failed, partial or unterminated Git observations emit no partial success\n'
+printf 'package main\nfunc main(){}\n' > "$tmp/large.go"
+head -c 4194305 /dev/zero | tr '\0' ' ' >> "$tmp/large.go"
+large_blob=$(git -C "$tmp/go-repo" hash-object -w --stdin < "$tmp/large.go")
+large_tree=$(printf '100644 blob %s\ta.go\000100644 blob %s\tz-large.go\0' "$go_blob" "$large_blob" | git -C "$tmp/go-repo" mktree -z)
+large_revision=$(git -C "$tmp/go-repo" commit-tree "$large_tree" -m large-source)
+REAL_GIT="$git_bin" TARGET_BLOB="$large_blob" FAIL_GIT_COMMAND=record-source READ_MARKER="$tmp/materialized-large-source" PATH="$tmp/bin:$PATH" \
+  refuse --inspect --include-go --repo-dir "$tmp/go-repo" --revision "$large_revision"
+[[ ! -e $tmp/materialized-large-source ]] || fail 'oversized Go source must be refused before materializing its bytes'
+printf 'PASS: oversized Go source is refused before materialization, after a healthy entrypoint\n'
+ln -s cmd/main.go "$tmp/go-repo/link.go"
+git -C "$tmp/go-repo" add -- link.go
+git -C "$tmp/go-repo" commit -qm go-symlink
+go_link_revision=$(git -C "$tmp/go-repo" rev-parse HEAD)
+refuse --inspect --include-go --repo-dir "$tmp/go-repo" --revision "$go_link_revision"
+printf 'PASS: selected Go symlinks are unsupported coverage\n'
+git -C "$tmp/go-repo" rm -q -- link.go
+git -C "$tmp/go-repo" commit -qm remove-fixture-link
+printf 'package main\nfunc main(\n' > "$tmp/go-repo/broken.go"
+git -C "$tmp/go-repo" add -- broken.go
+git -C "$tmp/go-repo" commit -qm malformed
+bad_go_revision=$(git -C "$tmp/go-repo" rev-parse HEAD)
+refuse --inspect --include-go --repo-dir "$tmp/go-repo" --revision "$bad_go_revision"
+run --inspect --repo-dir "$tmp/go-repo" --revision "$bad_go_revision"
+jq -e '.version == 1 and .coverage.goPrograms == "NOT_EXAMINED" and .coverage.selectedPaths == 1' "$tmp/out" >/dev/null
+printf 'PASS: malformed Go refuses incomplete opt-in evidence while shell-only behavior stays compatible\n'
 fi

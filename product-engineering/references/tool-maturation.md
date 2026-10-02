@@ -35,7 +35,7 @@ bash /absolute/installed/product-engineering/scripts/inspect-shell-helpers.sh \
   --inspect --repo-dir /absolute/repository/root --revision FULL_COMMIT
 ```
 
-The helper needs Bash, jq, iconv and Git supporting
+The helper needs Bash, jq, iconv, base64, tr, sort, cmp and Git supporting
 [`--no-lazy-fetch`](https://git-scm.com/docs/git/2.45.0#Documentation/git.txt---no-lazy-fetch).
 An unsupported Git refuses inspection instead of silently ignoring a no-fetch setting. The
 installed Git binary and repository metadata remain within the consumer's existing trust boundary;
@@ -44,15 +44,42 @@ It examines the named local commit, including when the
 working tree is dirty, without checking out or executing its files. Its conservative selection
 `tracked-shell-paths-v1` includes every tracked regular `*.sh` path except `*.test.sh`; it does not
 apply a size threshold or decide which files are non-trivial. Each path carries its committed blob
-identifier and executable bit. Tree/object read failures, selected symlinks and paths that cannot
+identifier and executable bit. Before selecting files, it compares the complete tree listing with
+an independent raw diff from Git's empty tree to the named commit. Missing complete records,
+disagreement between those views, tree/object read failures, selected symlinks and paths that cannot
 be represented faithfully in UTF-8 JSON produce exit `2` (`UNKNOWN`) with no success payload.
+
+To include Go entrypoint evidence, add `--include-go` to the same invocation. This opt-in needs
+Go 1.22 or later and compiles only the installed `scripts/go-entrypoint.go` parser, with modules,
+workspace configuration, extra build flags, C compilation and toolchain downloads disabled. The
+parser binary and observed blobs use a private temporary directory; Go uses its normal compilation
+cache. No surveyed package, initializer, generator, test or dependency is built or executed.
+
+The opt-in returns version `2` with selection `tracked-shell-and-go-entrypoints-v1`. It parses every
+regular committed `*.go` file except `*_test.go`, counts those examined in `coverage.goFilesExamined`,
+and includes a file as `kind: go-entrypoint` only when its syntax declares `package main` and one
+top-level, non-generic `func main()` with no arguments or results and a body. Shell candidates have
+`kind: shell-path`. Source read failures, mismatched blob identity, parse errors, ambiguous main
+signatures and source over 4 MiB refuse the whole observation. Blob size is checked before reading
+Go source bytes; accepted blobs also retain the parser's read limit and identity check.
+The command buffers its complete
+result, so a later unreadable file cannot leave a successful partial inventory.
+
+These are **entrypoint files, not built commands**. Build constraints and platform filename rules
+are not evaluated; mutually exclusive entrypoints can both appear. Types, dependency availability,
+module boundaries, compiler validity and package combinations are not established. Coverage reports
+`goPrograms: ENTRYPOINT_FILES_ONLY` and `buildability: NOT_ASSERTED`. Caller coverage remains UNKNOWN,
+destinations UNASSESSED and portfolio completeness NOT_ASSERTED. Use the files as starting evidence
+for the actual caller and fit assessment. Without `--include-go`, the version `1` shell-only output
+is unchanged; without `--inspect`, neither mode reads a repository or builds the parser.
 Exit `0` with `DISABLED` performs no inspection; exit `0` with `OBSERVED` records only the declared
-shell-path scope, including a genuinely empty scope.
+selection's scope, including a genuinely empty scope.
 
 Retain the repository identity, revision, date and JSON in the consumer's appropriate evidence
 store. Compare the selected paths with the commit's tree before using the observation. Callers
-remain `UNKNOWN` and destinations `UNASSESSED`; Go programs, scripts without a `.sh` suffix and
-portfolio completeness are not examined. Trace those separately under an explicit selection rule.
+remain `UNKNOWN` and destinations `UNASSESSED`. Go source is examined only with `--include-go`,
+within its entrypoint-file scope; scripts without a `.sh` suffix and portfolio completeness are
+not examined. Trace remaining coverage separately under an explicit selection rule.
 This helper is an inventory aid with no migration, execution or readiness authority.
 
 Trace callers from build tasks, workflows, documentation and code. Distinguish a program invoked
