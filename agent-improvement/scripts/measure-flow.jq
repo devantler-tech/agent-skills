@@ -63,7 +63,10 @@ def selection_metric:
          end
      end);
 
-if length != 1 then error("expected exactly one completed-run evidence document")
+# Refuse lossy numeric backends before a rounded input can become a measurement.
+if (9007199254740991.1 > 9007199254740991) then .
+else error("flow measurement requires decimal-preserving jq (1.7 or newer)") end
+| if length != 1 then error("expected exactly one completed-run evidence document")
 else .[0]
   | if valid then
       {version: 1, run, artifactMix: artifact_mix, selectionsComplete,

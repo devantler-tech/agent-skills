@@ -61,7 +61,7 @@ if ! find . -mindepth 2 -maxdepth 2 -name SKILL.md -print0 > "$inventory"; then
 fi
 missing=0
 while IFS= read -r -d '' skill_md; do
-  dir=$(dirname "$skill_md")
+  dir=${skill_md%/SKILL.md}
   dir=${dir#./}
   [ -n "$dir" ] || continue
   if ! LC_ALL=C awk -v skill="$dir" 'tolower($1) == "devantler-tech/agent-skills" && $2 == skill {found=1} END {exit !found}' <<<"$entries"; then

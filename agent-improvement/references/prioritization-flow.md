@@ -57,7 +57,7 @@ jq -e -s -f agent-improvement/scripts/measure-flow.jq evidence.json
 ```
 
 The path above is relative to this skill repository; after installation resolve `scripts/measure-flow.jq`
-relative to the installed skill. `-s` is required: the filter rejects zero or multiple input documents.
+relative to the installed skill. `jq` must preserve decimal number literals (standard jq 1.7 or newer); the filter checks that capability and refuses a lossy backend. `-s` is required: the filter rejects zero or multiple input documents.
 A malformed input fails without a result; record UNKNOWN and repair the evidence, never substitute
 zero. A valid but incomplete input preserves partial observations and exposes the incomplete flags.
 The consumer must verify source identity, scope, timestamps and join completeness before assigning

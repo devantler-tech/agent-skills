@@ -49,6 +49,7 @@ printf '%s\n' "${GH_HOST:-unset}" >> "$UPSTREAM_HOST_LOG"
 path=${target#*/contents/}
 path=${path%%\?*}
 case "$target" in
+  *forbidden*) echo "gh: Resource not accessible by integration (HTTP 403)" >&2; exit 1 ;;
   *bad-request*) echo "gh: Bad Request (HTTP 400)" >&2; exit 1 ;;
   *unauthorized*) echo "gh: Bad credentials (HTTP 401)" >&2; exit 1 ;;
   *invalid-request*) echo "gh: Validation Failed (HTTP 422)" >&2; exit 1 ;;
@@ -252,7 +253,7 @@ else
 fi
 
 
-for failure in bad-request unauthorized invalid-request; do
+for failure in bad-request unauthorized invalid-request forbidden; do
   c="$tmp/$failure"
   make_root "$c" <<EOF
 | \`alpha\` | [\`fixture/$failure\`](https://github.com/fixture/$failure/tree/main/alpha) | \`gh skill install fixture/$failure alpha\` |

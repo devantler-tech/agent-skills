@@ -207,6 +207,16 @@ STUB
   fi
 done
 
+
+for unusual in 'odd skill' 'literal\name' $'beta\n'; do
+  c="$tmp/unusual-path"
+  cp -R "$good" "$c"
+  mkdir -p "$c/$unusual"
+  printf '# orphan\n' > "$c/$unusual/SKILL.md"
+  fail_case 'complete NUL inventory detects an unindexed unusual path' "$c"
+  rm -rf "$c"
+done
+
 if [ "$fail" -ne 0 ]; then
   printf '❌ check-readme-index self-test FAILED\n' >&2
   exit 1

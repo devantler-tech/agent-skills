@@ -71,6 +71,11 @@ resolve_target() {
     if printf '%s' "$err" | grep -q 'HTTP 404'; then
       return 1
     fi
+    # Permission failures are permanent; explicit rate-limit 403s remain retryable.
+    if printf '%s' "$err" | grep -q 'HTTP 403' &&
+       ! printf '%s' "$err" | grep -Eqi 'rate.?limit|abuse detection'; then
+      return 3
+    fi
     # Permanent request/authentication errors cannot become successful warning-only checks.
     if printf '%s' "$err" | grep -Eq 'HTTP (400|401|405|410|422)'; then
       return 3
