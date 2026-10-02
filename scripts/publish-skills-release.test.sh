@@ -156,6 +156,12 @@ assert_case() {
     eol-normalization)
       printf 'README.md text eol=crlf\n' >"$case_dir/repo/.git/info/attributes"
       printf 'fixture\r\n' >"$case_dir/repo/README.md" ;;
+    space-eol-normalization)
+      printf '%s\n' '"space name.txt" text eol=crlf' >"$case_dir/repo/.git/info/attributes"
+      printf 'space\r\n' >"$case_dir/repo/space name.txt" ;;
+    newline-eol-normalization)
+      printf '%s\n' '"newline\nname.txt" text eol=crlf' >"$case_dir/repo/.git/info/attributes"
+      printf 'newline\r\n' >"$case_dir/repo/"$'newline\nname.txt' ;;
     subdirectory)
       mkdir -p "$case_dir/repo/nested"
       invocation_dir="$case_dir/repo/nested" ;;
@@ -173,8 +179,8 @@ assert_case() {
   # These fixtures must actually hide different bytes from status; an ordinary
   # dirty checkout would exercise only the existing status guard.
   case "${9:-match}" in
-    clean-filter|eol-normalization)
-      git -C "$case_dir/repo" add README.md
+    clean-filter|eol-normalization|space-eol-normalization|newline-eol-normalization)
+      git -C "$case_dir/repo" add README.md 'space name.txt' $'newline\nname.txt'
       fixture_status=$(git -C "$case_dir/repo" status --porcelain=v1 --untracked-files=all --ignored)
       [ -z "$fixture_status" ] || { printf 'invalid clean-status fixture\n' >&2; exit 1; } ;;
   esac
@@ -252,6 +258,8 @@ assert_case assume-unchanged-refuses missing published ok 1 no match "$fixture_c
 assert_case skip-worktree-refuses missing published ok 1 no match "$fixture_commit" skip-worktree
 assert_case clean-filter-transformed-bytes-refuse missing published ok 1 no match "$fixture_commit" clean-filter
 assert_case normalized-disk-bytes-refuse missing published ok 1 no match "$fixture_commit" eol-normalization
+assert_case space-named-disk-mismatch-refuses missing published ok 1 no match "$fixture_commit" space-eol-normalization
+assert_case newline-named-disk-mismatch-refuses missing published ok 1 no match "$fixture_commit" newline-eol-normalization
 assert_case subdirectory-refuses missing published ok 1 no match "$fixture_commit" subdirectory
 assert_case invalid-skills-refuse missing published invalid 1 no
 
