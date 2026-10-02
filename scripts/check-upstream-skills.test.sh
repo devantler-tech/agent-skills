@@ -48,17 +48,30 @@ printf '%s\n' "$target" >> "$UPSTREAM_CALL_LOG"
 printf '%s\n' "${GH_HOST:-unset}" >> "$UPSTREAM_HOST_LOG"
 path=${target#*/contents/}
 path=${path%%\?*}
+include=false
+for a in "$@"; do [ "$a" != --include ] || include=true; done
+error_response() {
+  if "$include"; then
+    printf 'HTTP/1.1 %s Error\r\nContent-Type: application/json\r\n\r\n' "$1"
+    jq -nc --arg message "$2" '{message:$message}'
+  fi
+  printf '%s\n' "$3" >&2
+  exit 1
+}
 case "$target" in
-  *forbidden*) echo "gh: Resource not accessible by integration (HTTP 403)" >&2; exit 1 ;;
-  *bad-request*) echo "gh: Bad Request (HTTP 400)" >&2; exit 1 ;;
-  *unauthorized*) echo "gh: Bad credentials (HTTP 401)" >&2; exit 1 ;;
-  *invalid-request*) echo "gh: Validation Failed (HTTP 422)" >&2; exit 1 ;;
-  *deleted*) echo "gh: Not Found (HTTP 404)" >&2; exit 1 ;;
-  *flaky*)   echo "gh: Service Unavailable (HTTP 503)" >&2; exit 1 ;;
-  *limited*) echo "gh: API rate limit exceeded (HTTP 403)" >&2; exit 1 ;;
+  *transient-mentions-404*) error_response 503 'Service Unavailable' 'gh: detail refers to HTTP 404 (HTTP 503)' ;;
+  *permanent-no-status*) error_response 401 'Bad credentials' 'gh: Bad credentials' ;;
+  *permanent-unlisted*) error_response 451 'Unavailable For Legal Reasons' 'gh: Unavailable (HTTP 451)' ;;
+  *forbidden*) error_response 403 'Resource not accessible by integration' 'gh: Resource not accessible by integration (HTTP 403)' ;;
+  *bad-request*) error_response 400 'Bad Request' 'gh: Bad Request (HTTP 400)' ;;
+  *unauthorized*) error_response 401 'Bad credentials' 'gh: Bad credentials (HTTP 401)' ;;
+  *invalid-request*) error_response 422 'Validation Failed' 'gh: Validation Failed (HTTP 422)' ;;
+  *deleted*) error_response 404 'Not Found' 'gh: Not Found (HTTP 404)' ;;
+  *flaky*) error_response 503 'Service Unavailable' 'gh: Service Unavailable (HTTP 503)' ;;
+  *limited*) error_response 403 'API rate limit exceeded' 'gh: API rate limit exceeded (HTTP 403)' ;;
   *recover*)
     if [ "$(grep -cF "$target" "$UPSTREAM_CALL_LOG")" -lt 3 ]; then
-      echo "gh: Service Unavailable (HTTP 503)" >&2; exit 1
+      error_response 503 'Service Unavailable' 'gh: Service Unavailable (HTTP 503)'
     fi ;;
 esac
 case "$target" in
@@ -75,6 +88,7 @@ esac
 if [ -n "$filter" ]; then
   printf '%s\n' "$body" | jq -r "$filter"
 else
+  if "$include"; then printf 'HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n'; fi
   printf '%s\n' "$body"
 fi
 STUB
@@ -265,6 +279,25 @@ EOF
     printf '  ❌ permanent %s was retried\n' "$failure"; fail=1
   else
     printf '  ✅ permanent %s refused without retries\n' "$failure"
+  fi
+done
+
+for scenario in transient-mentions-404 permanent-no-status permanent-unlisted; do
+  c="$tmp/$scenario"
+  make_root "$c" <<EOF
+| alpha | [fixture/$scenario](https://github.com/fixture/$scenario/tree/main/alpha) | gh skill install fixture/$scenario alpha |
+EOF
+  : > "$UPSTREAM_CALL_LOG"
+  rc=0; output=$(run_guard "$c" 2>&1) || rc=$?
+  expected_rc=1; expected_count=1; expected_summary='drift=0, transient-warnings=0, invalid-responses=1'
+  if [ "$scenario" = transient-mentions-404 ]; then
+    expected_rc=0; expected_count=3; expected_summary='drift=0, transient-warnings=1, invalid-responses=0'
+  fi
+  if [ "$rc" -eq "$expected_rc" ] && [[ "$output" == *"$expected_summary"* ]] &&
+     [ "$(wc -l < "$UPSTREAM_CALL_LOG" | tr -d ' ')" -eq "$expected_count" ]; then
+    printf '  ✅ %s decision binds actual HTTP response\n' "$scenario"
+  else
+    printf '  ❌ %s response decision misclassified (exit %s)\n%s\n' "$scenario" "$rc" "$output"; fail=1
   fi
 done
 
