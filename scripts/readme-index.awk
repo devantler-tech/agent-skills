@@ -34,7 +34,7 @@ function html_end(s) {
   if (html == "processing") return index(s, "?>") > 0
   if (html == "declaration") return index(s, ">") > 0
   if (html == "cdata") return index(s, "]]>") > 0
-  return index(tolower(s), "</" html ">") > 0
+  return tolower(s) ~ /<\/(pre|script|style|textarea)>/
 }
 function html_start(s, lower, tags, attr, open_tag) {
   lower=tolower(s); sub(/^ {0,3}/, "", lower)
@@ -42,15 +42,27 @@ function html_start(s, lower, tags, attr, open_tag) {
     sub(/^</, "", lower); sub(/[ \t>].*$/, "", lower); return lower
   }
   if (s ~ /^ ? ? ?<\?/) return "processing"
-  if (s ~ /^ ? ? ?<![A-Z]/) return "declaration"
+  if (s ~ /^ ? ? ?<![A-Za-z]/) return "declaration"
   if (s ~ /^ ? ? ?<!\[CDATA\[/) return "cdata"
   tags="address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul"
   if (lower ~ ("^</?(" tags ")([ \t>]|/>|$)")) return "blank"
   # A complete custom tag starts a block only outside a paragraph.
   attr="[a-z_:][a-z0-9_.:-]*([ \t]*=[ \t]*(\"[^\"]*\"|'[^']*'|[^ \t\"'=<>`]+))?"
   open_tag="<[a-z][a-z0-9-]*([ \t]+" attr ")*[ \t]*/?>"
-  if (!paragraph && lower ~ ("^(" open_tag "|</[a-z][a-z0-9-]*[ \t]*>)[ \t]*$")) return "blank"
+  if (!paragraph && lower ~ ("^(" open_tag "|</[a-z][a-z0-9-]*[ \t]*>)[ \t]*$") &&
+      lower !~ /^<(pre|script|style|textarea)([ \t\/>]|$)/) return "blank"
   return ""
+}
+function paragraph_line(s, previous, compact) {
+  if (s ~ /^[ \t]*$/ || s ~ /^ ? ? ?(#{1,6}([ \t]|$)|\||>|[-+*]([ \t]|$))/) return 0
+  compact=s; gsub(/[ \t]/, "", compact)
+  if (compact ~ /^(-{3,}|\*{3,}|_{3,})$/ && s ~ /^ {0,3}[^ ]/) return 0
+  if (previous && s ~ /^ ? ? ?(=+|-+)[ \t]*$/) return 0
+  if (!previous && s ~ /^(    |\t)/) return 0
+  if (s ~ /^ ? ? ?[0-9]{1,9}[.)]([ \t]|$)/ &&
+      (!previous || s ~ /^ ? ? ?1[.)][ \t]+[^ \t]/)) return 0
+  if (!previous && s ~ /^ ? ? ?\[[^]]+\]:[ \t]*[^ \t]+([ \t]+("[^"]*"|'[^']*'|\([^)]*\)))?[ \t]*$/) return 0
+  return 1
 }
 {
   sub(/\r$/, "")
@@ -85,7 +97,7 @@ function html_start(s, lower, tags, attr, open_tag) {
     }
     $0=visible
   }
-  paragraph=($0 !~ /^[ \t]*$/ && $0 !~ /^ *(#+[ \t]|\||>|[-+*] |[0-9]+[.)] )/)
+  paragraph=paragraph_line($0, paragraph)
   # A shorter run or the other fence character inside a code example is data.
   # Track fences outside Skills too, so example headings cannot create a section.
   stripped=$0; sub(/^ */, "", stripped)

@@ -70,11 +70,6 @@ Installation, the offline index check,
 and upstream target checking share this interpretation; the offline check also verifies maintained
 skill directories and rejects duplicate rows.
 
-Each installation passes the ref from the row's Upstream tree link with `--pin`. A link
-to `tree/main/...` installs from `main`; a link naming a tag installs that tag. This keeps
-installation on the source ref that catalogue validation and upstream checking examine.
-The two-column `--list` preview remains `<owner/repo> <skill>`.
-
 `--help` (`-h`) and
 `--list` (`-l`) are standalone modes and need no authentication or network access. Do not combine
 them with agent names.

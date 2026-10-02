@@ -88,11 +88,7 @@ fi
 
 # Validate the complete table before listing or invoking gh. A failed parser
 # must not be hidden in process substitution or leave a partial install list.
-if [ "$list_only" = true ]; then
-  catalogue=$(bash "$script_dir/readme-index.sh")
-else
-  catalogue=$(bash "$script_dir/readme-index.sh" --targets)
-fi
+catalogue=$(bash "$script_dir/readme-index.sh")
 entries=()
 while IFS= read -r entry; do
   [ -n "$entry" ] && entries+=("$entry")
@@ -125,12 +121,10 @@ for agent in "${agents[@]}"; do
   for entry in "${entries[@]}"; do
     repo=${entry%% *}
     skill=${entry##* }
-    target=${entry#* }
-    ref=${target%% *}
     # Capture output so the success path stays quiet but a failure can surface
     # the actual error (auth, network, missing skill, …) instead of swallowing it.
     if out=$(gh skill install "$repo" "$skill" \
-        --pin "$ref" --agent "$agent" --scope user --force --allow-hidden-dirs 2>&1); then
+        --agent "$agent" --scope user --force --allow-hidden-dirs 2>&1); then
       echo "  ok   [$agent] $repo $skill"
     else
       echo "  FAIL [$agent] $repo $skill" >&2

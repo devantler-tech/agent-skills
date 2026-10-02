@@ -108,7 +108,7 @@ shellcheck scripts/*.sh
                             # help/list are gh-free, and a missing/empty index fails loudly;
                             # also pins early argument validation, exact installation calls,
                             # agent selection without glob expansion, github.com host binding,
-                            # pre-install collision rejection, catalogue source-ref pins,
+                            # pre-install collision rejection,
                             # raw HTML exclusion, fence syntax, and partial-failure reporting
 ./scripts/check-upstream-skills.test.sh   # self-test of the upstream guard (also in the lint-scripts
                                           # gate): runs the REAL script against fixtures with an offline
