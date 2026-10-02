@@ -95,30 +95,27 @@ verify_tag_commit() {
   fi
 }
 
-# Does a git tag of this name exist on the remote? A read failure is fatal: it
-# leaves the publish precondition unknown, and an unknown precondition must never
-# be resolved by guessing in either direction.
+# One HTTP observation binds status to this exact tag endpoint. Error prose
+# cannot establish absence: another status may legitimately mention "Not Found".
 tag_ref_status=0
-gh api "repos/${repo}/git/ref/tags/${tag_path}" >/dev/null 2>&1 || tag_ref_status=$?
-
-if [ "$tag_ref_status" -eq 0 ]; then
+tag_response=$(gh api "repos/$repo/git/ref/tags/$tag_path" --include 2>/dev/null) || tag_ref_status=$?
+http_status=$(printf '%s\n' "$tag_response" | awk 'NR==1 && /^HTTP\/[0-9.]+ [0-9][0-9][0-9] / {print $2}') || exit 1
+tag_body=$(printf '%s\n' "$tag_response" | awk 'body {print; next} {sub(/\r$/, "")} /^$/ {body=1}') || exit 1
+if [ "$http_status" = 200 ] && [ "$tag_ref_status" -eq 0 ] &&
+   printf '%s' "$tag_body" | jq -es --arg ref "refs/tags/$tag" '
+     length==1 and (.[0] | type=="object" and .ref==$ref and
+       (.object.type=="commit" or .object.type=="tag") and
+       (.object.sha|type=="string" and test("\\A[0-9a-f]{40}\\z")))' >/dev/null; then
   tag_exists=yes
+elif [ "$http_status" = 404 ] && [ "$tag_ref_status" -eq 1 ] &&
+     printf '%s' "$tag_body" | jq -es 'length==1 and (.[0]|type=="object" and .message=="Not Found")' >/dev/null; then
+  tag_exists=no
 else
-  # Distinguish "no such tag" (a clean 404) from an auth/network failure. Only the
-  # former means the tag is absent; anything else leaves the answer unknown.
-  probe=$(gh api "repos/${repo}/git/ref/tags/${tag_path}" 2>&1 || true)
-  case "$probe" in
-    *"Not Found"* | *"HTTP 404"*) tag_exists=no ;;
-    *)
-      printf 'publish-skills-release: could not determine whether tag %s exists on %s; refusing to publish or skip.\n' \
-        "$tag" "$repo" >&2
-      printf '%s\n' "$probe" >&2
-      exit 1
-      ;;
-  esac
+  printf 'publish-skills-release: tag existence observation is incomplete; refusing publication.\n' >&2
+  exit 1
 fi
 
-if [ "$tag_exists" = no ]; then
+verify_checkout() {
   # The skill CLI validates the working directory and resolves its own origin.
   # Bind those bytes to this release before validation or any publication. Use
   # the effective URL (including Git's insteadOf rewrites), not gh's default repo.
@@ -156,11 +153,11 @@ if [ "$tag_exists" = no ]; then
   # These index flags hide modified or absent tracked files from status. Reject
   # them rather than validating disk bytes that differ from the release commit.
   # NUL-delimited records preserve filenames containing whitespace or newlines.
-  if ! git --no-replace-objects ls-files -v -z | while IFS= read -r -d '' entry; do
+  if ! git --no-replace-objects ls-files -v -z | { entry=''; while IFS= read -r -d '' entry; do
     case "${entry:0:1}" in
       S | [a-z]) exit 1 ;;
     esac
-  done; then
+  done; [ -z "$entry" ]; }; then
     printf 'publish-skills-release: hidden or unreadable index flags prevent checkout verification; refusing publication.\n' >&2
     exit 1
   fi
@@ -199,14 +196,23 @@ if [ "$tag_exists" = no ]; then
       exit 1
     }
   done <"$tracked_files"
+  [ -z "${record:-}" ] || {
+    printf 'publish-skills-release: incomplete tracked file record; refusing publication.\n' >&2
+    exit 1
+  }
   rm -f "$tracked_files"
   trap - EXIT
 
+}
+
+if [ "$tag_exists" = no ]; then
+  verify_checkout
   # gh skill publish --tag targets a branch name, or the default branch for a
   # detached checkout. Validate with the skill CLI, then name the immutable
   # commit explicitly when creating the GitHub release. The topic check remains
   # the caller's responsibility, as on the skill CLI's non-interactive path.
   gh skill publish --dry-run
+  verify_checkout
   # Create-only ref reservation loses atomically if another publisher wins the
   # tag after our absence probe. Never publish against that writer's tag. A
   # failed release leaves the reserved tag for explicit operator recovery.

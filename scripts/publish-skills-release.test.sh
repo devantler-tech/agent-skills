@@ -75,8 +75,18 @@ case "\$1 \$2" in
     ;;
   "api repos/owner/repo/git/ref/tags/$release_tag_path")
     case "$2" in
-      found) exit 0 ;;
-      missing) echo "gh: Not Found (HTTP 404)" >&2; exit 1 ;;
+      found)
+        if [[ "\$*" == *'--include'* ]]; then
+          printf 'HTTP/2.0 200 OK\r\nContent-Type: application/json\r\n\r\n'
+          printf '%s\n' '{"ref":"refs/tags/$release_tag","object":{"type":"commit","sha":"$fixture_commit"}}'
+        fi
+        exit 0 ;;
+      false404)
+        printf 'HTTP/2.0 403 Forbidden\r\n\r\n'
+        echo 'gh: Not Found in diagnostic (HTTP 403)' >&2; exit 1 ;;
+      missing)
+        [[ "\$*" != *'--include'* ]] || printf 'HTTP/2.0 404 Not Found\r\n\r\n{"message":"Not Found"}\n'
+        echo "gh: Not Found (HTTP 404)" >&2; exit 1 ;;
       broken) echo "gh: connection refused" >&2; exit 1 ;;
     esac
     ;;
@@ -98,6 +108,7 @@ case "\$1 \$2" in
     fi
     [ "\$*" = 'skill publish --dry-run' ] || exit 1
     [ "$4" != invalid ] || exit 1
+    [ "$4" != mutates ] || printf 'validation changed checkout\n' >> "$case_dir/repo/README.md"
     echo 'Validated'
     ;;
   "release create")
@@ -132,6 +143,24 @@ assert_case() {
   case_dir=$(make_stub "$name" "$2" "$3" "$4" "${7:-match}" "$test_tag" "${11:-v1.0.0}" "${12:-ok}")
   invocation_dir="$case_dir/repo"
   case "${9:-match}" in
+    tree-tail|index-tail)
+      [ "${9}" != index-tail ] || git -C "$case_dir/repo" update-index --assume-unchanged 'space name.txt'
+      real_git=$(command -v git)
+      cat > "$case_dir/bin/git" <<'GIT'
+#!/usr/bin/env bash
+case " $* " in
+  *' ls-tree '*|*' ls-files -v -z '*)
+    if { [ "$FRAMING_FAULT" = tree-tail ] && [[ " $* " == *' ls-tree '* ]]; } ||
+       { [ "$FRAMING_FAULT" = index-tail ] && [[ " $* " == *' ls-files -v -z '* ]]; }; then
+      "$REAL_GIT" "$@" > "$FRAMING_DATA" || exit
+      size=$(wc -c < "$FRAMING_DATA")
+      dd if="$FRAMING_DATA" bs=1 count="$((size - 1))" 2>/dev/null
+      exit
+    fi ;;
+esac
+exec "$REAL_GIT" "$@"
+GIT
+      chmod +x "$case_dir/bin/git" ;;
     wrong-repo) git -C "$case_dir/repo" remote set-url origin https://github.com/other/repo.git ;;
     no-origin) git -C "$case_dir/repo" remote remove origin ;;
     wrong-commit)
@@ -187,7 +216,7 @@ assert_case() {
 
   actual_exit=0
   (cd "$invocation_dir" && GITHUB_SHA="${8-$fixture_commit}" GH_REPO=other/selection GH_HOST=example.test \
-    PATH="$case_dir/bin:$PATH" "$script" --tag "$test_tag" --repo owner/repo \
+    PATH="$case_dir/bin:$PATH" REAL_GIT="${real_git:-}" FRAMING_FAULT="${9:-}" FRAMING_DATA="$case_dir/framing" "$script" --tag "$test_tag" --repo owner/repo \
     >"$case_dir/out" 2>"$case_dir/err") || actual_exit=$?
 
   if [ -s "$case_dir/published" ]; then
@@ -225,6 +254,12 @@ assert_case() {
 
   printf 'ok   %s (exit %s, published=%s)\n' "$name" "$actual_exit" "$actual_published"
 }
+
+# Incomplete observations or validation changes must create no remote object.
+assert_case diagnostic404-is-not-absence false404 published ok 1 no
+assert_case validation-checkout-movement-refuses missing published mutates 1 no
+assert_case unterminated-tree-refuses missing published ok 1 no match "$fixture_commit" tree-tail
+assert_case unterminated-index-refuses missing published ok 1 no match "$fixture_commit" index-tail
 
 # The ordinary release: nothing published yet, so it publishes.
 assert_case unpublished-publishes missing published ok 0 yes
