@@ -403,6 +403,24 @@ $close
 EOF
   expect_list "$delimiters HTML examples are excluded" "$html_root" $'fixture/one alpha\nfixture/one beta'
 done
+for comment_kind in single multi; do
+  html_root="$tmp/comment-custom-$comment_kind"
+  case "$comment_kind" in
+    single) comment='<!-- note -->' ;;
+    multi) comment=$'<!-- note\ncontinued -->' ;;
+  esac
+  make_root "$html_root" <<EOF
+| \`alpha\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/alpha) | \`gh skill install fixture/one alpha\` |
+
+$comment
+<example-widget>
+| \`hidden\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/hidden) | \`gh skill install fixture/one hidden\` |
+</example-widget>
+
+| \`beta\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/beta) | \`gh skill install fixture/one beta\` |
+EOF
+  expect_list "$comment_kind comment before a custom HTML block cannot expose its example" "$html_root" $'fixture/one alpha\nfixture/one beta'
+done
 make_root "$tmp/invalid-fence" <<'EOF'
 | `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/alpha) | `gh skill install fixture/one alpha` |
 EOF

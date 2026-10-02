@@ -67,7 +67,6 @@ function html_start(s, lower, tags, attr, open_tag) {
       next
     }
   }
-  paragraph=($0 !~ /^[ \t]*$/ && $0 !~ /^ *(#+[ \t]|\||>|[-+*] |[0-9]+[.)] )/)
   # Hidden Markdown comments never describe installable catalogue entries. Do
   # this outside code fences: example comment delimiters are literal code.
   if (!fence && (comment || $0 !~ /^ ? ? ?(```|~~~)/)) {
@@ -86,6 +85,7 @@ function html_start(s, lower, tags, attr, open_tag) {
     }
     $0=visible
   }
+  paragraph=($0 !~ /^[ \t]*$/ && $0 !~ /^ *(#+[ \t]|\||>|[-+*] |[0-9]+[.)] )/)
   # A shorter run or the other fence character inside a code example is data.
   # Track fences outside Skills too, so example headings cannot create a section.
   stripped=$0; sub(/^ */, "", stripped)
