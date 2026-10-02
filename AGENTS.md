@@ -171,7 +171,9 @@ default ports 443 and 22 respectively). All forge calls use
 github.com even when `GH_HOST` names another host. Hidden index flags (`assume-unchanged` or
 `skip-worktree`, including sparse entries) are refused because they prevent the clean-tree check
 from proving which files validation will read. Ignored files are also refused because the skill CLI
-can discover them independently of Git tracking. The script validates with
+can discover them independently of Git tracking. Tracked disk bytes must match the expected commit's
+blobs directly, including symlink targets; Git filters and newline conversion cannot substitute
+different content for validation. The script runs
 `gh skill publish --dry-run`, reserves the tag using the create-only refs API, verifies its commit,
 then creates the release with an explicit full commit target and `--verify-tag`. Both new
 releases and completed reruns must pass remote tag-commit and matching non-draft release checks.

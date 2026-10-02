@@ -20,7 +20,10 @@ trap 'rm -rf "$work"' EXIT
 # Only GitHub is replaced: no test can create a remote release.
 git init -q "$work/fixture"
 printf 'fixture\n' >"$work/fixture/README.md"
-git -C "$work/fixture" add README.md
+printf 'space\n' >"$work/fixture/space name.txt"
+printf 'newline\n' >"$work/fixture/"$'newline\nname.txt'
+ln -s README.md "$work/fixture/readme-link"
+git -C "$work/fixture" add README.md 'space name.txt' $'newline\nname.txt' readme-link
 git -C "$work/fixture" -c user.name=Fixture -c user.email=fixture@example.test \
   -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -qm fixture --allow-empty
 fixture_commit=$(git -C "$work/fixture" rev-parse HEAD)
@@ -146,6 +149,13 @@ assert_case() {
     staged-dirty)
       printf 'changed\n' >>"$case_dir/repo/README.md"
       git -C "$case_dir/repo" add README.md ;;
+    clean-filter)
+      git -C "$case_dir/repo" config filter.release-mask.clean 'git cat-file blob HEAD:README.md'
+      printf 'README.md filter=release-mask\n' >"$case_dir/repo/.git/info/attributes"
+      printf 'different disk contents\n' >"$case_dir/repo/README.md" ;;
+    eol-normalization)
+      printf 'README.md text eol=crlf\n' >"$case_dir/repo/.git/info/attributes"
+      printf 'fixture\r\n' >"$case_dir/repo/README.md" ;;
     subdirectory)
       mkdir -p "$case_dir/repo/nested"
       invocation_dir="$case_dir/repo/nested" ;;
@@ -158,6 +168,15 @@ assert_case() {
     https-port) git -C "$case_dir/repo" remote set-url origin https://github.com:443/owner/repo.git ;;
     ssh-port) git -C "$case_dir/repo" remote set-url origin ssh://git@github.com:22/owner/repo.git ;;
     foreign-host) git -C "$case_dir/repo" remote set-url origin https://example.test/owner/repo.git ;;
+  esac
+
+  # These fixtures must actually hide different bytes from status; an ordinary
+  # dirty checkout would exercise only the existing status guard.
+  case "${9:-match}" in
+    clean-filter|eol-normalization)
+      git -C "$case_dir/repo" add README.md
+      fixture_status=$(git -C "$case_dir/repo" status --porcelain=v1 --untracked-files=all --ignored)
+      [ -z "$fixture_status" ] || { printf 'invalid clean-status fixture\n' >&2; exit 1; } ;;
   esac
 
   actual_exit=0
@@ -231,6 +250,8 @@ assert_case tracked-dirty-checkout-refuses missing published ok 1 no match "$fix
 assert_case staged-dirty-checkout-refuses missing published ok 1 no match "$fixture_commit" staged-dirty
 assert_case assume-unchanged-refuses missing published ok 1 no match "$fixture_commit" assume-unchanged
 assert_case skip-worktree-refuses missing published ok 1 no match "$fixture_commit" skip-worktree
+assert_case clean-filter-transformed-bytes-refuse missing published ok 1 no match "$fixture_commit" clean-filter
+assert_case normalized-disk-bytes-refuse missing published ok 1 no match "$fixture_commit" eol-normalization
 assert_case subdirectory-refuses missing published ok 1 no match "$fixture_commit" subdirectory
 assert_case invalid-skills-refuse missing published invalid 1 no
 
