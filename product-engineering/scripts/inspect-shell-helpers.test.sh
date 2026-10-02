@@ -186,21 +186,55 @@ if [[ " $* " == *' ls-tree '* && $FAIL_GIT_COMMAND == truncated-tree ]]; then
   printf '100644 blob %040d\tcmd/main.go' 0
   exit 0
 fi
+if [[ " $* " == *' ls-tree '* && $FAIL_GIT_COMMAND == empty-tree ]]; then exit 0; fi
+if [[ " $* " == *' ls-tree '* && $FAIL_GIT_COMMAND == prefix-tree ]]; then
+  "$REAL_GIT" "$@" > "$PREFIX_OUTPUT" || exit $?
+  for ((index=0; index<2; index++)); do
+    IFS= read -r -d '' entry || exit 74
+    printf '%s\0' "$entry"
+  done < "$PREFIX_OUTPUT"
+  exit 0
+fi
+if [[ " $* " == *' diff-tree '* ]]; then
+  case $FAIL_GIT_COMMAND in
+    empty-diff) exit 0 ;;
+    truncated-diff) printf ':000000 100644'; exit 0 ;;
+    prefix-diff)
+      "$REAL_GIT" "$@" > "$PREFIX_OUTPUT" || exit $?
+      for ((index=0; index<4; index++)); do
+        IFS= read -r -d '' entry || exit 74
+        printf '%s\0' "$entry"
+      done < "$PREFIX_OUTPUT"
+      exit 0 ;;
+  esac
+fi
 if [[ " $* " == *" cat-file blob $TARGET_BLOB "* ]]; then
   case $FAIL_GIT_COMMAND in
     failed-source) exit 73 ;;
     partial-source) printf 'package helper\n'; exit 0 ;;
+    record-source) touch "$READ_MARKER" ;;
   esac
 fi
 exec "$REAL_GIT" "$@"
 STUB
-for operation in truncated-tree failed-source partial-source; do
-  REAL_GIT="$git_bin" TARGET_BLOB="$last_go_blob" FAIL_GIT_COMMAND="$operation" PATH="$tmp/bin:$PATH" \
+for operation in truncated-tree empty-tree prefix-tree empty-diff truncated-diff prefix-diff failed-source partial-source; do
+  REAL_GIT="$git_bin" TARGET_BLOB="$last_go_blob" PREFIX_OUTPUT="$tmp/prefix-tree" FAIL_GIT_COMMAND="$operation" PATH="$tmp/bin:$PATH" \
     refuse --inspect --include-go --repo-dir "$tmp/go-repo" --revision "$go_revision"
 done
-REAL_GIT="$git_bin" FAIL_GIT_COMMAND=truncated-tree PATH="$tmp/bin:$PATH" \
-  refuse --inspect --repo-dir "$tmp/go-repo" --revision "$go_revision"
+for operation in truncated-tree empty-tree prefix-tree empty-diff truncated-diff prefix-diff; do
+  REAL_GIT="$git_bin" PREFIX_OUTPUT="$tmp/prefix-tree" FAIL_GIT_COMMAND="$operation" PATH="$tmp/bin:$PATH" \
+    refuse --inspect --repo-dir "$tmp/go-repo" --revision "$go_revision"
+done
 printf 'PASS: failed, partial or unterminated Git observations emit no partial success\n'
+printf 'package main\nfunc main(){}\n' > "$tmp/large.go"
+head -c 4194305 /dev/zero | tr '\0' ' ' >> "$tmp/large.go"
+large_blob=$(git -C "$tmp/go-repo" hash-object -w --stdin < "$tmp/large.go")
+large_tree=$(printf '100644 blob %s\ta.go\000100644 blob %s\tz-large.go\0' "$go_blob" "$large_blob" | git -C "$tmp/go-repo" mktree -z)
+large_revision=$(git -C "$tmp/go-repo" commit-tree "$large_tree" -m large-source)
+REAL_GIT="$git_bin" TARGET_BLOB="$large_blob" FAIL_GIT_COMMAND=record-source READ_MARKER="$tmp/materialized-large-source" PATH="$tmp/bin:$PATH" \
+  refuse --inspect --include-go --repo-dir "$tmp/go-repo" --revision "$large_revision"
+[[ ! -e $tmp/materialized-large-source ]] || fail 'oversized Go source must be refused before materializing its bytes'
+printf 'PASS: oversized Go source is refused before materialization, after a healthy entrypoint\n'
 ln -s cmd/main.go "$tmp/go-repo/link.go"
 git -C "$tmp/go-repo" add -- link.go
 git -C "$tmp/go-repo" commit -qm go-symlink
