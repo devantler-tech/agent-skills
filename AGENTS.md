@@ -97,7 +97,7 @@ shellcheck scripts/*.sh
                                   # link (cross-column consistency — no wrong-repo/slug install ships);
                                   # distinct upstream repositories cannot share an installed skill name
 # install.sh and both index guards share scripts/readme-index.{sh,awk}: validate every
-# table row before emitting any entries, ignore prose/fenced examples, and reject malformed
+# table row before emitting any entries, ignore prose/fenced examples and HTML comments, and reject malformed
 # or contradictory catalogues before any GitHub call. Upstream requests bind github.com.
 ./scripts/check-readme-index.test.sh   # self-test of the guard above (also in the lint-scripts gate):
                                        # proves it PASSES a consistent fixture and FAILS each drift it

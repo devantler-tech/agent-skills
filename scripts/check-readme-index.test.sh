@@ -95,6 +95,32 @@ make_root "$c" "beta" <<'EOF'
 EOF
 pass_case 'fenced table examples do not change the catalogue row count' "$c"
 
+
+c="$tmp/inline-comment-example"
+make_root "$c" "beta" <<'EOF'
+Markers such as `<!--` are literal code examples.
+| `beta` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/main/beta) | `gh skill install devantler-tech/agent-skills beta` |
+EOF
+pass_case 'inline code comment examples do not hide the catalogue' "$c"
+c="$tmp/commented-rows"
+make_root "$c" "beta" <<'EOF'
+| `beta` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/main/beta) | `gh skill install devantler-tech/agent-skills beta` |
+<!--
+## Skills
+| `hidden` | [`fixture/source`](https://github.com/fixture/source/tree/main/hidden) | `gh skill install fixture/source hidden` |
+-->
+EOF
+pass_case 'commented headings and rows do not change the visible catalogue' "$c"
+if out=$(bash "$c/scripts/install.sh" --list) && [ "$out" = 'devantler-tech/agent-skills beta' ]; then
+  printf '  ✅ hidden rows never reach installation\n'
+else printf '  ❌ hidden rows reached installation\n'; fail=1; fi
+c="$tmp/open-comment"
+make_root "$c" "beta" <<'EOF'
+| `beta` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/main/beta) | `gh skill install devantler-tech/agent-skills beta` |
+<!-- unclosed catalogue comment
+EOF
+fail_case 'an unterminated comment cannot report a complete catalogue' "$c"
+
 # Individually consistent columns must not hide two upstreams targeting one
 # installed directory. The shared parser rejects this before the count check.
 c="$tmp/colliding-names"

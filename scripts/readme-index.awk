@@ -10,8 +10,45 @@ function path_ok(s, a, n, i) {
   for (i=1; i<=n; i++) if (a[i] !~ /^[A-Za-z0-9_.-]+$/ || a[i] == "." || a[i] == "..") return 0
   return n > 0
 }
+function comment_start(s, i,j,k,width,closing) {
+  for (i=1;i<=length(s);i++) {
+    if (substr(s,i,1) == "\\") { i++; continue }
+    if (substr(s,i,1) == "`") {
+      width=1; while (substr(s,i+width,1) == "`") width++
+      closing=0
+      for (j=i+width;j<=length(s);j++) {
+        if (substr(s,j,1) != "`") continue
+        k=j; while (substr(s,k,1) == "`") k++
+        if (k-j == width) { closing=k-1; break }
+        j=k-1
+      }
+      if (closing) { i=closing; continue }
+      i+=width-1
+    }
+    if (substr(s,i,4) == "<!--") return i
+  }
+  return 0
+}
 {
   sub(/\r$/, "")
+  # Hidden Markdown comments never describe installable catalogue entries. Do
+  # this outside code fences: example comment delimiters are literal code.
+  if (!fence && (comment || $0 !~ /^ ? ? ?(```|~~~)/)) {
+    visible=""; remaining=$0
+    while (length(remaining)) {
+      if (comment) {
+        end=index(remaining, "-->")
+        if (!end) { remaining=""; break }
+        remaining=substr(remaining,end+3); comment=0
+      } else {
+        start=comment_start(remaining)
+        if (!start) { visible=visible remaining; remaining=""; break }
+        visible=visible substr(remaining,1,start-1)
+        remaining=substr(remaining,start+4); comment=1
+      }
+    }
+    $0=visible
+  }
   # A shorter run or the other fence character inside a code example is data.
   # Track fences outside Skills too, so example headings cannot create a section.
   stripped=$0; sub(/^ */, "", stripped)
@@ -83,6 +120,7 @@ function path_ok(s, a, n, i) {
   }
 }
 END {
+  if (comment) refuse("unterminated HTML comment")
   if (!seen_section || !count) { print "error: no skills found in README index" > "/dev/stderr"; bad=1 }
   if (bad) exit 1
   if (mode == "rows") print row_count
