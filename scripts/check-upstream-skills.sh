@@ -54,12 +54,17 @@ UPSTREAM_RETRY_SLEEP=${UPSTREAM_RETRY_SLEEP:-sleep}
 # on an invalid successful response returns 3 (verification failure).
 resolve_target() {
   local owner=$1 repo=$2 ref=$3 path=$4
-  local attempt err
+  local attempt err api_status http_status body
   for attempt in 1 2 3; do
-    if err=$(gh api "repos/$owner/$repo/contents/$path/SKILL.md?ref=$ref" 2>&1); then
+    api_status=0
+    gh api "repos/$owner/$repo/contents/$path/SKILL.md?ref=$ref" --include > "$response_dir/response" 2> "$response_dir/error" || api_status=$?
+    http_status=$(awk 'NR==1 && /^HTTP\/[0-9.]+ [0-9][0-9][0-9] / {print $2}' "$response_dir/response")
+    body=$(awk 'body {print; next} {sub(/\r$/, "")} /^$/ {body=1}' "$response_dir/response")
+    err=$(cat "$response_dir/error")
+    if [ "$http_status" = 200 ] && [ "$api_status" -eq 0 ]; then
       # Validate after the API call so a directory or malformed payload cannot be
       # mistaken for a transport error and downgraded to a transient warning.
-      if printf '%s' "$err" | jq -es --arg path "$path/SKILL.md" '
+      if printf '%s' "$body" | jq -es --arg path "$path/SKILL.md" '
         length == 1 and (.[0] | type == "object"
           and .type == "file" and .name == "SKILL.md" and .path == $path)
       ' >/dev/null 2>&1; then
@@ -67,21 +72,21 @@ resolve_target() {
       fi
       return 3
     fi
-    # HTTP 404 = the path/skill genuinely no longer exists at this pointer.
-    if printf '%s' "$err" | grep -q 'HTTP 404'; then
-      return 1
-    fi
-    # Permission failures are permanent; explicit rate-limit 403s remain retryable.
-    if printf '%s' "$err" | grep -q 'HTTP 403' &&
-       ! printf '%s' "$err" | grep -Eqi 'rate.?limit|abuse detection'; then
+    # One complete response establishes absence; diagnostic prose is never status.
+    if [ "$http_status" = 404 ] && [ "$api_status" -eq 1 ]; then
+      if printf '%s' "$body" | jq -es 'length==1 and (.[0] | type=="object" and (.message | type=="string"))' >/dev/null 2>&1; then return 1; fi
       return 3
     fi
-    # Permanent request/authentication errors cannot become successful warning-only checks.
-    if printf '%s' "$err" | grep -Eq 'HTTP (400|401|405|410|422)'; then
-      return 3
-    fi
-    # Anything else (network, 5xx, secondary-rate-limit/403) may be transient —
-    # back off and retry before deciding.
+    case "$http_status" in
+      403)
+        # The actual API message identifies rate limiting, not unrelated stderr.
+        printf '%s' "$body" | jq -es 'length==1 and (.[0].message | type=="string" and test("^(API rate limit exceeded|You have exceeded a secondary rate limit|You have triggered an abuse detection mechanism)";"i"))' >/dev/null 2>&1 || return 3
+        ;;
+      408|429|5[0-9][0-9]) ;;
+      '') [ "$api_status" -ne 0 ] || return 3 ;;
+      *) return 3 ;;
+    esac
+    # Transport, server and explicit rate-limit failures retain bounded retries.
     "$UPSTREAM_RETRY_SLEEP" $((attempt * 2))
   done
   printf '%s' "$err"
@@ -97,6 +102,9 @@ if [ -z "$rows" ]; then
   echo "::error::No upstream skill rows parsed from the README '## Skills' index — the tables or parser drifted."
   exit 1
 fi
+
+response_dir=$(mktemp -d)
+trap 'rm -rf "$response_dir"' EXIT
 
 checked=0
 drift=0
