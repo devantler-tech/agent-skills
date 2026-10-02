@@ -57,7 +57,7 @@ jq -e -s -f agent-improvement/scripts/measure-flow.jq evidence.json
 ```
 
 The path above is relative to this skill repository; after installation resolve `scripts/measure-flow.jq`
-relative to the installed skill. `-s` is required: the filter rejects zero or multiple input documents.
+relative to the installed skill. `jq` must preserve decimal number literals (standard jq 1.7 or newer); the filter checks that capability and refuses a lossy backend. `-s` is required: the filter rejects zero or multiple input documents.
 A malformed input fails without a result; record UNKNOWN and repair the evidence, never substitute
 zero. A valid but incomplete input preserves partial observations and exposes the incomplete flags.
 The consumer must verify source identity, scope, timestamps and join completeness before assigning
@@ -68,7 +68,7 @@ Input version 1 is a JSON object:
 | Field | Contract |
 |---|---|
 | `version` | `1`; schema changes require a new version and preserved old series. |
-| `run` | Nonblank `id`, `instance`, `evidence`, and `scoringVersion`; `role` is `engineer` or `improver`; integer Unix-second `startedAt` and `endedAt`. Only completed runs. `scoringVersion` identifies the deployment's classification/measurement rubric, separately from the JSON schema version. Compare only compatible scoring definitions. |
+| `run` | Nonblank `id`, `instance`, `evidence`, and `scoringVersion`; `role` is `engineer` or `improver`; finite integer Unix-second `startedAt` and `endedAt` between 0 and 9007199254740991, inclusive (the exact JSON numeric range). Only completed runs. `scoringVersion` identifies the deployment's classification/measurement rubric, separately from the JSON schema version. Compare only compatible scoring definitions. |
 | `artifactsComplete` | Boolean: every artifact attributable to this run was enumerated. |
 | `artifacts` | Array of `{id, class, evidence}`; class is `easy`, `substantive`, or `unknown`. IDs identify artifacts, not observations. Repeated IDs may have different evidence pointers but must agree on class. |
 | `selectionsComplete` | Boolean: every selection in this run was enumerated. False forbids a whole-run selection verdict even if individual observed selections are measurable. |

@@ -1,7 +1,7 @@
 # Read one completed run with: jq -e -s -f measure-flow.jq evidence.json
 # This computes descriptive metrics; evidence authenticity and policy stay with the consumer.
 def text: type == "string" and test("\\S");
-def timestamp: type == "number" and . >= 0 and floor == .;
+def timestamp: type == "number" and isfinite and . >= 0 and . <= 9007199254740991 and floor == .;
 def classification: . == "easy" or . == "substantive" or . == "unknown";
 def nullable_boolean: type == "boolean" or . == null;
 def unique_ids: length == (map(.id) | unique | length);
@@ -63,7 +63,10 @@ def selection_metric:
          end
      end);
 
-if length != 1 then error("expected exactly one completed-run evidence document")
+# Refuse lossy numeric backends before a rounded input can become a measurement.
+if (9007199254740991.1 > 9007199254740991) then .
+else error("flow measurement requires decimal-preserving jq (1.7 or newer)") end
+| if length != 1 then error("expected exactly one completed-run evidence document")
 else .[0]
   | if valid then
       {version: 1, run, artifactMix: artifact_mix, selectionsComplete,

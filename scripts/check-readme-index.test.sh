@@ -183,6 +183,40 @@ make_root "$c" "beta" <<'EOF'
 EOF
 fail_case "check 5: Upstream URL tail != skill name" "$c"
 
+
+# A producer can emit a valid subset and still fail. Its status must be retained.
+for output in empty partial; do
+  c="$tmp/find-$output"
+  cp -R "$good" "$c"
+  mkdir -p "$c/orphan" "$c/bin"
+  printf '# omitted skill\n' > "$c/orphan/SKILL.md"
+  cat > "$c/bin/find" <<'STUB'
+#!/usr/bin/env bash
+if [ "$FIND_OUTPUT" = partial ]; then
+  case " $* " in *' -print0 '*) printf './beta/SKILL.md\0' ;; *) printf './beta/SKILL.md\n' ;; esac
+fi
+exit 7
+STUB
+  chmod +x "$c/bin/find"
+  if PATH="$c/bin:$PATH" FIND_OUTPUT="$output" run_guard "$c" > "$tmp/find-out" 2>&1; then
+    printf '  ❌ failed %s inventory reported success\n' "$output"; fail=1
+  elif grep -q 'inventory' "$tmp/find-out"; then
+    printf '  ✅ failed %s inventory refused\n' "$output"
+  else
+    printf '  ❌ failed inventory lacked an explicit diagnostic\n'; fail=1
+  fi
+done
+
+
+for unusual in 'odd skill' 'literal\name' $'beta\n'; do
+  c="$tmp/unusual-path"
+  cp -R "$good" "$c"
+  mkdir -p "$c/$unusual"
+  printf '# orphan\n' > "$c/$unusual/SKILL.md"
+  fail_case 'complete NUL inventory detects an unindexed unusual path' "$c"
+  rm -rf "$c"
+done
+
 if [ "$fail" -ne 0 ]; then
   printf '❌ check-readme-index self-test FAILED\n' >&2
   exit 1

@@ -100,4 +100,21 @@ reject 'future candidate creation time' '.selections[0].candidates[0].createdAt=
 reject 'unfinished run' '.run.endedAt=null'
 reject 'unknown schema version' '.version=2'
 reject 'more than one input document' '., .'
+
+reject 'fractional timestamp near exact upper bound' '.run.endedAt=9007199254740991.1'
+reject 'saturated run end timestamp' '.run.endedAt=1e999'
+reject 'inexact run end timestamp' '.run.endedAt=9007199254740992'
+reject 'inexact run start timestamp' '.run.startedAt=9007199254740992 | .run.endedAt=9007199254740992 | .selections=[]'
+reject 'inexact selection timestamp' '.run.endedAt=9007199254740992 | .selections[0].at=9007199254740992'
+reject 'inexact candidate timestamp' '.run.endedAt=9007199254740992 | .selections[0].at=9007199254740992 | .selections[0].candidates[0].createdAt=9007199254740992'
+check 'exact timestamp upper bound remains supported' '.run.endedAt=9007199254740991' '.run.endedAt==9007199254740991'
+
+# Ablate only the decimal-preservation capability probe, modeling a lossy backend.
+sed 's/9007199254740991\.1 > 9007199254740991/9007199254740991 > 9007199254740991/' "$calculator" > "$work/lossy.jq"
+if jq -e -s -f "$work/lossy.jq" "$work/base.json" > "$work/output.json" 2> "$work/error" || [ -s "$work/output.json" ]; then
+  printf 'FAIL: a lossy numeric backend produced a scorecard\n' >&2; exit 1
+fi
+grep -q 'decimal-preserving jq' "$work/error"
+passed=$((passed + 1))
+
 printf 'agent improvement flow: PASS (%s cases)\n' "$passed"

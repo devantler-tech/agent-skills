@@ -158,7 +158,7 @@ validate-spec + lint-scripts). `actionlint` and `check-upstream-skills.sh` are *
 `actionlint` is a local-only convenience, and the upstream-resolution check runs as the standalone
 scheduled **`🔗 Upstream skill targets`** workflow (weekly + on index-touch PRs) so a third-party
 outage never gates a contributor PR — it downgrades transport errors to warnings after bounded retries.
-HTTP 404 fails as drift; a successful response must identify the exact requested `SKILL.md` file or
+HTTP 404 fails as drift; permanent request and authentication errors fail verification without retry. A successful response must identify the exact requested `SKILL.md` file or
 verification fails separately. Invalid payloads never count as healthy or transient.
 (Its **offline self-test**, `check-upstream-skills.test.sh`, *is* in `lint-scripts` — it stubs
 `gh`, so it pins the guard's parsing/discrimination logic with no network.) Never weaken a check to
