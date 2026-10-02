@@ -53,8 +53,14 @@ fi
 # 3. Every in-house skill MUST appear in the index. (Derive the directory with
 # `dirname` rather than `find -printf`, which is GNU-only — this keeps the check
 # working when run locally on macOS/BSD as well as in CI.)
+inventory=$(mktemp) || exit 1
+trap 'rm -f "$inventory"' EXIT
+if ! find . -mindepth 2 -maxdepth 2 -name SKILL.md -print0 > "$inventory"; then
+  echo '::error::local skill inventory failed; refusing incomplete index validation.' >&2
+  exit 1
+fi
 missing=0
-while IFS= read -r skill_md; do
+while IFS= read -r -d '' skill_md; do
   dir=$(dirname "$skill_md")
   dir=${dir#./}
   [ -n "$dir" ] || continue
@@ -62,7 +68,7 @@ while IFS= read -r skill_md; do
     echo "::error::in-house skill '$dir' is missing from the README index."
     missing=1
   fi
-done < <(find . -mindepth 2 -maxdepth 2 -name SKILL.md)
+done < "$inventory"
 
 # 4. Every in-house index entry must resolve to a real on-disk skill directory
 # (index -> disk; the reverse of check 3). Upstream pointers name other repos and

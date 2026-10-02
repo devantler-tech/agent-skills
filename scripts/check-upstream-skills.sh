@@ -71,6 +71,10 @@ resolve_target() {
     if printf '%s' "$err" | grep -q 'HTTP 404'; then
       return 1
     fi
+    # Permanent request/authentication errors cannot become successful warning-only checks.
+    if printf '%s' "$err" | grep -Eq 'HTTP (400|401|405|410|422)'; then
+      return 3
+    fi
     # Anything else (network, 5xx, secondary-rate-limit/403) may be transient —
     # back off and retry before deciding.
     "$UPSTREAM_RETRY_SLEEP" $((attempt * 2))
@@ -109,7 +113,7 @@ while read -r source ref path _skill; do
         drift=1
         ;;
       3)
-        echo "::error::could not establish upstream skill file '$owner/$repo $path/SKILL.md' (ref $ref): successful API response does not identify the expected file."
+        echo "::error::could not establish upstream skill file '$owner/$repo $path/SKILL.md' (ref $ref): a permanent API error or successful response without the expected file prevented verification."
         invalid=$((invalid + 1))
         ;;
       *)

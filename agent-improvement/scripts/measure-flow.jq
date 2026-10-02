@@ -1,7 +1,7 @@
 # Read one completed run with: jq -e -s -f measure-flow.jq evidence.json
 # This computes descriptive metrics; evidence authenticity and policy stay with the consumer.
 def text: type == "string" and test("\\S");
-def timestamp: type == "number" and . >= 0 and floor == .;
+def timestamp: type == "number" and isfinite and . >= 0 and . <= 9007199254740991 and floor == .;
 def classification: . == "easy" or . == "substantive" or . == "unknown";
 def nullable_boolean: type == "boolean" or . == null;
 def unique_ids: length == (map(.id) | unique | length);

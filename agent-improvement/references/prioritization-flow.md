@@ -68,7 +68,7 @@ Input version 1 is a JSON object:
 | Field | Contract |
 |---|---|
 | `version` | `1`; schema changes require a new version and preserved old series. |
-| `run` | Nonblank `id`, `instance`, `evidence`, and `scoringVersion`; `role` is `engineer` or `improver`; integer Unix-second `startedAt` and `endedAt`. Only completed runs. `scoringVersion` identifies the deployment's classification/measurement rubric, separately from the JSON schema version. Compare only compatible scoring definitions. |
+| `run` | Nonblank `id`, `instance`, `evidence`, and `scoringVersion`; `role` is `engineer` or `improver`; finite integer Unix-second `startedAt` and `endedAt` between 0 and 9007199254740991, inclusive (the exact JSON numeric range). Only completed runs. `scoringVersion` identifies the deployment's classification/measurement rubric, separately from the JSON schema version. Compare only compatible scoring definitions. |
 | `artifactsComplete` | Boolean: every artifact attributable to this run was enumerated. |
 | `artifacts` | Array of `{id, class, evidence}`; class is `easy`, `substantive`, or `unknown`. IDs identify artifacts, not observations. Repeated IDs may have different evidence pointers but must agree on class. |
 | `selectionsComplete` | Boolean: every selection in this run was enumerated. False forbids a whole-run selection verdict even if individual observed selections are measurable. |

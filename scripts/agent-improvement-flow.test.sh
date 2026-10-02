@@ -100,4 +100,12 @@ reject 'future candidate creation time' '.selections[0].candidates[0].createdAt=
 reject 'unfinished run' '.run.endedAt=null'
 reject 'unknown schema version' '.version=2'
 reject 'more than one input document' '., .'
+
+reject 'saturated run end timestamp' '.run.endedAt=1e999'
+reject 'inexact run end timestamp' '.run.endedAt=9007199254740992'
+reject 'inexact run start timestamp' '.run.startedAt=9007199254740992 | .run.endedAt=9007199254740992 | .selections=[]'
+reject 'inexact selection timestamp' '.run.endedAt=9007199254740992 | .selections[0].at=9007199254740992'
+reject 'inexact candidate timestamp' '.run.endedAt=9007199254740992 | .selections[0].at=9007199254740992 | .selections[0].candidates[0].createdAt=9007199254740992'
+check 'exact timestamp upper bound remains supported' '.run.endedAt=9007199254740991' '.run.endedAt==9007199254740991'
+
 printf 'agent improvement flow: PASS (%s cases)\n' "$passed"
