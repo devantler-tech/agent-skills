@@ -117,6 +117,7 @@ shellcheck scripts/*.sh
                             # pre-install collision rejection,
                             # raw HTML exclusion, fence syntax, and partial-failure reporting
 ./scripts/install-source.test.sh # source-ref pins and complete resolution before installation
+bash scripts/catalogue-boundaries.test.sh # documented option grammar and exact source-path selection
 ./scripts/check-upstream-skills.test.sh   # self-test of the upstream guard (also in the lint-scripts
                                           # gate): runs the REAL script against fixtures with an offline
                                           # `gh` stub (no network) — pins ## Skills scoping, Upstream

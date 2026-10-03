@@ -177,10 +177,10 @@ echo
 fail=0
 for agent in "${agents[@]}"; do
   for i in "${!entries[@]}"; do
-    read -r repo _ _ skill <<<"${entries[$i]}"
+    read -r repo _ path skill <<<"${entries[$i]}"
     # Capture output so the success path stays quiet but a failure can surface
     # the actual error (auth, network, missing skill, …) instead of swallowing it.
-    if out=$(gh skill install "$repo" "$skill" --pin "${pins[$i]}" \
+    if out=$(gh skill install "$repo" "$path/SKILL.md" --pin "${pins[$i]}" \
         --agent "$agent" --scope user --force --allow-hidden-dirs 2>&1); then
       echo "  ok   [$agent] $repo $skill"
     else

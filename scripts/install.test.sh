@@ -239,7 +239,7 @@ check 'conflicting modes never call gh' test ! -s "$GH_CALLS"
 
 run_install "$alias_root" codex
 check 'repository casing aliases install successfully' test "$rc" -eq 0
-printf '<skill><--help>\n<api><--hostname><github.com><repos/Fixture/One/commits/main>\n<skill><install><Fixture/One><alpha><--pin><1111111111111111111111111111111111111111><--agent><codex><--scope><user><--force><--allow-hidden-dirs>\n' > "$tmp/expected"
+printf '<skill><--help>\n<api><--hostname><github.com><repos/Fixture/One/commits/main>\n<skill><install><Fixture/One><alpha/SKILL.md><--pin><1111111111111111111111111111111111111111><--agent><codex><--scope><user><--force><--allow-hidden-dirs>\n' > "$tmp/expected"
 check 'repository casing aliases install only once' diff -u "$tmp/expected" "$GH_CALLS"
 
 # Different upstreams with the same destination name must be rejected before
@@ -266,8 +266,8 @@ expected_calls() {
   printf '<api><--hostname><github.com><repos/devantler-tech/agent-skills/commits/main>\n<api><--hostname><github.com><repos/fluxcd/agent-skills/commits/main>\n'
   local agent
   for agent in "$@"; do
-    printf '<skill><install><devantler-tech/agent-skills><beta><--pin><1111111111111111111111111111111111111111><--agent><%s><--scope><user><--force><--allow-hidden-dirs>\n' "$agent"
-    printf '<skill><install><fluxcd/agent-skills><alpha><--pin><1111111111111111111111111111111111111111><--agent><%s><--scope><user><--force><--allow-hidden-dirs>\n' "$agent"
+    printf '<skill><install><devantler-tech/agent-skills><beta/SKILL.md><--pin><1111111111111111111111111111111111111111><--agent><%s><--scope><user><--force><--allow-hidden-dirs>\n' "$agent"
+    printf '<skill><install><fluxcd/agent-skills><skills/alpha/SKILL.md><--pin><1111111111111111111111111111111111111111><--agent><%s><--scope><user><--force><--allow-hidden-dirs>\n' "$agent"
   done
 }
 expected_calls github-copilot claude-code > "$tmp/expected"
@@ -300,7 +300,7 @@ check 'environment options are not agents' test "$rc" -eq 2
 check 'invalid environment never calls gh' test ! -s "$GH_CALLS"
 
 expected_calls codex cursor > "$tmp/expected"
-GH_FAIL_SKILL=beta run_install "$two" codex cursor
+GH_FAIL_SKILL=beta/SKILL.md run_install "$two" codex cursor
 check 'partial installation returns failure' test "$rc" -eq 1
 check 'partial failure still attempts every install' diff -u "$tmp/expected" "$GH_CALLS"
 check 'original failure diagnostic is preserved' grep -q 'fixture download failed' "$tmp/stderr"
