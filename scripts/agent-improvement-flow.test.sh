@@ -102,6 +102,7 @@ reject 'unknown schema version' '.version=2'
 reject 'more than one input document' '., .'
 
 reject 'fractional timestamp near exact upper bound' '.run.endedAt=9007199254740991.1'
+reject 'high-precision fractional timestamp' '.run.endedAt=110.000000000000000001'
 reject 'saturated run end timestamp' '.run.endedAt=1e999'
 reject 'inexact run end timestamp' '.run.endedAt=9007199254740992'
 reject 'inexact run start timestamp' '.run.startedAt=9007199254740992 | .run.endedAt=9007199254740992 | .selections=[]'

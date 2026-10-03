@@ -1,7 +1,22 @@
 # Read one completed run with: jq -e -s -f measure-flow.jq evidence.json
 # This computes descriptive metrics; evidence authenticity and policy stay with the consumer.
 def text: type == "string" and test("\\S");
-def timestamp: type == "number" and isfinite and . >= 0 and . <= 9007199254740991 and floor == .;
+def decimal_integer:
+  tostring
+  | capture("^(?<whole>[0-9]+)(?:\\.(?<fraction>[0-9]+))?(?:[eE](?<exponent>[+-]?[0-9]+))?$") as $parts
+  | ($parts.fraction // "") as $fraction
+  | ($parts.whole + $fraction) as $digits
+  | if ($digits | test("^0+$")) then true
+    else (($parts.exponent // "0") | tonumber) as $exponent
+      | (($fraction | length) - $exponent) as $scale
+      | if $scale <= 0 then true
+        elif $scale > ($digits | length) then false
+        else (($digits | length) - $scale) as $integer_length
+          | ($digits[$integer_length:] | test("^0+$"))
+        end
+    end;
+def timestamp:
+  type == "number" and isfinite and . >= 0 and . <= 9007199254740991 and decimal_integer;
 def classification: . == "easy" or . == "substantive" or . == "unknown";
 def nullable_boolean: type == "boolean" or . == null;
 def unique_ids: length == (map(.id) | unique | length);
