@@ -83,16 +83,26 @@ function table_separator_columns(s, cells, n, i) {
   for (i=1; i<=n; i++) if (trim(cells[i]) !~ /^:?-+:?$/) return 0
   return n
 }
-function paragraph_line(s, previous, compact) {
-  if (s ~ /^[ \t]*$/ || s ~ /^ ? ? ?(#{1,6}([ \t]|$)|>)/) return 0
+function thematic_line(s, compact) {
   compact=s; gsub(/[ \t]/, "", compact)
-  if (compact ~ /^(-{3,}|\*{3,}|_{3,})$/ && indent_width(s) <= 3) return 0
+  return compact ~ /^(-{3,}|\*{3,}|_{3,})$/ && indent_width(s) <= 3
+}
+function fence_start(s, stripped, mark, width) {
+  if (indent_width(s) > 3) return 0
+  stripped=s; sub(/^ */, "", stripped); mark=substr(stripped,1,1)
+  if (mark != "`" && mark != "~") return 0
+  width=0; while (substr(stripped,width+1,1) == mark) width++
+  return width >= 3 && (mark == "~" || index(substr(stripped,width+1),"`") == 0)
+}
+function paragraph_line(s, previous) {
+  if (s ~ /^[ \t]*$/ || s ~ /^ ? ? ?(#{1,6}([ \t]|$)|>)/) return 0
+  if (thematic_line(s)) return 0
   if (previous && s ~ /^ ? ? ?(=+|-+)[ \t]*$/) return 0
   if (!previous && indent_width(s) >= 4) return 0
   if (s ~ /^ ? ? ?[-+*]([ \t]|$)/ &&
       (!previous || s ~ /^ ? ? ?[-+*][ \t]+[^ \t]/)) return 0
   if (s ~ /^ ? ? ?[0-9]{1,9}[.)]([ \t]|$)/ &&
-      (!previous || s ~ /^ ? ? ?1[.)][ \t]+[^ \t]/)) return 0
+      (!previous || s ~ /^ ? ? ?0*1[.)][ \t]+[^ \t]/)) return 0
   return 1
 }
 # Reference definitions are block content, including a following destination
@@ -157,6 +167,9 @@ function reference_prefix(s, i, start, ch, label) {
 function reference_line(s, result, tail, prefix) {
   if (reference_title_end) {
     if (s ~ /^[ \t]*$/) { refuse("unterminated reference title"); reference_title_end=""; return 0 }
+    if (!paragraph_line(s,1) || html_start(s) || fence_start(s)) {
+      reference_title_end=""; return 0
+    }
     result=title_close(s,reference_title_end)
     if (result < 0) refuse("invalid reference title ending")
     if (result) reference_title_end=""
@@ -252,6 +265,7 @@ function reference_line(s, result, tail, prefix) {
   }
   if (fence) next
   # Hidden Markdown comments never describe installable catalogue entries.
+  paragraph_before_comments=paragraph; nonblank_before_comments=($0 !~ /^[ \t]*$/)
   if (!fence) {
     visible=""; remaining=$0
     while (length(remaining)) {
@@ -269,6 +283,7 @@ function reference_line(s, result, tail, prefix) {
     $0=visible
   }
   list_item=match($0,/^ ? ? ?([-+*]|[0-9]{1,9}[.)])[ \t]+[^ \t]/)
+  if (list_item && (thematic_line($0) || (paragraph && paragraph_line($0,1)))) list_item=0
   if (list_item) list_indent=column_width(substr($0,1,RLENGTH-1))
   else if (!paragraph && match($0,/^ ? ? ?([-+*]|[0-9]{1,9}[.)])[ \t]*$/)) {
     list_item=1; empty_marker=$0; sub(/[ \t]+$/, "", empty_marker)
@@ -277,6 +292,7 @@ function reference_line(s, result, tail, prefix) {
   if (table && paragraph_line($0, 0)) paragraph=0
   else if (pipe_columns && table_separator_columns($0) == pipe_columns) { table=1; paragraph=0 }
   else { table=0; paragraph=paragraph_line($0, paragraph) }
+  if (paragraph_before_comments && nonblank_before_comments && $0 ~ /^[ \t]*$/) paragraph=1
   pipe_columns=(!table && paragraph ? pipe_header_columns($0) : 0)
   if (list_indent && !list_item && !paragraph && $0 !~ /^[ \t]*$/ &&
       indent_width($0) < list_indent) list_indent=0

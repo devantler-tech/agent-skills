@@ -826,6 +826,92 @@ Ordinary paragraph text
 last"
 EOF
 expect_list 'ordinary prose ends the consecutive-definition prefix' "$tmp/reference-followed-by-prose" $'fixture/one alpha\nfixture/one beta'
+for marker in '2.' '02.' '0)' '123)'; do
+  html_root="$tmp/noninterrupting-ordered-$RANDOM"
+  make_root "$html_root" <<EOF
+| \`alpha\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/alpha) | \`gh skill install fixture/one alpha\` |
+
+An actual paragraph
+$marker explanatory text
+<example-widget>
+### More entries
+| Skill | Upstream | Install |
+| --- | --- | --- |
+| \`beta\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/beta) | \`gh skill install fixture/one beta\` |
+EOF
+  expect_list 'noninterrupting ordered markers retain paragraph context' "$html_root" $'fixture/one alpha\nfixture/one beta'
+done
+make_root "$tmp/zero-padded-interrupting-marker" <<'EOF'
+| `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/alpha) | `gh skill install fixture/one alpha` |
+
+An actual paragraph
+01. explanatory text
+<example-widget>
+| `hidden` | [`fixture/one`](https://github.com/fixture/one/tree/main/hidden) | `gh skill install fixture/one hidden` |
+</example-widget>
+
+| `beta` | [`fixture/one`](https://github.com/fixture/one/tree/main/beta) | `gh skill install fixture/one beta` |
+EOF
+expect_list 'a zero-padded start of one still interrupts a paragraph' "$tmp/zero-padded-interrupting-marker" $'fixture/one alpha\nfixture/one beta'
+make_root "$tmp/thematic-break-not-list" <<'EOF'
+| `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/alpha) | `gh skill install fixture/one alpha` |
+
+- - -
+An actual paragraph
+<example-widget>
+### More entries
+| Skill | Upstream | Install |
+| --- | --- | --- |
+| `beta` | [`fixture/one`](https://github.com/fixture/one/tree/main/beta) | `gh skill install fixture/one beta` |
+EOF
+expect_list 'a thematic break cannot create a stale list container' "$tmp/thematic-break-not-list" $'fixture/one alpha\nfixture/one beta'
+for block in '### More entries' '***' '> quoted paragraph' '- new item' '1. new item' '<pre>
+raw example
+</pre>' '<!-- note -->' '```markdown
+raw example
+```' '~~~markdown
+raw example
+~~~'; do
+  html_root="$tmp/interrupted-reference-title-$RANDOM"
+  make_root "$html_root" <<EOF
+| \`alpha\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/alpha) | \`gh skill install fixture/one alpha\` |
+
+[example]: /url "title
+$block
+### Visible entries
+| Skill | Upstream | Install |
+| --- | --- | --- |
+| \`beta\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/beta) | \`gh skill install fixture/one beta\` |
+end"
+EOF
+  expect_list 'interrupting blocks end a would-be multiline title' "$html_root" $'fixture/one alpha\nfixture/one beta'
+done
+make_root "$tmp/invalid-fence-in-title" <<'EOF'
+| `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/alpha) | `gh skill install fixture/one alpha` |
+
+[example]: /url "first
+```bad`info
+| `hidden` | [`fixture/one`](https://github.com/fixture/one/tree/main/hidden) | `gh skill install fixture/one hidden` |
+last"
+
+| `beta` | [`fixture/one`](https://github.com/fixture/one/tree/main/beta) | `gh skill install fixture/one beta` |
+EOF
+expect_list 'invalid fence info does not interrupt a reference title' "$tmp/invalid-fence-in-title" $'fixture/one alpha\nfixture/one beta'
+for indentation in '    ' $'\t' $' \t'; do
+  html_root="$tmp/inline-comment-paragraph-$RANDOM"
+  make_root "$html_root" <<EOF
+| \`alpha\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/alpha) | \`gh skill install fixture/one alpha\` |
+
+An actual paragraph
+${indentation}<!-- comment -->
+<example-widget>
+### More entries
+| Skill | Upstream | Install |
+| --- | --- | --- |
+| \`beta\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/beta) | \`gh skill install fixture/one beta\` |
+EOF
+  expect_list 'stripped inline-only comments retain paragraph context' "$html_root" $'fixture/one alpha\nfixture/one beta'
+done
 for marker in '```' '~~~'; do
   for item in '- explanatory item' '-'; do
     html_root="$tmp/list-owned-fence-$RANDOM"
