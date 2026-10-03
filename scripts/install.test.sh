@@ -677,7 +677,9 @@ make_root "$tmp/unclosed-reference-title" <<'EOF'
 [example]: /url "unclosed
 | `beta` | [`fixture/one`](https://github.com/fixture/one/tree/main/beta) | `gh skill install fixture/one beta` |
 EOF
-expect_fail 'unterminated reference title cannot produce a partial catalogue' "$tmp/unclosed-reference-title" --list
+run_install "$tmp/unclosed-reference-title" --list
+check 'unterminated reference title fails loudly' test "$rc" -ne 0
+check 'unterminated reference title emits no partial catalogue' test ! -s "$tmp/stdout"
 for opening in '<!-- note -->' '<!-- note
 continued -->'; do
   html_root="$tmp/block-comment-suffix-$RANDOM"
