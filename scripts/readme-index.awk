@@ -4,6 +4,8 @@ function trim(s) { sub(/^[ \t]+/, "", s); sub(/[ \t]+$/, "", s); return s }
 function plain(s) { if (s ~ /^`.*`$/) return substr(s, 2, length(s)-2); return s }
 function identifier(s) { return s ~ /^[A-Za-z0-9][A-Za-z0-9_.-]*$/ }
 function repository(s, a) { return split(s, a, "/") == 2 && identifier(a[1]) && identifier(a[2]) }
+# Validate the complete literal option grammar and bind any explicit pin to the
+# advertised source ref, without executing or forwarding catalogue arguments.
 function options_ok(arg, words, ref, i, flag, value, equal, seen) {
   for (i=6; i<=words; i++) {
     flag=arg[i]; value=""; equal=index(flag,"=")
@@ -27,6 +29,8 @@ function options_ok(arg, words, ref, i, flag, value, equal, seen) {
 }
 function refuse(reason) { print "error: README index line " NR ": " reason > "/dev/stderr"; bad=1 }
 function path_ok(s, a, n, i) {
+  # Paths are CLI operands; an option-leading path cannot retain that meaning.
+  if (s ~ /^-/) return 0
   n=split(s, a, "/")
   for (i=1; i<=n; i++) if (a[i] !~ /^[A-Za-z0-9_.-]+$/ || a[i] == "." || a[i] == "..") return 0
   return n > 0

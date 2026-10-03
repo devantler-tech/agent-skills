@@ -36,6 +36,13 @@ options conflicting-equals-pin reject ' --pin=v2.0.0'
 options repeated-pin reject ' --pin main --pin main'
 options local-source-conflict reject ' --from-local'
 options selection-conflict reject ' --all'
+catalogue ''
+sed 's@nested/alpha@-prefix/alpha@g' "$work/root/README.md" > "$work/leading-path"
+mv "$work/leading-path" "$work/root/README.md"
+if bash "$work/root/scripts/install.sh" --list > "$work/out" 2> "$work/err"; then
+  printf 'FAIL option-leading source path\n'; fail=$((fail+1))
+elif [ ! -s "$work/out" ]; then printf 'PASS option-leading source path\n'
+else printf 'FAIL partial output for option-leading source path\n'; fail=$((fail+1)); fi
 # A name-only call intentionally substitutes another discovered alpha. The exact
 # catalogue path returns the advertised bytes and retains the frozen source commit.
 cat > "$work/bin/gh" <<'STUB'
