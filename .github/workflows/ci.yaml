@@ -223,6 +223,9 @@ jobs:
         # gh stub and asserts both the exit status and whether a publish actually happened.
         run: ./scripts/publish-skills-release.test.sh
 
+      - name: 🧪 Verify release publisher argument boundaries
+        run: bash ./scripts/publish-arguments.test.sh
+
       - name: 🧪 Verify human accountability brief checks and rendering
         run: bash ./scripts/product-engineering-accountability.test.sh
 
