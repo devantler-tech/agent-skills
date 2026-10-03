@@ -66,6 +66,9 @@ check 'very large finite endpoints avoid arithmetic overflow' ADOPT '
   .plan.measures[0] |= (.direction="higher" | .minImprovement=1e308 | .protected=false)
   | .observations[].values[0] |= (.baseline={lower:-1e308,upper:-1e308} | .candidate={lower:1e308,upper:1e308})'
 invalid 'decimal exponent exceeds explicit arithmetic bound' '.observations[].values[0].candidate={lower:1e-1025,upper:1e-1025}'
+grep -Fq 'decimal inputs exceed 1024-digit/exponent bound' "$work/error" || {
+  printf 'FAIL bound diagnostic missing\n'; cat "$work/error"; exit 1;
+}
 check 'faster but less reliable' REJECT '.observations[].values[1].candidate = {lower:980000,upper:990000}'
 check 'floor breach survives unmeasured baseline' REJECT '.observations[0].values[1] |= (.baseline = null | .candidate = {lower:980000,upper:990000})' 'protected floor breached: reliability'
 check 'lower-is-better floor survives unmeasured baseline' REJECT '.observations[0].values[0] |= (.baseline = null | .candidate = {lower:130,upper:140})' 'protected floor breached: latency'
