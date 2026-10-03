@@ -189,6 +189,11 @@ verify_checkout() {
       actual_blob=$(printf '%s' "$link" | git --no-replace-objects hash-object --stdin) || exit 1
     else
       [ -f "./$path" ] && [ ! -L "./$path" ] || exit 1
+      if { [ "$mode" = 100755 ] && [ ! -x "./$path" ]; } ||
+         { [ "$mode" = 100644 ] && [ -x "./$path" ]; }; then
+        printf 'publish-skills-release: tracked executable permissions differ from the release commit; refusing publication.\n' >&2
+        exit 1
+      fi
       actual_blob=$(git --no-replace-objects hash-object --no-filters -- "./$path") || exit 1
     fi
     [ "$actual_blob" = "$expected_blob" ] || {

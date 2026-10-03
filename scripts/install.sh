@@ -128,8 +128,16 @@ fi
 # CLI's exit status and require exactly one complete commit response: partial
 # output from a failed request and concatenated responses are not provenance.
 pins=()
+sources=()
+source_pins=()
 for entry in "${entries[@]}"; do
   read -r repo ref _ skill <<<"$entry"
+  source="$(printf '%s' "$repo" | LC_ALL=C tr '[:upper:]' '[:lower:]')/$ref"
+  pin=''
+  for i in "${!sources[@]}"; do
+    if [ "${sources[$i]}" = "$source" ]; then pin=${source_pins[$i]}; break; fi
+  done
+  if [ -n "$pin" ]; then pins+=("$pin"); continue; fi
   if ! response=$(gh api --hostname github.com "repos/$repo/commits/$ref"); then
     echo "error: could not resolve $repo at $ref; no skills installed." >&2
     exit 1
@@ -143,6 +151,8 @@ for entry in "${entries[@]}"; do
     exit 1
   fi
   pins+=("$pin")
+  sources+=("$source")
+  source_pins+=("$pin")
 done
 
 echo "Installing ${#entries[@]} skill(s) for agent(s): ${agents[*]} (scope=user)"

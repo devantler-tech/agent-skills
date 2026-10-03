@@ -85,6 +85,8 @@ Each installed skill name must identify one source repository. If the catalogue
 lists the same name from different repositories, installation and `--list` exit 1
 and name both sources before calling GitHub CLI. Repeated entries for the same
 repository and skill, including repository casing aliases, are installed once.
+Each repository and source ref resolves once before installation. Skills sharing that source use
+the same frozen commit even if its branch moves during the run; different refs remain separate.
 
 Positional agent names override `AGENTS`. An unset or empty `AGENTS` uses the two default agents;
 otherwise, spaces, tabs, and newlines separate names without expanding wildcard characters into

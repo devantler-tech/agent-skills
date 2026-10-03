@@ -59,5 +59,34 @@ for mode in partial multiple malformed; do
   label="$mode source response fails verification"; check test "$rc" -ne 0
   label="$mode source response leaves all installs untouched"; check test ! -s "$INSTALL_CALLS"
 done
+# One catalogue source must remain one snapshot even if its branch moves while
+# other skills are resolving. The actual installer must bind all siblings together.
+cat >> "$work/root/README.md" <<'EOF'
+| `gamma` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/main/gamma) | `gh skill install devantler-tech/agent-skills gamma` |
+EOF
+cat > "$work/bin/gh" <<'EOF'
+#!/usr/bin/env bash
+set -eu
+if [[ "$1 $2" == 'skill --help' ]]; then exit 0; fi
+if [[ "$1" == api ]]; then
+  printf '%s\n' "$*" >> "$CALL_ORDER"
+  case "$*" in
+    *agent-skills/commits/main*)
+      if grep -q agent-skills "$INSTALL_CALLS"; then exit 1; fi
+      count=$(grep -c agent-skills "$CALL_ORDER")
+      if [[ $count == 1 ]]; then printf '{"sha":"%s"}\n' '1111111111111111111111111111111111111111'
+      else printf '{"sha":"%s"}\n' '3333333333333333333333333333333333333333'; fi ;;
+    *agent-plugins/commits/v1.0.0*) printf '{"sha":"%s"}\n' '2222222222222222222222222222222222222222' ;;
+    *) exit 1 ;;
+  esac
+  exit 0
+fi
+[[ "$1 $2" == 'skill install' ]] || exit 1
+printf '<%s>' "$@" >> "$INSTALL_CALLS"; printf '\n' >> "$INSTALL_CALLS"
+EOF
+run good
+label='moving catalogue branch still installs a consistent snapshot'; check test "$rc" -eq 0
+label='each repository and ref is resolved once'; check test "$(grep -c agent-skills "$CALL_ORDER")" -eq 1
+label='all sibling skills use the same frozen commit'; check test "$(grep -c '<--pin><1111111111111111111111111111111111111111>' "$INSTALL_CALLS")" -eq 2
 printf 'source-install regressions: %s failure(s)\n' "$fail"
 test "$fail" -eq 0

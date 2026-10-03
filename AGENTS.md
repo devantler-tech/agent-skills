@@ -178,7 +178,8 @@ github.com even when `GH_HOST` names another host. Hidden index flags (`assume-u
 from proving which files validation will read. Ignored files are also refused because the skill CLI
 can discover them independently of Git tracking. Tracked disk bytes must match the expected commit's
 blobs directly, including symlink targets; Git filters and newline conversion cannot substitute
-different content for validation. The script runs
+different content for validation. Executable permissions on regular tracked files must also match
+their committed mode, even when Git's file-mode tracking is disabled. The script runs
 `gh skill publish --dry-run`, reserves the tag using the create-only refs API, verifies its commit,
 then creates the release with an explicit full commit target and `--verify-tag`. Both new
 releases and completed reruns must pass remote tag-commit and matching non-draft release checks.
