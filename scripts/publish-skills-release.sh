@@ -29,6 +29,9 @@ Usage: publish-skills-release.sh --tag <tag> [--repo <owner/repo>] [--expected-c
   --repo  the github.com repository to publish; defaults to $GITHUB_REPOSITORY
   --expected-commit  full release commit SHA; defaults to $GITHUB_SHA
 
+Each selector may be supplied once. Help must be used alone.
+Repository selectors must be one github.com owner/repository pair.
+
 Exit codes:
   0  the release is published (by this run, or already)
   1  the publish failed, or its precondition could not be established
@@ -47,27 +50,39 @@ die_usage() {
 tag=''
 repo="${GITHUB_REPOSITORY:-}"
 expected_commit="${GITHUB_SHA:-}"
+tag_seen=false repo_seen=false commit_seen=false
+
+case "${1:-}" in
+  -h|--help)
+    [ "$#" -eq 1 ] || die_usage 'help must be used alone'
+    usage; exit 0 ;;
+esac
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --tag)
-      [ "$#" -ge 2 ] || die_usage "--tag needs a value"
+      [ "$tag_seen" = false ] || die_usage '--tag must be supplied once'
+      if [ "$#" -lt 2 ] || [ -z "$2" ] || [[ "$2" == -* ]]; then die_usage '--tag needs a value'; fi
+      tag_seen=true
       tag="$2"
       shift 2
       ;;
     --repo)
-      [ "$#" -ge 2 ] || die_usage "--repo needs a value"
+      [ "$repo_seen" = false ] || die_usage '--repo must be supplied once'
+      if [ "$#" -lt 2 ] || [ -z "$2" ] || [[ "$2" == -* ]]; then die_usage '--repo needs a value'; fi
+      repo_seen=true
       repo="$2"
       shift 2
       ;;
     --expected-commit)
-      [ "$#" -ge 2 ] || die_usage "--expected-commit needs a value"
+      [ "$commit_seen" = false ] || die_usage '--expected-commit must be supplied once'
+      if [ "$#" -lt 2 ] || [ -z "$2" ] || [[ "$2" == -* ]]; then die_usage '--expected-commit needs a value'; fi
+      commit_seen=true
       expected_commit="$2"
       shift 2
       ;;
     -h | --help)
-      usage
-      exit 0
+      die_usage 'help must be used alone'
       ;;
     *) die_usage "unknown argument: $1" ;;
   esac
@@ -76,6 +91,7 @@ done
 [ -n "$tag" ] || die_usage "--tag is required"
 [[ "$tag" != -* ]] || die_usage "--tag must not begin with '-'"
 [ -n "$repo" ] || die_usage "--repo is required when GITHUB_REPOSITORY is unset"
+[[ "$repo" =~ ^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9][A-Za-z0-9_.-]*$ ]] || die_usage '--repo (or GITHUB_REPOSITORY) must be an explicit github.com owner/repository pair'
 [[ "$expected_commit" =~ ^[0-9a-f]{40}$ ]] || die_usage "--expected-commit (or GITHUB_SHA) must be a full commit SHA"
 
 # Origin verification below supports github.com. Keep every API, validation,
