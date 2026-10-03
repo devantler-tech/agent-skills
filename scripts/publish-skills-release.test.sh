@@ -69,6 +69,7 @@ case "\$1 \$2" in
       exit 0
     fi
     case "$5" in
+      repeated-sha) echo '{"sha":"2222222222222222222222222222222222222222","sha":"$fixture_commit"}' ;;
       match) if [[ "\$*" == *'--jq'* ]]; then echo '$fixture_commit'; else echo '{"sha":"$fixture_commit"}'; fi ;;
       mismatch|branch-collision) if [[ "\$*" == *'--jq'* ]]; then echo '2222222222222222222222222222222222222222'; else echo '{"sha":"2222222222222222222222222222222222222222"}'; fi ;;
       unreadable) echo 'gh: connection refused' >&2; exit 1 ;;
@@ -77,6 +78,12 @@ case "\$1 \$2" in
     ;;
   "api repos/owner/repo/git/ref/tags/$release_tag_path")
     case "$2" in
+      repeated-ref)
+        if [[ "\$*" == *'--include'* ]]; then
+          printf 'HTTP/2.0 200 OK\r\nContent-Type: application/json\r\n\r\n'
+          printf '%s\n' '{"ref":"refs/tags/other","ref":"refs/tags/$release_tag","object":{"type":"commit","sha":"$fixture_commit"}}'
+        fi
+        exit 0 ;;
       found)
         if [[ "\$*" == *'--include'* ]]; then
           printf 'HTTP/2.0 200 OK\r\nContent-Type: application/json\r\n\r\n'
@@ -304,6 +311,8 @@ assert_case terminated-tree-prefix-refuses missing published ok 1 no match "$fix
 assert_case terminated-index-prefix-refuses missing published ok 1 no match "$fixture_commit" index-prefix
 assert_case repeated-release-identity-refuses found repeated-leaf ok 1 no
 assert_case repeated-release-container-refuses found repeated-container ok 1 no
+assert_case repeated-tag-ref-response-refuses repeated-ref published ok 1 no
+assert_case repeated-tag-commit-response-refuses found published ok 1 no repeated-sha
 assert_case diagnostic404-is-not-absence false404 published ok 1 no
 assert_case validation-checkout-movement-refuses missing published mutates 1 no
 assert_case unterminated-tree-refuses missing published ok 1 no match "$fixture_commit" tree-tail
