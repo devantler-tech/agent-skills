@@ -4,8 +4,33 @@ function trim(s) { sub(/^[ \t]+/, "", s); sub(/[ \t]+$/, "", s); return s }
 function plain(s) { if (s ~ /^`.*`$/) return substr(s, 2, length(s)-2); return s }
 function identifier(s) { return s ~ /^[A-Za-z0-9][A-Za-z0-9_.-]*$/ }
 function repository(s, a) { return split(s, a, "/") == 2 && identifier(a[1]) && identifier(a[2]) }
+# Validate the complete literal option grammar and bind any explicit pin to the
+# advertised source ref, without executing or forwarding catalogue arguments.
+function options_ok(arg, words, ref, i, flag, value, equal, seen) {
+  for (i=6; i<=words; i++) {
+    flag=arg[i]; value=""; equal=index(flag,"=")
+    if (equal) { value=substr(flag,equal+1); flag=substr(flag,1,equal-1) }
+    if (flag == "-f") flag="--force"
+    if (flag in seen) return 0
+    seen[flag]=1
+    if (flag == "--force" || flag == "--allow-hidden-dirs") {
+      if (equal) return 0
+      continue
+    }
+    if (flag != "--agent" && flag != "--scope" && flag != "--pin" && flag != "--dir") return 0
+    if (!equal) { if (++i > words) return 0; value=arg[i] }
+    if (value == "" || value ~ /^-/) return 0
+    if (flag == "--agent" && !identifier(value)) return 0
+    if (flag == "--scope" && value != "project" && value != "user") return 0
+    if (flag == "--pin" && value != ref) return 0
+    if (flag == "--dir" && value !~ /^[A-Za-z0-9_.~\/+][A-Za-z0-9_.~\/+\-]*$/) return 0
+  }
+  return 1
+}
 function refuse(reason) { print "error: README index line " NR ": " reason > "/dev/stderr"; bad=1 }
 function path_ok(s, a, n, i) {
+  # Paths are CLI operands; an option-leading path cannot retain that meaning.
+  if (s ~ /^-/) return 0
   n=split(s, a, "/")
   for (i=1; i<=n; i++) if (a[i] !~ /^[A-Za-z0-9_.-]+$/ || a[i] == "." || a[i] == "..") return 0
   return n > 0
@@ -333,9 +358,9 @@ function reference_line(s, result, tail, prefix) {
       arg[5] != name || part[segments] != name) {
     refuse("Skill, Upstream and Install columns disagree"); next
   }
-  # Install flags are documentation only: the installer constructs its own argv.
-  # A command suffix without an option is a malformed example, not another entry.
-  if (words > 5 && arg[6] !~ /^--[A-Za-z]/) { refuse("unexpected install command suffix"); next }
+  # Documented options are data. Validate their full grammar and source pin;
+  # the batch installer still constructs its own agent and scope arguments.
+  if (!options_ok(arg,words,ref)) { refuse("invalid or contradictory install command options"); next }
   identity=tolower(source) SUBSEP name
   if (name in destination && destination[name] != tolower(source)) {
     refuse("skill name " name " is shared by " destination[name] " and " tolower(source)); next

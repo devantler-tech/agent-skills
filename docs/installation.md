@@ -87,6 +87,13 @@ and name both sources before calling GitHub CLI. Repeated entries for the same
 repository and skill, including repository casing aliases, are installed once.
 Each repository and source ref resolves once before installation. Skills sharing that source use
 the same frozen commit even if its branch moves during the run; different refs remain separate.
+Installation selects the exact source directory from the catalogue link, with a `SKILL.md` suffix.
+Another skill with the same name elsewhere in that repository cannot replace that selection.
+Catalogue commands support literal `--agent`, `--scope`, `--dir`, `--pin`, `--force` (`-f`) and
+`--allow-hidden-dirs` options. Value options also accept `--option=value`. Each option occurs once;
+an explicit pin must match the link's source ref. Unsupported options, missing values and extra
+arguments refuse the whole catalogue before installation. The batch command chooses its own agents
+and user scope; those documented options describe commands run directly.
 Source responses must contain one unambiguous commit identity. When a catalogue link names
 a full commit, the returned identity must match it. A conflicting or incomplete response stops
 the complete installation before any skill is replaced. The upstream target checker also refuses

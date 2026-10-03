@@ -198,6 +198,9 @@ jobs:
       - name: 🧪 Verify source identities and complete local discovery
         run: bash ./scripts/source-boundaries.test.sh
 
+      - name: 🧪 Verify catalogue commands and exact paths
+        run: bash ./scripts/catalogue-boundaries.test.sh
+
       - name: 🧪 Self-test the upstream-skills guard
         # The real check-upstream-skills.sh resolves upstream targets over the network
         # (the standalone scheduled `🔗 Upstream skill targets` workflow), so it can't
