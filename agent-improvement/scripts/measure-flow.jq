@@ -2,11 +2,13 @@
 # This computes descriptive metrics; evidence authenticity and policy stay with the consumer.
 def text: type == "string" and test("\\S");
 def decimal_integer:
-  tostring
-  | capture("^(?<whole>[0-9]+)(?:\\.(?<fraction>[0-9]+))?(?:[eE](?<exponent>[+-]?[0-9]+))?$") as $parts
+  tostring as $raw
+  | ($raw | ltrimstr("-")) as $unsigned
+  | ($unsigned == (1e-1147483647 | tostring)) as $underflowed
+  | ($unsigned | capture("^(?<whole>[0-9]+)(?:\\.(?<fraction>[0-9]+))?(?:[eE](?<exponent>[+-]?[0-9]+))?$")) as $parts
   | ($parts.fraction // "") as $fraction
   | ($parts.whole + $fraction) as $digits
-  | if ($digits | test("^0+$")) then true
+  | if ($digits | test("^0+$")) then ($underflowed | not)
     else (($parts.exponent // "0") | tonumber) as $exponent
       | (($fraction | length) - $exponent) as $scale
       | if $scale <= 0 then true
