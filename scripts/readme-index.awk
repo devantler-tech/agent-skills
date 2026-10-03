@@ -67,15 +67,17 @@ function indent_width(s, i) {
   return column_width(substr(s,1,i-1))
 }
 function pipe_header_columns(s, i, last, n) {
-  if (s !~ /^ ? ? ?\|/) return 0
+  if (indent_width(s) > 3) return 0
   s=trim(s); n=0
-  for (i=2; i<=length(s); i++) {
+  for (i=1; i<=length(s); i++) {
     if (substr(s,i,1) == "\\") { i++; continue }
     if (substr(s,i,1) == "|") { n++; last=i }
   }
-  return n + (last == length(s) ? 0 : 1)
+  if (!n) return 0
+  return n + 1 - (substr(s,1,1) == "|") - (last == length(s))
 }
 function table_separator_columns(s, cells, n, i) {
+  if (indent_width(s) > 3) return 0
   s=trim(s); sub(/^\|/, "", s); sub(/\|$/, "", s)
   n=split(s,cells,"|")
   for (i=1; i<=n; i++) if (trim(cells[i]) !~ /^:?-+:?$/) return 0
@@ -86,7 +88,7 @@ function paragraph_line(s, previous, compact) {
   compact=s; gsub(/[ \t]/, "", compact)
   if (compact ~ /^(-{3,}|\*{3,}|_{3,})$/ && indent_width(s) <= 3) return 0
   if (previous && s ~ /^ ? ? ?(=+|-+)[ \t]*$/) return 0
-  if (!previous && s ~ /^(    |\t)/) return 0
+  if (!previous && indent_width(s) >= 4) return 0
   if (s ~ /^ ? ? ?[-+*]([ \t]|$)/ &&
       (!previous || s ~ /^ ? ? ?[-+*][ \t]+[^ \t]/)) return 0
   if (s ~ /^ ? ? ?[0-9]{1,9}[.)]([ \t]|$)/ &&
@@ -198,7 +200,11 @@ function reference_line(s, result, tail, prefix) {
         list_blank=0
       }
     }
-    if (reference_line($0)) { clear_paragraph(); next }
+    if (reference_line($0)) {
+      # Definitions are removed from a paragraph when it closes; until then,
+      # a custom HTML tag cannot interrupt the surrounding paragraph.
+      paragraph=1; table=0; pipe_columns=0; next
+    }
     # GitHub ends a list container before a deindented standalone HTML block.
     # Ordinary text can still lazily continue the list paragraph.
     if (list_indent && indent_width($0) < list_indent) {
@@ -254,6 +260,10 @@ function reference_line(s, result, tail, prefix) {
   }
   list_item=match($0,/^ ? ? ?([-+*]|[0-9]{1,9}[.)])[ \t]+[^ \t]/)
   if (list_item) list_indent=column_width(substr($0,1,RLENGTH-1))
+  else if (!paragraph && match($0,/^ ? ? ?([-+*]|[0-9]{1,9}[.)])[ \t]*$/)) {
+    list_item=1; empty_marker=$0; sub(/[ \t]+$/, "", empty_marker)
+    list_indent=column_width(empty_marker)+1
+  }
   if (table && $0 ~ /^ ? ? ?\|/) paragraph=0
   else if (pipe_columns && table_separator_columns($0) == pipe_columns) { table=1; paragraph=0 }
   else { table=0; paragraph=paragraph_line($0, paragraph) }

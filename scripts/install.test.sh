@@ -454,7 +454,7 @@ make_root "$tmp/lower-declaration" <<'EOF'
 | `beta` | [`fixture/one`](https://github.com/fixture/one/tree/main/beta) | `gh skill install fixture/one beta` |
 EOF
 expect_list 'lowercase declarations hide raw HTML examples' "$tmp/lower-declaration" $'fixture/one alpha\nfixture/one beta'
-for separator in '---' '***' '___' '- - -' '* * *' '_ _ _' '###' '###### Heading' '[example]: https://example.test'; do
+for separator in '---' '***' '___' '- - -' '* * *' '_ _ _' '###' '###### Heading'; do
   html_root="$tmp/block-context-$RANDOM"
   make_root "$html_root" <<EOF
 | \`alpha\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/alpha) | \`gh skill install fixture/one alpha\` |
@@ -499,6 +499,7 @@ for title in '"title"' "'title'" '(title)'; do
 
 [example]: /url
   $title
+
 <example-widget>
 | \`hidden\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/hidden) | \`gh skill install fixture/one hidden\` |
 </example-widget>
@@ -540,6 +541,7 @@ for reference in '[example]:
 | \`alpha\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/alpha) | \`gh skill install fixture/one alpha\` |
 
 $reference
+
 <example-widget>
 | \`hidden\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/hidden) | \`gh skill install fixture/one hidden\` |
 </example-widget>
@@ -558,6 +560,7 @@ for title in '"first
 
 [example]: /url
   $title
+
 <example-widget>
 | \`hidden\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/hidden) | \`gh skill install fixture/one hidden\` |
 </example-widget>
@@ -642,6 +645,7 @@ for definition in '[foo\]bar]: /url' '[foo\[bar]: /url' '[foo]: /foo(bar(baz))' 
 | \`alpha\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/alpha) | \`gh skill install fixture/one alpha\` |
 
 $definition
+
 <example-widget>
 | \`hidden\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/hidden) | \`gh skill install fixture/one hidden\` |
 </example-widget>
@@ -671,6 +675,97 @@ make_root "$tmp/table-html-boundary" <<'EOF'
 | `beta` | [`fixture/one`](https://github.com/fixture/one/tree/main/beta) | `gh skill install fixture/one beta` |
 EOF
 expect_list 'an established table still permits a following raw HTML block' "$tmp/table-html-boundary" $'fixture/one alpha\nfixture/one beta'
+for indentation in '    ' $'\t' $' \t'; do
+  html_root="$tmp/over-indented-table-$RANDOM"
+  make_root "$html_root" <<'EOF'
+| `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/alpha) | `gh skill install fixture/one alpha` |
+EOF
+  cat > "$html_root/README.md" <<EOF
+| explanatory text
+${indentation}| --- |
+<example-widget>
+## Skills
+| Skill | Upstream | Install |
+| --- | --- | --- |
+| \`alpha\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/alpha) | \`gh skill install fixture/one alpha\` |
+EOF
+  expect_list 'over-indented delimiters remain paragraph content' "$html_root" 'fixture/one alpha'
+done
+for marker in '-' '+' '*' '1.' '2)'; do
+  html_root="$tmp/empty-list-container-$RANDOM"
+  padding=${marker//?/ }
+  make_root "$html_root" <<EOF
+| \`alpha\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/alpha) | \`gh skill install fixture/one alpha\` |
+
+$marker
+$padding <script>
+$padding raw example
+
+| Skill | Upstream | Install |
+| --- | --- | --- |
+| \`beta\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/beta) | \`gh skill install fixture/one beta\` |
+EOF
+  expect_list "empty $marker establishes a list-owned HTML container" "$html_root" $'fixture/one alpha\nfixture/one beta'
+done
+for indentation in $' \t' $'  \t' $'   \t'; do
+  html_root="$tmp/mixed-code-indent-$RANDOM"
+  make_root "$html_root" <<EOF
+| \`alpha\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/alpha) | \`gh skill install fixture/one alpha\` |
+
+${indentation}indented code
+<example-widget>
+| \`hidden\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/hidden) | \`gh skill install fixture/one hidden\` |
+</example-widget>
+
+| \`beta\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/beta) | \`gh skill install fixture/one beta\` |
+EOF
+  expect_list 'mixed spaces and tabs establish indented code by columns' "$html_root" $'fixture/one alpha\nfixture/one beta'
+done
+# A definition can be consumed while its enclosing paragraph stays open. A
+# following custom tag cannot interrupt it, as confirmed by GitHub's renderer.
+label=''
+for ((i=0; i<600; i++)); do label+='é'; done
+for definition in '[example]: /url' '[example]:
+  /url' '[example]: /url
+  "title"' '[example]: /url
+  "first
+  second"' "[$label]: /url"; do
+  html_root="$tmp/reference-paragraph-$RANDOM"
+  make_root "$html_root" <<'EOF'
+| `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/alpha) | `gh skill install fixture/one alpha` |
+EOF
+  cat > "$html_root/README.md" <<EOF
+$definition
+<example-widget>
+## Skills
+| Skill | Upstream | Install |
+| --- | --- | --- |
+| \`alpha\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/alpha) | \`gh skill install fixture/one alpha\` |
+EOF
+  expect_list 'a reference definition preserves its enclosing paragraph' "$html_root" 'fixture/one alpha'
+done
+for header in 'left | right' '| left | right' 'left | right |'; do
+  html_root="$tmp/optional-table-pipes-$RANDOM"
+  make_root "$html_root" <<'EOF'
+| `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/alpha) | `gh skill install fixture/one alpha` |
+EOF
+  cat > "$html_root/README.md" <<EOF
+$header
+--- | ---
+<example-widget>
+## Skills
+| Skill | Upstream | Install |
+| --- | --- | --- |
+| \`hidden\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/hidden) | \`gh skill install fixture/one hidden\` |
+</example-widget>
+
+## Skills
+| Skill | Upstream | Install |
+| --- | --- | --- |
+| \`alpha\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/alpha) | \`gh skill install fixture/one alpha\` |
+EOF
+  expect_list 'table boundary accepts optional leading and trailing pipes' "$html_root" 'fixture/one alpha'
+done
 for tag in pre script style textarea; do
   html_root="$tmp/list-owned-html-$tag"
   make_root "$html_root" <<EOF
