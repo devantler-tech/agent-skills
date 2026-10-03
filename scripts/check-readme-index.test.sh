@@ -234,6 +234,24 @@ STUB
 done
 
 
+# A successful producer must also terminate its last NUL record.
+c="$tmp/find-unterminated"
+cp -R "$good" "$c"
+mkdir -p "$c/orphan" "$c/bin"
+printf '# omitted skill\n' > "$c/orphan/SKILL.md"
+cat > "$c/bin/find" <<'STUB'
+#!/usr/bin/env bash
+printf './beta/SKILL.md\0./orphan/SKILL.md'
+STUB
+chmod +x "$c/bin/find"
+if PATH="$c/bin:$PATH" run_guard "$c" > "$tmp/find-out" 2>&1; then
+  printf '  ❌ unterminated inventory reported success\n'; fail=1
+elif grep -q 'inventory' "$tmp/find-out"; then
+  printf '  ✅ unterminated inventory refused\n'
+else
+  printf '  ❌ unterminated inventory lacked an explicit diagnostic\n'; fail=1
+fi
+
 for unusual in 'odd skill' 'literal\name' $'beta\n'; do
   c="$tmp/unusual-path"
   cp -R "$good" "$c"

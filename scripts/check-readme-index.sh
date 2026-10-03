@@ -69,6 +69,10 @@ while IFS= read -r -d '' skill_md; do
     missing=1
   fi
 done < "$inventory"
+[ -z "${skill_md:-}" ] || {
+  echo '::error::local skill inventory has an unterminated record; refusing incomplete index validation.' >&2
+  exit 1
+}
 
 # 4. Every in-house index entry must resolve to a real on-disk skill directory
 # (index -> disk; the reverse of check 3). Upstream pointers name other repos and
