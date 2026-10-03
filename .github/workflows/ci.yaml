@@ -202,6 +202,9 @@ jobs:
         # against throwaway fixtures with a deterministic offline `gh` stub: no gh/network.
         run: ./scripts/check-upstream-skills.test.sh
 
+      - name: 🧪 Verify upstream observation failures
+        run: bash ./scripts/check-upstream-observations.test.sh
+
       - name: 🧪 Self-test the release publish gate
         # publish-skills-release.sh decides whether `gh skill publish` runs at all. Both wrong
         # answers are expensive — skipping a publish that never happened ships nothing while

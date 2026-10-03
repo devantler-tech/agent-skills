@@ -58,9 +58,14 @@ resolve_target() {
   for attempt in 1 2 3; do
     api_status=0
     gh api "repos/$owner/$repo/contents/$path/SKILL.md?ref=$ref" --include > "$response_dir/response" 2> "$response_dir/error" || api_status=$?
-    http_status=$(awk 'NR==1 && /^HTTP\/[0-9.]+ [0-9][0-9][0-9] / {print $2}' "$response_dir/response")
-    body=$(awk 'body {print; next} {sub(/\r$/, "")} /^$/ {body=1}' "$response_dir/response")
-    err=$(cat "$response_dir/error")
+    # This function is called in a conditional, so errexit cannot protect reads.
+    # Partial output from a failed parser is not an observation of the response.
+    http_status=$(awk 'NR==1 && /^HTTP\/[0-9.]+ [0-9][0-9][0-9] / {print $2}' "$response_dir/response") || return 3
+    body=$(awk 'body {print; next} {sub(/\r$/, "")} /^$/ {body=1}' "$response_dir/response") || return 3
+    err=$(cat "$response_dir/error") || return 3
+    # Native cancellation/authentication errors may have no HTTP response.
+    # Only general transport failure is eligible for the statusless retry path.
+    case "$api_status" in 0|1) ;; *) return 3 ;; esac
     if [ "$http_status" = 200 ] && [ "$api_status" -eq 0 ]; then
       # Validate after the API call so a directory or malformed payload cannot be
       # mistaken for a transport error and downgraded to a transient warning.
@@ -87,7 +92,7 @@ resolve_target() {
       *) return 3 ;;
     esac
     # Transport, server and explicit rate-limit failures retain bounded retries.
-    "$UPSTREAM_RETRY_SLEEP" $((attempt * 2))
+    "$UPSTREAM_RETRY_SLEEP" $((attempt * 2)) || return 3
   done
   printf '%s' "$err"
   return 2
@@ -129,9 +134,13 @@ while read -r source ref path _skill; do
         echo "::error::could not establish upstream skill file '$owner/$repo $path/SKILL.md' (ref $ref): a permanent API error or successful response without the expected file prevented verification."
         invalid=$((invalid + 1))
         ;;
-      *)
+      2)
         echo "::warning::could not verify '$owner/$repo $path' (ref $ref) after retries — treating as transient (network/rate-limit), not drift. Last error: ${detail//$'\n'/ }"
         warned=$((warned + 1))
+        ;;
+      *)
+        echo "::error::upstream verification could not complete for '$owner/$repo $path/SKILL.md' (ref $ref)."
+        invalid=$((invalid + 1))
         ;;
     esac
   fi
