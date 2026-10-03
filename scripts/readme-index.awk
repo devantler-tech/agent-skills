@@ -206,7 +206,7 @@ function reference_line(s, result, tail, prefix) {
         list_blank=0
       }
     }
-    if (reference_line($0)) {
+    if (!table && reference_line($0)) {
       # Definitions are removed from a paragraph when it closes; until then,
       # a custom HTML tag cannot interrupt the surrounding paragraph.
       paragraph=1; reference_paragraph=1; table=0; pipe_columns=0; next
@@ -274,7 +274,7 @@ function reference_line(s, result, tail, prefix) {
     list_item=1; empty_marker=$0; sub(/[ \t]+$/, "", empty_marker)
     list_indent=column_width(empty_marker)+1
   }
-  if (table && $0 ~ /^ ? ? ?\|/) paragraph=0
+  if (table && paragraph_line($0, 0)) paragraph=0
   else if (pipe_columns && table_separator_columns($0) == pipe_columns) { table=1; paragraph=0 }
   else { table=0; paragraph=paragraph_line($0, paragraph) }
   pipe_columns=(!table && paragraph ? pipe_header_columns($0) : 0)

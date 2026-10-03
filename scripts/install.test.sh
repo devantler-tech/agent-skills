@@ -766,6 +766,45 @@ $header
 EOF
   expect_list 'table boundary accepts optional leading and trailing pipes' "$html_root" 'fixture/one alpha'
 done
+for body in 'one | two' 'one' 'one \| two' '===' '[example]: /url'; do
+  html_root="$tmp/unpiped-table-body-$RANDOM"
+  make_root "$html_root" <<EOF
+| \`alpha\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/alpha) | \`gh skill install fixture/one alpha\` |
+
+left | right
+--- | ---
+$body
+<example-widget>
+| \`hidden\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/hidden) | \`gh skill install fixture/one hidden\` |
+</example-widget>
+
+| \`beta\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/beta) | \`gh skill install fixture/one beta\` |
+EOF
+  expect_list 'unpiped table body rows retain block context' "$html_root" $'fixture/one alpha\nfixture/one beta'
+done
+# GitHub starts the deindented custom HTML block outside these containers.
+# Its following apparent heading is raw content, not a visible catalogue.
+for container in '> quoted paragraph' '- explanatory text' '1. explanatory text'; do
+  html_root="$tmp/container-html-rendering-$RANDOM"
+  make_root "$html_root" <<'EOF'
+| `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/alpha) | `gh skill install fixture/one alpha` |
+EOF
+  cat > "$html_root/README.md" <<EOF
+$container
+<example-widget>
+## Skills
+| Skill | Upstream | Install |
+| --- | --- | --- |
+| \`hidden\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/hidden) | \`gh skill install fixture/one hidden\` |
+</example-widget>
+
+## Skills
+| Skill | Upstream | Install |
+| --- | --- | --- |
+| \`alpha\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/alpha) | \`gh skill install fixture/one alpha\` |
+EOF
+  expect_list 'deindented custom HTML matches GitHub container rendering' "$html_root" 'fixture/one alpha'
+done
 make_root "$tmp/consecutive-reference-titles" <<'EOF'
 | `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/alpha) | `gh skill install fixture/one alpha` |
 
