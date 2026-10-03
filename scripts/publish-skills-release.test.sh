@@ -64,13 +64,13 @@ case "\$1 \$2" in
       case "$reserve_behavior" in
         moved) echo '2222222222222222222222222222222222222222' ;;
         unreadable) echo 'gh: connection refused' >&2; exit 1 ;;
-        *) echo '$fixture_commit' ;;
+        *) if [[ "\$*" == *'--jq'* ]]; then echo '$fixture_commit'; else echo '{"sha":"$fixture_commit"}'; fi ;;
       esac
       exit 0
     fi
     case "$5" in
-      match) echo '$fixture_commit' ;;
-      mismatch|branch-collision) echo '2222222222222222222222222222222222222222' ;;
+      match) if [[ "\$*" == *'--jq'* ]]; then echo '$fixture_commit'; else echo '{"sha":"$fixture_commit"}'; fi ;;
+      mismatch|branch-collision) if [[ "\$*" == *'--jq'* ]]; then echo '2222222222222222222222222222222222222222'; else echo '{"sha":"2222222222222222222222222222222222222222"}'; fi ;;
       unreadable) echo 'gh: connection refused' >&2; exit 1 ;;
       malformed) echo 'null' ;;
     esac
@@ -99,6 +99,8 @@ case "\$1 \$2" in
       draft) echo '{"tagName":"v1.0.0","isDraft":true}' ;;
       wrong-tag) echo '{"tagName":"v2.0.0","isDraft":false}' ;;
       ambiguous) printf '%s\n' '{"tagName":"v1.0.0","isDraft":false}' '{"tagName":"v1.0.0","isDraft":false}' ;;
+      repeated-leaf) echo '{"tagName":"v1.0.0","isDraft":true,"isDraft":false}' ;;
+      repeated-container) echo '{"extra":{"first":true},"extra":{"second":false},"tagName":"v1.0.0","isDraft":false}' ;;
       absent) echo "release not found" >&2; exit 1 ;;
     esac
     ;;
@@ -144,7 +146,38 @@ assert_case() {
   test_tag=${10:-v1.0.0}
   case_dir=$(make_stub "$name" "$2" "$3" "$4" "${7:-match}" "$test_tag" "${11:-v1.0.0}" "${12:-ok}")
   invocation_dir="$case_dir/repo"
+  invocation_env=()
   case "${9:-match}" in
+    selectors)
+      git clone -q --no-hardlinks "$work/fixture" "$case_dir/other"
+      git -C "$case_dir/other" remote set-url origin https://github.com/owner/repo.git
+      git -C "$case_dir/repo" remote set-url origin https://github.com/other/repo.git
+      invocation_env=("GIT_DIR=$case_dir/other/.git" "GIT_WORK_TREE=$case_dir/repo") ;;
+    tree-prefix|index-prefix)
+      real_git=$(command -v git)
+      if [ "${9}" = tree-prefix ]; then
+        git -C "$case_dir/repo" config filter.release-mask.clean 'git cat-file blob HEAD:README.md'
+        printf 'README.md filter=release-mask\n' > "$case_dir/repo/.git/info/attributes"
+        printf 'different bytes\n' > "$case_dir/repo/README.md"
+        git -C "$case_dir/repo" add README.md
+      else
+        git -C "$case_dir/repo" update-index --assume-unchanged README.md
+      fi
+      [ -z "$(git -C "$case_dir/repo" status --porcelain)" ] || exit 1
+      cat > "$case_dir/bin/git" <<'GIT'
+#!/usr/bin/env bash
+if { [ "$FRAMING_FAULT" = tree-prefix ] && [[ " $* " == *' ls-tree '* ]]; } ||
+   { [ "$FRAMING_FAULT" = index-prefix ] && [[ " $* " == *' ls-files -v -z '* ]]; }; then
+  "$REAL_GIT" "$@" > "$FRAMING_DATA" || exit
+  while IFS= read -r -d '' record; do
+    case "$record" in *$'\tREADME.md'|*' README.md') continue ;; esac
+    printf '%s\0' "$record"
+  done < "$FRAMING_DATA"
+  exit 0
+fi
+exec "$REAL_GIT" "$@"
+GIT
+      chmod +x "$case_dir/bin/git" ;;
     mode-mismatch)
       git -C "$case_dir/repo" config core.filemode false
       chmod +x "$case_dir/repo/README.md"
@@ -225,7 +258,7 @@ GIT
   esac
 
   actual_exit=0
-  (cd "$invocation_dir" && GITHUB_SHA="${8-$fixture_commit}" GH_REPO=other/selection GH_HOST=example.test \
+  (cd "$invocation_dir" && env ${invocation_env[@]+"${invocation_env[@]}"} GITHUB_SHA="${8-$fixture_commit}" GH_REPO=other/selection GH_HOST=example.test \
     PATH="$case_dir/bin:$PATH" REAL_GIT="${real_git:-}" FRAMING_FAULT="${9:-}" FRAMING_DATA="$case_dir/framing" "$script" --tag "$test_tag" --repo owner/repo \
     >"$case_dir/out" 2>"$case_dir/err") || actual_exit=$?
 
@@ -266,6 +299,11 @@ GIT
 }
 
 # Incomplete observations or validation changes must create no remote object.
+assert_case inherited-selectors-refuse missing published ok 1 no match "$fixture_commit" selectors
+assert_case terminated-tree-prefix-refuses missing published ok 1 no match "$fixture_commit" tree-prefix
+assert_case terminated-index-prefix-refuses missing published ok 1 no match "$fixture_commit" index-prefix
+assert_case repeated-release-identity-refuses found repeated-leaf ok 1 no
+assert_case repeated-release-container-refuses found repeated-container ok 1 no
 assert_case diagnostic404-is-not-absence false404 published ok 1 no
 assert_case validation-checkout-movement-refuses missing published mutates 1 no
 assert_case unterminated-tree-refuses missing published ok 1 no match "$fixture_commit" tree-tail

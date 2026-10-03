@@ -195,6 +195,10 @@ Tag existence comes from one complete HTTP response for the exact tag endpoint; 
 cannot prove absence. Checkout verification refuses unterminated tree/index records and repeats
 after skill validation, before reserving a remote tag, so validation cannot silently substitute
 different release bytes.
+Inherited Git repository selectors are cleared before checkout verification. Complete tracked-tree
+and index inventories must agree with an independent immutable tree observation, including files
+whose names contain whitespace or newlines. Repeated remote identity declaration paths are refused;
+an ambiguous tag, commit or release response never establishes successful publication.
 
 ## Maintenance (autonomous AI assistant)
 
