@@ -91,7 +91,7 @@ done
 [ -n "$tag" ] || die_usage "--tag is required"
 [[ "$tag" != -* ]] || die_usage "--tag must not begin with '-'"
 [ -n "$repo" ] || die_usage "--repo is required when GITHUB_REPOSITORY is unset"
-[[ "$repo" =~ ^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9][A-Za-z0-9_.-]*$ ]] || die_usage '--repo (or GITHUB_REPOSITORY) must be an explicit github.com owner/repository pair'
+[[ "$repo" =~ ^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?/[A-Za-z0-9][A-Za-z0-9_.-]*$ ]] || die_usage '--repo (or GITHUB_REPOSITORY) must be an explicit github.com owner/repository pair'
 [[ "$expected_commit" =~ ^[0-9a-f]{40}$ ]] || die_usage "--expected-commit (or GITHUB_SHA) must be a full commit SHA"
 
 # Origin verification below supports github.com. Keep every API, validation,
