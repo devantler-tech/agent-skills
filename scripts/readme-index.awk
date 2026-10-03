@@ -97,8 +97,9 @@ function reference_destination_line(s, tail) {
 }
 function reference_line(s, result, tail) {
   if (reference_title_end) {
-    if (s ~ /^[ \t]*$/) { reference_title_end=""; return 0 }
+    if (s ~ /^[ \t]*$/) { refuse("unterminated reference title"); reference_title_end=""; return 0 }
     result=title_close(s,reference_title_end)
+    if (result < 0) refuse("invalid reference title ending")
     if (result) reference_title_end=""
     return result >= 0
   }
