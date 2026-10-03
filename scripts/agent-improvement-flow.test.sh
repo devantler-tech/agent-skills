@@ -102,12 +102,17 @@ reject 'unknown schema version' '.version=2'
 reject 'more than one input document' '., .'
 
 reject 'fractional timestamp near exact upper bound' '.run.endedAt=9007199254740991.1'
+reject 'high-precision fractional timestamp' '.run.endedAt=110.000000000000000001'
+reject 'timestamp underflowed to serialized zero' '.run.startedAt=1e-1147483647'
 reject 'saturated run end timestamp' '.run.endedAt=1e999'
 reject 'inexact run end timestamp' '.run.endedAt=9007199254740992'
 reject 'inexact run start timestamp' '.run.startedAt=9007199254740992 | .run.endedAt=9007199254740992 | .selections=[]'
 reject 'inexact selection timestamp' '.run.endedAt=9007199254740992 | .selections[0].at=9007199254740992'
 reject 'inexact candidate timestamp' '.run.endedAt=9007199254740992 | .selections[0].at=9007199254740992 | .selections[0].candidates[0].createdAt=9007199254740992'
 check 'exact timestamp upper bound remains supported' '.run.endedAt=9007199254740991' '.run.endedAt==9007199254740991'
+check 'negative zero timestamp remains supported' '.run.startedAt=-0' '.run.startedAt==0'
+check 'negative decimal zero timestamp remains supported' '.run.startedAt=-0.0' '.run.startedAt==0'
+check 'negative exponent zero timestamp remains supported' '.run.startedAt=-0e10' '.run.startedAt==0'
 
 # Ablate only the decimal-preservation capability probe, modeling a lossy backend.
 sed 's/9007199254740991\.1 > 9007199254740991/9007199254740991 > 9007199254740991/' "$calculator" > "$work/lossy.jq"
