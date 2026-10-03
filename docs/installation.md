@@ -64,9 +64,12 @@ AGENTS="github-copilot claude-code cursor" ./scripts/install.sh   # any gh skill
 The script validates the complete README catalogue before printing a preview or starting an
 installation. Every table row must have an install command matching its skill name and source
 link. A malformed or contradictory row exits 1 without installing anything or printing a partial
-preview. Prose commands and fenced examples are excluded. Installation, the offline index check,
+preview. Prose commands, fenced examples, HTML comments and raw HTML blocks are excluded.
+A backtick fence opener whose info string contains a backtick is treated as ordinary Markdown.
+Installation, the offline index check,
 and upstream target checking share this interpretation; the offline check also verifies maintained
 skill directories and rejects duplicate rows.
+Unterminated comments and reference titles are rejected before installation.
 
 `--help` (`-h`) and
 `--list` (`-l`) are standalone modes and need no authentication or network access. Do not combine
