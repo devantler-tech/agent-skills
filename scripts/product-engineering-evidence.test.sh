@@ -32,6 +32,40 @@ invalid() {
   passed=$((passed + 1))
 }
 check 'complete repeatable improvement' ADOPT '.'
+# These literal decimal boundaries have hand-derived gains, independent of the evaluator.
+check 'sub-ULP gain misses preregistered threshold' REJECT '
+  .plan.measures[0] |= (.direction="higher" | .minImprovement=1.5e-16 | .protected=false)
+  | .observations[].values[0] |= (.baseline={lower:1.0000000000000001,upper:1.0000000000000001}
+    | .candidate={lower:1.0000000000000002,upper:1.0000000000000002})'
+check 'decimal improvement meets exact threshold' ADOPT '
+  .plan.measures[0] |= (.direction="higher" | .minImprovement=0.2 | .protected=false)
+  | .observations[].values[0] |= (.baseline={lower:0.1,upper:0.1} | .candidate={lower:0.3,upper:0.3})'
+check 'negative decimal lower-is-better gain meets threshold' ADOPT '
+  .plan.measures[0] |= (.minImprovement=0.2 | .protected=false)
+  | .observations[].values[0] |= (.baseline={lower:-0.1,upper:-0.1} | .candidate={lower:-0.3,upper:-0.3})'
+check 'scientific notation gain meets threshold' ADOPT '
+  .plan.measures[0] |= (.direction="higher" | .minImprovement=2e-20 | .protected=false)
+  | .observations[].values[0] |= (.baseline={lower:1e-20,upper:1e-20} | .candidate={lower:3e-20,upper:3e-20})'
+check 'negative gain stays within exact regression allowance' ADOPT '
+  .plan.measures[0] |= (.objective=false | .maxRegression=1.5e-16 | .floor=2)
+  | .plan.measures[1] |= (.objective=true | .minImprovement=1)
+  | .observations[].values[0] |= (.baseline={lower:1.0000000000000001,upper:1.0000000000000001}
+    | .candidate={lower:1.0000000000000002,upper:1.0000000000000002})
+  | .observations[].values[1].candidate={lower:999010,upper:999010}'
+check 'decimal interval straddles threshold' HOLD '
+  .plan.measures[0] |= (.direction="higher" | .minImprovement=1.5e-16 | .protected=false)
+  | .observations[].values[0] |= (.baseline={lower:1,upper:1}
+    | .candidate={lower:1.0000000000000001,upper:1.0000000000000002})'
+check 'carry and borrow preserve boundary equality' ADOPT '
+  .plan.measures[0] |= (.direction="higher" | .minImprovement=0.0001 | .protected=false)
+  | .observations[].values[0] |= (.baseline={lower:0.0999,upper:0.0999} | .candidate={lower:0.1,upper:0.1})'
+check 'crossing zero preserves boundary equality' ADOPT '
+  .plan.measures[0] |= (.direction="higher" | .minImprovement=0.2 | .protected=false)
+  | .observations[].values[0] |= (.baseline={lower:-0.1,upper:-0.1} | .candidate={lower:0.1,upper:0.1})'
+check 'very large finite endpoints avoid arithmetic overflow' ADOPT '
+  .plan.measures[0] |= (.direction="higher" | .minImprovement=1e308 | .protected=false)
+  | .observations[].values[0] |= (.baseline={lower:-1e308,upper:-1e308} | .candidate={lower:1e308,upper:1e308})'
+invalid 'decimal exponent exceeds explicit arithmetic bound' '.observations[].values[0].candidate={lower:1e-1025,upper:1e-1025}'
 check 'faster but less reliable' REJECT '.observations[].values[1].candidate = {lower:980000,upper:990000}'
 check 'floor breach survives unmeasured baseline' REJECT '.observations[0].values[1] |= (.baseline = null | .candidate = {lower:980000,upper:990000})' 'protected floor breached: reliability'
 check 'lower-is-better floor survives unmeasured baseline' REJECT '.observations[0].values[0] |= (.baseline = null | .candidate = {lower:130,upper:140})' 'protected floor breached: latency'
