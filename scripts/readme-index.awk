@@ -31,6 +31,7 @@ function comment_start(s, i,j,k,width,closing) {
 }
 function html_end(s) {
   if (html == "blank") return s ~ /^[ \t]*$/
+  if (html == "comment") return index(s, "-->") > 0
   if (html == "processing") return index(s, "?>") > 0
   if (html == "declaration") return index(s, ">") > 0
   if (html == "cdata") return index(s, "]]>") > 0
@@ -42,6 +43,7 @@ function html_start(s, lower, tags, attr, open_tag) {
     sub(/^</, "", lower); sub(/[ \t>].*$/, "", lower); return lower
   }
   if (s ~ /^ ? ? ?<\?/) return "processing"
+  if (s ~ /^ ? ? ?<!--/) return "comment"
   if (s ~ /^ ? ? ?<![A-Za-z]/) return "declaration"
   if (s ~ /^ ? ? ?<!\[CDATA\[/) return "cdata"
   tags="address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul"
@@ -54,15 +56,66 @@ function html_start(s, lower, tags, attr, open_tag) {
   return ""
 }
 function paragraph_line(s, previous, compact) {
-  if (s ~ /^[ \t]*$/ || s ~ /^ ? ? ?(#{1,6}([ \t]|$)|\||>|[-+*]([ \t]|$))/) return 0
+  if (s ~ /^[ \t]*$/ || s ~ /^ ? ? ?(#{1,6}([ \t]|$)|\||>)/) return 0
   compact=s; gsub(/[ \t]/, "", compact)
   if (compact ~ /^(-{3,}|\*{3,}|_{3,})$/ && s ~ /^ {0,3}[^ ]/) return 0
   if (previous && s ~ /^ ? ? ?(=+|-+)[ \t]*$/) return 0
   if (!previous && s ~ /^(    |\t)/) return 0
+  if (s ~ /^ ? ? ?[-+*]([ \t]|$)/ &&
+      (!previous || s ~ /^ ? ? ?[-+*][ \t]+[^ \t]/)) return 0
   if (s ~ /^ ? ? ?[0-9]{1,9}[.)]([ \t]|$)/ &&
       (!previous || s ~ /^ ? ? ?1[.)][ \t]+[^ \t]/)) return 0
   if (!previous && s ~ /^ ? ? ?\[[^]]+\]:[ \t]*[^ \t]+([ \t]+("[^"]*"|'[^']*'|\([^)]*\)))?[ \t]*$/) return 0
   return 1
+}
+# Reference definitions are block content, including a following destination
+# and optional multiline title. Their quoted content is not inline Markdown.
+function title_close(s, closing, i) {
+  for (i=1; i<=length(s); i++) {
+    if (substr(s,i,1) == "\\") { i++; continue }
+    if (substr(s,i,1) == closing)
+      return substr(s,i+1) ~ /^[ \t]*$/ ? 1 : -1
+  }
+  return 0
+}
+function reference_title_line(s, opening, closing, result) {
+  s=trim(s); opening=substr(s,1,1)
+  if (opening != "\"" && opening != "'" && opening != "(") return 0
+  closing=(opening == "(" ? ")" : opening)
+  result=title_close(substr(s,2), closing)
+  if (result < 0) return 0
+  reference_title_end=(result ? "" : closing)
+  return 1
+}
+function reference_destination_line(s, tail) {
+  s=trim(s)
+  if (!match(s, /^(<[^<>]*>|[^ \t<>]+)/)) return 0
+  tail=substr(s,RLENGTH+1)
+  if (tail !~ /^[ \t]*$/ && !reference_title_line(tail)) return 0
+  reference_title=(tail ~ /^[ \t]*$/)
+  return 1
+}
+function reference_line(s, result, tail) {
+  if (reference_title_end) {
+    if (s ~ /^[ \t]*$/) { reference_title_end=""; return 0 }
+    result=title_close(s,reference_title_end)
+    if (result) reference_title_end=""
+    return result >= 0
+  }
+  if (reference_destination_pending) {
+    reference_destination_pending=0
+    return reference_destination_line(s)
+  }
+  if (reference_title) {
+    reference_title=0
+    if (reference_title_line(s)) return 1
+  }
+  if (!paragraph && match(s,/^ ? ? ?\[[^]]+\]:[ \t]*/)) {
+    tail=substr(s,RLENGTH+1)
+    if (tail == "") { reference_destination_pending=1; return 1 }
+    return reference_destination_line(tail)
+  }
+  return 0
 }
 {
   sub(/\r$/, "")
@@ -72,6 +125,14 @@ function paragraph_line(s, previous, compact) {
     next
   }
   if (!fence && !comment) {
+    if (reference_line($0)) { paragraph=0; next }
+    # GitHub ends a list container before a deindented standalone HTML block.
+    # Ordinary text can still lazily continue the list paragraph.
+    if (list_indent && match($0,/^ */) && RLENGTH < list_indent) {
+      previous_paragraph=paragraph; paragraph=0
+      if (!html_start($0)) paragraph=previous_paragraph
+      else list_indent=0
+    }
     html=html_start($0)
     if (html) {
       if (html_end($0)) html=""
@@ -115,10 +176,8 @@ function paragraph_line(s, previous, compact) {
     }
     $0=visible
   }
-  if (reference_title && $0 ~ /^[ \t]*("[^"]*"|'[^']*'|\([^)]*\))[ \t]*$/) {
-    reference_title=0; paragraph=0; next
-  }
-  reference_title=(!paragraph && $0 ~ /^ ? ? ?\[[^]]+\]:[ \t]*[^ \t]+[ \t]*$/)
+  if (match($0,/^ ? ? ?([-+*]|[0-9]{1,9}[.)])[ \t]+[^ \t]/))
+    list_indent=RLENGTH-1
   paragraph=paragraph_line($0, paragraph)
 }
 /^## Skills[ \t]*$/ {
@@ -177,7 +236,8 @@ function paragraph_line(s, previous, compact) {
   }
 }
 END {
-  if (comment) refuse("unterminated HTML comment")
+  if (comment || html == "comment") refuse("unterminated HTML comment")
+  if (reference_title_end) refuse("unterminated reference title")
   if (!seen_section || !count) { print "error: no skills found in README index" > "/dev/stderr"; bad=1 }
   if (bad) exit 1
   if (mode == "rows") print row_count

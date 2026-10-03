@@ -69,6 +69,7 @@ A backtick fence opener whose info string contains a backtick is treated as ordi
 Installation, the offline index check,
 and upstream target checking share this interpretation; the offline check also verifies maintained
 skill directories and rejects duplicate rows.
+Unterminated comments and reference titles are rejected before installation.
 
 `--help` (`-h`) and
 `--list` (`-l`) are standalone modes and need no authentication or network access. Do not combine

@@ -517,6 +517,86 @@ make_root "$tmp/invalid-fence-comment" <<'EOF'
 | `beta` | [`fixture/one`](https://github.com/fixture/one/tree/main/beta) | `gh skill install fixture/one beta` |
 EOF
 expect_list 'invalid backtick fence still parses multiline comments' "$tmp/invalid-fence-comment" $'fixture/one alpha\nfixture/one beta'
+for marker in '*' '+' '*   ' '+   '; do
+  html_root="$tmp/empty-bullet-$RANDOM"
+  make_root "$html_root" <<EOF
+| \`alpha\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/alpha) | \`gh skill install fixture/one alpha\` |
+
+An actual paragraph
+$marker
+<example-widget>
+| \`beta\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/beta) | \`gh skill install fixture/one beta\` |
+EOF
+  expect_list "empty bullet $marker cannot interrupt a paragraph" "$html_root" $'fixture/one alpha\nfixture/one beta'
+done
+for reference in '[example]:
+  /url' '[example]:
+  /url
+  "title"' '[example]:
+  /url
+  (title)'; do
+  html_root="$tmp/reference-destination-$RANDOM"
+  make_root "$html_root" <<EOF
+| \`alpha\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/alpha) | \`gh skill install fixture/one alpha\` |
+
+$reference
+<example-widget>
+| \`hidden\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/hidden) | \`gh skill install fixture/one hidden\` |
+</example-widget>
+
+| \`beta\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/beta) | \`gh skill install fixture/one beta\` |
+EOF
+  expect_list 'reference destination may continue on the following line' "$html_root" $'fixture/one alpha\nfixture/one beta'
+done
+for title in '"first
+  second"' "'first
+  second'" '(first
+  second)'; do
+  html_root="$tmp/reference-multiline-title-$RANDOM"
+  make_root "$html_root" <<EOF
+| \`alpha\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/alpha) | \`gh skill install fixture/one alpha\` |
+
+[example]: /url
+  $title
+<example-widget>
+| \`hidden\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/hidden) | \`gh skill install fixture/one hidden\` |
+</example-widget>
+
+| \`beta\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/beta) | \`gh skill install fixture/one beta\` |
+EOF
+  expect_list 'multiline reference titles retain block context' "$html_root" $'fixture/one alpha\nfixture/one beta'
+done
+make_root "$tmp/list-html-boundary" <<'EOF'
+| `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/alpha) | `gh skill install fixture/one alpha` |
+
+- explanatory item
+  continued item text
+<example-widget>
+| `hidden` | [`fixture/one`](https://github.com/fixture/one/tree/main/hidden) | `gh skill install fixture/one hidden` |
+</example-widget>
+
+| `beta` | [`fixture/one`](https://github.com/fixture/one/tree/main/beta) | `gh skill install fixture/one beta` |
+EOF
+expect_list 'deindented HTML after a list follows GitHub rendering' "$tmp/list-html-boundary" $'fixture/one alpha\nfixture/one beta'
+make_root "$tmp/unclosed-reference-title" <<'EOF'
+| `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/alpha) | `gh skill install fixture/one alpha` |
+
+[example]: /url "unclosed
+| `beta` | [`fixture/one`](https://github.com/fixture/one/tree/main/beta) | `gh skill install fixture/one beta` |
+EOF
+expect_fail 'unterminated reference title cannot produce a partial catalogue' "$tmp/unclosed-reference-title" --list
+for opening in '<!-- note -->' '<!-- note
+continued -->'; do
+  html_root="$tmp/block-comment-suffix-$RANDOM"
+  make_root "$html_root" <<EOF
+| \`alpha\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/alpha) | \`gh skill install fixture/one alpha\` |
+
+$opening| \`hidden\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/hidden) | \`gh skill install fixture/one hidden\` |
+
+| \`beta\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/beta) | \`gh skill install fixture/one beta\` |
+EOF
+  expect_list 'block comment closing-line suffix remains raw HTML' "$html_root" $'fixture/one alpha\nfixture/one beta'
+done
 
 if [ "$fail" -ne 0 ]; then
   printf '❌ install.sh self-test FAILED\n' >&2
