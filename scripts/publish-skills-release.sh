@@ -115,6 +115,8 @@ else
   exit 1
 fi
 
+# Bind the validation checkout to the requested repository and expected commit.
+# Refuse hidden index state, changed disk content, or executable permissions that differ from its tree.
 verify_checkout() {
   # The skill CLI validates the working directory and resolves its own origin.
   # Bind those bytes to this release before validation or any publication. Use
