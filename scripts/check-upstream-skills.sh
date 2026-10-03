@@ -80,8 +80,12 @@ resolve_target() {
     # Native cancellation/authentication errors may have no HTTP response.
     # Only general transport failure is eligible for the statusless retry path.
     case "$api_status" in 0|1) ;; *) return 3 ;; esac
-    # Every HTTP classification uses this same complete, unambiguous body.
-    if [ -n "$http_status" ] && ! unambiguous_object "$body"; then return 3; fi
+    # Identity, absence and API-message classifications need an unambiguous body.
+    # Transient HTTP status alone authorizes only bounded retries, never success.
+    case "$http_status" in
+      ''|408|429|5[0-9][0-9]) ;;
+      *) unambiguous_object "$body" || return 3 ;;
+    esac
     if [ "$http_status" = 200 ] && [ "$api_status" -eq 0 ]; then
       # Validate after the API call so a directory or malformed payload cannot be
       # mistaken for a transport error and downgraded to a transient warning.

@@ -56,6 +56,42 @@ for kind in clean repeated-path repeated-container; do
     printf 'PASS upstream-%s\n' "$kind"
   else printf 'FAIL upstream-%s (exit=%s)\n' "$kind" "$rc"; fail=$((fail+1)); fi
 done
+for kind in empty-timeout html-rate-limit empty-server html-server malformed-server recovering-server; do
+  root="$work/$kind"; fixture "$root" main
+  sed 's@devantler-tech/agent-skills@test/source@g' "$root/README.md" > "$root/new"; mv "$root/new" "$root/README.md"
+  : > "$root/calls"
+  cat > "$root/bin/gh" <<'STUB'
+#!/usr/bin/env bash
+set -eu
+printf 'call\n' >> "$RETRY_TRACE"
+case "$RETRY_KIND" in
+  empty-timeout) status=408; body='' ;;
+  html-rate-limit) status=429; body='<html>Try later</html>' ;;
+  empty-server) status=503; body='' ;;
+  html-server) status=502; body='<html>Unavailable</html>' ;;
+  malformed-server) status=504; body='{"message":' ;;
+  recovering-server)
+    if [ "$(wc -l < "$RETRY_TRACE")" -gt 1 ]; then
+      printf 'HTTP/1.1 200 OK\r\n\r\n{"type":"file","name":"SKILL.md","path":"alpha/SKILL.md"}\n'
+      exit 0
+    fi
+    status=503; body='<html>Unavailable</html>' ;;
+  *) exit 2 ;;
+esac
+printf 'HTTP/1.1 %s Error\r\n\r\n%s\n' "$status" "$body"
+exit 1
+STUB
+  chmod +x "$root/bin/gh"
+  rc=0
+  PATH="$root/bin:$PATH" RETRY_TRACE="$root/calls" RETRY_KIND="$kind" UPSTREAM_RETRY_SLEEP=true \
+    bash "$root/scripts/check-upstream-skills.sh" > "$root/out" 2>&1 || rc=$?
+  expected_calls=3; [ "$kind" != recovering-server ] || expected_calls=2
+  if [ "$rc" -eq 0 ] && [ "$(wc -l < "$root/calls")" -eq "$expected_calls" ] && \
+      { { [ "$kind" = recovering-server ] && grep -q '  ok ' "$root/out"; } ||
+        { [ "$kind" != recovering-server ] && grep -q 'transient' "$root/out"; }; }; then
+    printf 'PASS retry-%s\n' "$kind"
+  else printf 'FAIL retry-%s (exit=%s)\n' "$kind" "$rc"; fail=$((fail+1)); fi
+done
 root="$work/inventory"; fixture "$root" main
 mkdir -p "$root/orphan"; printf 'unindexed\n' > "$root/orphan/SKILL.md"
 cat > "$root/bin/find" <<'STUB'
