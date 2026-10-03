@@ -13,7 +13,7 @@ passed=0
 check() {
   local name=$1 expected=$2 mutation=$3 reason=${4:-}
   jq "$mutation" "$example" > "$work/input.json"
-  jq -s --arg now "$now" -f "$filter" "$work/input.json" > "$work/output.json"
+  jq --stream -s --arg now "$now" -f "$filter" "$work/input.json" > "$work/output.json"
   jq -e --arg expected "$expected" --arg reason "$reason" '
     .decision == $expected and (.reasons | type == "array")
     and ($reason == "" or (.reasons | index($reason) != null))
@@ -26,7 +26,7 @@ check() {
 invalid() {
   local name=$1 mutation=$2
   jq "$mutation" "$example" > "$work/input.json"
-  if jq -s --arg now "$now" -f "$filter" "$work/input.json" > "$work/output.json" 2> "$work/error"; then
+  if jq --stream -s --arg now "$now" -f "$filter" "$work/input.json" > "$work/output.json" 2> "$work/error"; then
     printf 'FAIL malformed bundle accepted: %s\n' "$name"; exit 1
   fi
   passed=$((passed + 1))
@@ -155,14 +155,14 @@ invalid 'missing uncertainty method' 'del(.plan.measures[0].uncertaintyMethod)'
 invalid 'empty input' 'empty'
 invalid 'multiple input bundles' '., .'
 
-if jq -s --arg now yesterday -f "$filter" "$example" > "$work/output.json" 2> "$work/error"; then
+if jq --stream -s --arg now yesterday -f "$filter" "$example" > "$work/output.json" 2> "$work/error"; then
   printf 'FAIL invalid evaluation time accepted\n'; exit 1
 fi
 passed=$((passed + 1))
 
 # The package works after installation, independent of the repository's scripts directory.
 cp -R "$root/product-engineering" "$work/installed"
-(cd "$work" && jq -s --arg now "$now" -f installed/scripts/check-evidence.jq installed/references/evidence-example.json) > "$work/installed.json"
+(cd "$work" && jq --stream -s --arg now "$now" -f installed/scripts/check-evidence.jq installed/references/evidence-example.json) > "$work/installed.json"
 jq -e '.decision == "ADOPT"' "$work/installed.json" >/dev/null
 passed=$((passed + 1))
 printf 'product engineering evidence: PASS (%s cases)\n' "$passed"

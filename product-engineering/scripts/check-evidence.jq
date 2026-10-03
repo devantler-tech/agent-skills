@@ -1,5 +1,28 @@
+# Inspect decoded member paths before object reconstruction can overwrite them.
+# A container prefix is declared once while active; after its closing event, a
+# repeated prefix is a second declaration, even when its children are disjoint.
+def raw_need($ok; $why): if $ok then . else error($why) end;
+def raw_document:
+  raw_need(type == "array" and all(.[]; type == "array" and (length == 1 or length == 2)
+    and (.[0] | type == "array")); "use jq --stream -s")
+  | . as $events
+  | reduce .[] as $event ({active: [], seen: {}};
+      $event[0] as $path
+      | if ($event | length) == 2 then
+          reduce range(1; ($path | length) + 1) as $n (.;
+            $path[0:$n] as $prefix
+            | if $n < ($path | length) and .active[0:$n] == $prefix then .
+              else ($prefix | tojson) as $key
+                | raw_need(.seen[$key] != true; "repeated decoded field path: " + $key)
+                | .seen[$key] = true end)
+          | .active = $path[0:-1]
+        else .active = $path[0:-2] end)
+  | [$events | fromstream(.[])]
+  | raw_need(length == 1; "expected exactly one JSON document")
+  | .[0];
+
 # Offline evidence-bundle v1 evaluator. See ../references/evidence-bundle.md.
-# jq -s --arg now YYYY-MM-DDTHH:MM:SSZ -f check-evidence.jq bundle.json
+# jq --stream -s --arg now YYYY-MM-DDTHH:MM:SSZ -f check-evidence.jq bundle.json
 def require($ok; $message): if $ok then . else error($message) end;
 def text: type == "string" and test("\\S");
 def number: type == "number" and isfinite;
@@ -128,8 +151,8 @@ def floor_known_bad($m; $v):
 def floor_proven($m; $v):
   ($m.protected | not) or (if $m.direction == "lower" then $v.candidate.upper <= $m.floor else $v.candidate.lower >= $m.floor end);
 
-require(9007199254740991.1 > 9007199254740991; "evidence assessment requires decimal-preserving jq (1.7 or newer)")
-| require(type == "array" and length == 1; "use jq -s with exactly one evidence bundle")
+[raw_document] | require(9007199254740991.1 > 9007199254740991; "evidence assessment requires decimal-preserving jq (1.7 or newer)")
+| require(type == "array" and length == 1; "use jq --stream -s with exactly one evidence bundle")
 | .[0]
 | require($now | stamp; "--arg now must be a UTC timestamp")
 | schema

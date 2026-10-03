@@ -11,7 +11,7 @@ passed=0
 valid() {
   local name=$1 mutation=$2
   jq "$mutation" "$example" > "$work/input.json"
-  jq -s --arg mode check -f "$filter" "$work/input.json" > "$work/result.json"
+  jq --stream -s --arg mode check -f "$filter" "$work/input.json" > "$work/result.json"
   jq -e '.status == "STRUCTURALLY_VALID" and .semanticReview == "REQUIRED" and .authority == "none"' "$work/result.json" >/dev/null || { printf 'FAIL %s\n' "$name"; exit 1; }
   passed=$((passed + 1))
 }
@@ -20,7 +20,7 @@ invalid() {
   local name=$1 mutation=$2
   jq "$mutation" "$example" > "$work/input.json"
   for mode in check render; do
-    if jq -s --arg mode "$mode" -f "$filter" "$work/input.json" > "$work/result" 2> "$work/error"; then
+    if jq --stream -s --arg mode "$mode" -f "$filter" "$work/input.json" > "$work/result" 2> "$work/error"; then
       printf 'FAIL %s accepted by %s\n' "$name" "$mode"; exit 1
     fi
     [ ! -s "$work/result" ] || { printf 'FAIL partial output for %s\n' "$name"; exit 1; }
@@ -119,13 +119,13 @@ valid 'real records keep the same structural boundary' '.synthetic=false | .evid
 valid 'all evidence can remain explicitly unknown' '.evidence=[] | .claims[] |= (.basis="UNKNOWN" | .evidence=[]) | .operations.rollback |= (.status="UNKNOWN" | .evidence=[]) | .unknowns[0].targets += ["claim:speed"]'
 valid 'cited human decision' '.humanDecisions[0].resolution={decision:"Declined",reference:"artifact://decision/42"}'
 jq -e '.openHumanDecisions == 0' "$work/result.json" >/dev/null
-jq -sr --arg mode render -f "$filter" "$work/input.json" > "$work/render.md"
+jq --stream -sr --arg mode render -f "$filter" "$work/input.json" > "$work/render.md"
 grep -Fq 'Resolution: Declined. Reference: artifact://decision/42.' "$work/render.md"
 grep -Fq 'claim:live\-effect' "$work/render.md"
 grep -Fq 'live\-recovery [rollback]' "$work/render.md"
 valid 'one owned follow-up explicitly covers several gaps' '.unknowns[0].targets += ["rollback"] | .unknowns=[.unknowns[0]]'
 valid 'single spaces keep revisions and sources exact' '.decision.revision="candidate search 2" | .evidence[].revision="candidate search 2" | .synthetic=false | .evidence[].source |= sub("^example://";"artifact://") | .evidence[0].source="artifact://run 42"'
-jq -sr --arg mode render -f "$filter" "$work/input.json" > "$work/render.md"
+jq --stream -sr --arg mode render -f "$filter" "$work/input.json" > "$work/render.md"
 grep -Fq 'Revision: candidate search 2 ·' "$work/render.md"
 grep -Fq 'revision=candidate search 2,' "$work/render.md"
 grep -Fq 'Source: artifact://run 42.' "$work/render.md"
@@ -138,9 +138,9 @@ done
 # Every teaching example is valid, remains marked synthetic, and renders its own decision.
 for scenario in product infrastructure library; do
   candidate="$root/product-engineering/references/accountability-$scenario.json"
-  jq -s --arg mode check -f "$filter" "$candidate" > "$work/result.json"
+  jq --stream -s --arg mode check -f "$filter" "$candidate" > "$work/result.json"
   jq -e '.synthetic == true and .semanticReview == "REQUIRED" and .authority == "none"' "$work/result.json" >/dev/null
-  jq -sr --arg mode render -f "$filter" "$candidate" > "$work/render.md"
+  jq --stream -sr --arg mode render -f "$filter" "$candidate" > "$work/render.md"
   grep -Fq "$(jq -r '.decision.title' "$candidate")" "$work/render.md"
   grep -Fq 'Synthetic example' "$work/render.md"
   passed=$((passed + 1))
@@ -149,15 +149,15 @@ done
 # Reject empty/multiple documents and an unsupported mode, not merely malformed field values.
 for input in empty multiple; do
   if [ "$input" = empty ]; then : > "$work/input.json"; else cat "$example" "$example" > "$work/input.json"; fi
-  if jq -s --arg mode check -f "$filter" "$work/input.json" > "$work/result" 2> "$work/error"; then exit 1; fi
+  if jq --stream -s --arg mode check -f "$filter" "$work/input.json" > "$work/result" 2> "$work/error"; then exit 1; fi
   [ ! -s "$work/result" ]; passed=$((passed + 1))
 done
-if jq -s --arg mode publish -f "$filter" "$example" > "$work/result" 2> "$work/error"; then exit 1; fi
+if jq --stream -s --arg mode publish -f "$filter" "$example" > "$work/result" 2> "$work/error"; then exit 1; fi
 [ ! -s "$work/result" ]; passed=$((passed + 1))
 
 # Data remains text in Markdown; titles cannot inject links, images, HTML, or new headings.
 jq '.decision.title="[click](https://example.invalid) <script>\n# fake ~~strike~~"' "$example" > "$work/input.json"
-jq -sr --arg mode render -f "$filter" "$work/input.json" > "$work/render.md"
+jq --stream -sr --arg mode render -f "$filter" "$work/input.json" > "$work/render.md"
 grep -Fq 'Synthetic example' "$work/render.md"
 grep -Fq '\[click\]\(https://example\.invalid\) &lt;script&gt; \# fake' "$work/render.md"
 grep -Fq '\~\~strike\~\~' "$work/render.md"
@@ -168,7 +168,7 @@ passed=$((passed + 1))
 # Standalone fields must not become headings, lists, or thematic breaks.
 for value in '# Forged heading' '- Forged item' '+ Forged item' '1. Forged item' '---' '==='; do
   jq --arg value "$value" '.decision.summary=$value | .model.explanation=$value | .comparison.whySelected=$value' "$example" > "$work/input.json"
-  jq -sr --arg mode render -f "$filter" "$work/input.json" > "$work/render.md"
+  jq --stream -sr --arg mode render -f "$filter" "$work/input.json" > "$work/render.md"
   if grep -Fxq -- "$value" "$work/render.md"; then
     printf 'FAIL standalone Markdown structure: %s\n' "$value"; exit 1
   fi

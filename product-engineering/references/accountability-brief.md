@@ -56,8 +56,8 @@ directory. The input is one JSON object; the helper reads no files beyond that i
 network calls. It emits either one complete result or an error before emitting any result.
 
 ```sh
-jq -s --arg mode check -f scripts/accountability-brief.jq brief.json
-jq -sr --arg mode render -f scripts/accountability-brief.jq brief.json
+jq --stream -s --arg mode check -f scripts/accountability-brief.jq brief.json
+jq --stream -sr --arg mode render -f scripts/accountability-brief.jq brief.json
 ```
 
 The first command returns `STRUCTURALLY_VALID`, `semanticReview: REQUIRED`, and `authority: none`,

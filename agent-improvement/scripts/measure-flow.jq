@@ -1,4 +1,27 @@
-# Read one completed run with: jq -e -s -f measure-flow.jq evidence.json
+# Inspect decoded member paths before object reconstruction can overwrite them.
+# A container prefix is declared once while active; after its closing event, a
+# repeated prefix is a second declaration, even when its children are disjoint.
+def raw_need($ok; $why): if $ok then . else error($why) end;
+def raw_document:
+  raw_need(type == "array" and all(.[]; type == "array" and (length == 1 or length == 2)
+    and (.[0] | type == "array")); "use jq --stream -s")
+  | . as $events
+  | reduce .[] as $event ({active: [], seen: {}};
+      $event[0] as $path
+      | if ($event | length) == 2 then
+          reduce range(1; ($path | length) + 1) as $n (.;
+            $path[0:$n] as $prefix
+            | if $n < ($path | length) and .active[0:$n] == $prefix then .
+              else ($prefix | tojson) as $key
+                | raw_need(.seen[$key] != true; "repeated decoded field path: " + $key)
+                | .seen[$key] = true end)
+          | .active = $path[0:-1]
+        else .active = $path[0:-2] end)
+  | [$events | fromstream(.[])]
+  | raw_need(length == 1; "expected exactly one JSON document")
+  | .[0];
+
+# Read one completed run with: jq --stream -e -s -f measure-flow.jq evidence.json
 # This computes descriptive metrics; evidence authenticity and policy stay with the consumer.
 def text: type == "string" and test("\\S");
 def decimal_integer:
@@ -81,7 +104,7 @@ def selection_metric:
      end);
 
 # Refuse lossy numeric backends before a rounded input can become a measurement.
-if (9007199254740991.1 > 9007199254740991) then .
+[raw_document] | if (9007199254740991.1 > 9007199254740991) then .
 else error("flow measurement requires decimal-preserving jq (1.7 or newer)") end
 | if length != 1 then error("expected exactly one completed-run evidence document")
 else .[0]
