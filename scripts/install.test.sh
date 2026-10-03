@@ -766,6 +766,44 @@ $header
 EOF
   expect_list 'table boundary accepts optional leading and trailing pipes' "$html_root" 'fixture/one alpha'
 done
+make_root "$tmp/consecutive-reference-titles" <<'EOF'
+| `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/alpha) | `gh skill install fixture/one alpha` |
+
+[first]: /url
+[second]: /url "first
+| `hidden` | [`fixture/one`](https://github.com/fixture/one/tree/main/hidden) | `gh skill install fixture/one hidden` |
+last"
+
+| `beta` | [`fixture/one`](https://github.com/fixture/one/tree/main/beta) | `gh skill install fixture/one beta` |
+EOF
+expect_list 'consecutive definitions retain hidden multiline-title content' "$tmp/consecutive-reference-titles" $'fixture/one alpha\nfixture/one beta'
+make_root "$tmp/reference-followed-by-prose" <<'EOF'
+| `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/alpha) | `gh skill install fixture/one alpha` |
+
+[first]: /url
+Ordinary paragraph text
+[second]: /url "first
+| `beta` | [`fixture/one`](https://github.com/fixture/one/tree/main/beta) | `gh skill install fixture/one beta` |
+last"
+EOF
+expect_list 'ordinary prose ends the consecutive-definition prefix' "$tmp/reference-followed-by-prose" $'fixture/one alpha\nfixture/one beta'
+for marker in '```' '~~~'; do
+  for item in '- explanatory item' '-'; do
+    html_root="$tmp/list-owned-fence-$RANDOM"
+    make_root "$html_root" <<EOF
+| \`alpha\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/alpha) | \`gh skill install fixture/one alpha\` |
+
+$item
+  $marker
+  raw example
+
+| Skill | Upstream | Install |
+| --- | --- | --- |
+| \`beta\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/beta) | \`gh skill install fixture/one beta\` |
+EOF
+    expect_list 'an unclosed fence ends with its containing list' "$html_root" $'fixture/one alpha\nfixture/one beta'
+  done
+done
 for tag in pre script style textarea; do
   html_root="$tmp/list-owned-html-$tag"
   make_root "$html_root" <<EOF

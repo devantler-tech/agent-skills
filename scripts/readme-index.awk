@@ -55,7 +55,7 @@ function html_start(s, lower, tags, attr, open_tag) {
       lower !~ /^<(pre|script|style|textarea)([ \t\/>]|$)/) return "blank"
   return ""
 }
-function clear_paragraph() { paragraph=0; table=0; pipe_columns=0 }
+function clear_paragraph() { paragraph=0; table=0; pipe_columns=0; reference_paragraph=0 }
 function column_width(s, i, width) {
   width=0
   for (i=1; i<=length(s); i++)
@@ -170,7 +170,7 @@ function reference_line(s, result, tail, prefix) {
     reference_title=0
     if (reference_title_line(s)) return 1
   }
-  if (!paragraph && (prefix=reference_prefix(s))) {
+  if ((!paragraph || reference_paragraph) && (prefix=reference_prefix(s))) {
     tail=trim(substr(s,prefix+1))
     if (tail == "") { reference_destination_pending=1; return 1 }
     return reference_destination_line(tail)
@@ -179,6 +179,12 @@ function reference_line(s, result, tail, prefix) {
 }
 {
   sub(/\r$/, "")
+  # An unclosed fence also ends when its enclosing list container ends.
+  if (fence && fence_container && $0 !~ /^[ \t]*$/ &&
+      indent_width($0) < fence_container) {
+    fence=""; fence_container=0; list_indent=0; list_blank=0
+    clear_paragraph()
+  }
   # A list-owned HTML block ends before the first line outside that container.
   if (html && html_container && $0 !~ /^[ \t]*$/ &&
       indent_width($0) < html_container) {
@@ -203,8 +209,9 @@ function reference_line(s, result, tail, prefix) {
     if (reference_line($0)) {
       # Definitions are removed from a paragraph when it closes; until then,
       # a custom HTML tag cannot interrupt the surrounding paragraph.
-      paragraph=1; table=0; pipe_columns=0; next
+      paragraph=1; reference_paragraph=1; table=0; pipe_columns=0; next
     }
+    reference_paragraph=0
     # GitHub ends a list container before a deindented standalone HTML block.
     # Ordinary text can still lazily continue the list paragraph.
     if (list_indent && indent_width($0) < list_indent) {
@@ -232,11 +239,14 @@ function reference_line(s, result, tail, prefix) {
     if (!fence) {
       if (mark == "~" || index(substr(stripped, width+1), "`") == 0) {
         fence=mark; fence_width=width
+        fence_container=(list_indent && indent_width($0) >= list_indent ? list_indent : 0)
         if (indent < list_indent) list_indent=0
         clear_paragraph(); next
       }
     } else {
-      if (mark == fence && width >= fence_width && trim(substr(stripped, width+1)) == "") { fence=""; clear_paragraph() }
+      if (mark == fence && width >= fence_width && trim(substr(stripped, width+1)) == "") {
+        fence=""; fence_container=0; clear_paragraph()
+      }
       next
     }
   }
