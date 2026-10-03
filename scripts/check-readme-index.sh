@@ -53,10 +53,35 @@ fi
 # 3. Every in-house skill MUST appear in the index. (Derive the directory with
 # `dirname` rather than `find -printf`, which is GNU-only — this keeps the check
 # working when run locally on macOS/BSD as well as in CI.)
-inventory=$(mktemp) || exit 1
-trap 'rm -f "$inventory"' EXIT
+inventory_dir=$(mktemp -d) || exit 1
+trap 'rm -rf "$inventory_dir"' EXIT
+inventory="$inventory_dir/find"
 if ! find . -mindepth 2 -maxdepth 2 -name SKILL.md -print0 > "$inventory"; then
   echo '::error::local skill inventory failed; refusing incomplete index validation.' >&2
+  exit 1
+fi
+# Direct-layout globbing independently observes the same scope. Base64 retains
+# unusual names while sort compares complete record sets, rather than a count.
+: > "$inventory_dir/direct"
+shopt -s dotglob nullglob
+for skill_md in ./*/SKILL.md; do
+  [ -e "$skill_md" ] || [ -L "$skill_md" ] || continue
+  printf '%s' "$skill_md" | base64 | tr -d '\r\n' >> "$inventory_dir/direct"
+  printf '\n' >> "$inventory_dir/direct"
+done
+: > "$inventory_dir/observed"
+while IFS= read -r -d '' skill_md; do
+  printf '%s' "$skill_md" | base64 | tr -d '\r\n' >> "$inventory_dir/observed"
+  printf '\n' >> "$inventory_dir/observed"
+done < "$inventory"
+[ -z "${skill_md:-}" ] || {
+  echo '::error::local skill inventory has an unterminated record; refusing incomplete index validation.' >&2
+  exit 1
+}
+LC_ALL=C sort "$inventory_dir/direct" > "$inventory_dir/direct-sorted"
+LC_ALL=C sort "$inventory_dir/observed" > "$inventory_dir/observed-sorted"
+if ! cmp -s "$inventory_dir/direct-sorted" "$inventory_dir/observed-sorted"; then
+  echo '::error::local skill inventory observations disagree; refusing incomplete index validation.' >&2
   exit 1
 fi
 missing=0

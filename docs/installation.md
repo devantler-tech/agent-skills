@@ -87,6 +87,13 @@ and name both sources before calling GitHub CLI. Repeated entries for the same
 repository and skill, including repository casing aliases, are installed once.
 Each repository and source ref resolves once before installation. Skills sharing that source use
 the same frozen commit even if its branch moves during the run; different refs remain separate.
+Source responses must contain one unambiguous commit identity. When a catalogue link names
+a full commit, the returned identity must match it. A conflicting or incomplete response stops
+the complete installation before any skill is replaced. The upstream target checker also refuses
+repeated file declarations instead of selecting one interpretation.
+
+The offline index guard compares two independent inventories of local skill files, including
+hidden directories. A partial listing cannot establish that every maintained skill is indexed.
 
 Positional agent names override `AGENTS`. An unset or empty `AGENTS` uses the two default agents;
 otherwise, spaces, tabs, and newlines separate names without expanding wildcard characters into
