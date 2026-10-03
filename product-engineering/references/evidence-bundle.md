@@ -109,7 +109,9 @@ still permits improvement remain inconclusive.
 
 ## Run the optional offline check
 
-Requires jq 1.6 or newer. Resolve paths relative to this installed skill, not the consuming repository.
+Requires decimal-preserving jq 1.7 or newer. Numeric repeat counts must be integers;
+fractional values fail validation before any adoption assessment. Resolve paths relative to this
+installed skill, not the consuming repository.
 The helper reads JSON, performs no network calls or writes, and is **not enabled as a runtime gate**.
 
 ```bash

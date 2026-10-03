@@ -13,7 +13,7 @@
 #   ./scripts/install.sh --list                # print the parsed index and exit (no gh needed)
 #   ./scripts/install.sh --help                # show usage without reading the index
 #
-# Requires gh >= 2.90.0 (with `gh skill`). See `gh skill install --help`.
+# Requires jq and gh >= 2.90.0 (with `gh skill`). See `gh skill install --help`.
 # (`--list` only parses the README, so it needs neither gh nor network access.)
 set -euo pipefail
 
@@ -32,7 +32,9 @@ Unset or empty AGENTS defaults to: github-copilot claude-code.
 --help, -h  Show this help without reading the index or calling gh.
 Help and listing are standalone modes; do not combine them with agent arguments.
 
-Installation requires gh >= 2.90.0 with gh skill support. Agent names are passed
+Installation requires jq and gh >= 2.90.0 with gh skill support. Every catalogue
+source is resolved to an immutable commit before any skill is installed.
+Agent names are passed
 to gh skill install; run gh skill install --help for supported agents.
 EOF
 }
@@ -88,7 +90,11 @@ fi
 
 # Validate the complete table before listing or invoking gh. A failed parser
 # must not be hidden in process substitution or leave a partial install list.
-catalogue=$(bash "$script_dir/readme-index.sh")
+if [ "$list_only" = true ]; then
+  catalogue=$(bash "$script_dir/readme-index.sh")
+else
+  catalogue=$(bash "$script_dir/readme-index.sh" --targets)
+fi
 entries=()
 while IFS= read -r entry; do
   [ -n "$entry" ] && entries+=("$entry")
@@ -113,17 +119,42 @@ if ! gh skill --help >/dev/null 2>&1; then
   exit 1
 fi
 
+if ! command -v jq >/dev/null 2>&1; then
+  echo "error: installation requires jq to verify source commits." >&2
+  exit 1
+fi
+
+# Resolve the whole catalogue before the first user-scope write. Preserve the
+# CLI's exit status and require exactly one complete commit response: partial
+# output from a failed request and concatenated responses are not provenance.
+pins=()
+for entry in "${entries[@]}"; do
+  read -r repo ref _ skill <<<"$entry"
+  if ! response=$(gh api --hostname github.com "repos/$repo/commits/$ref"); then
+    echo "error: could not resolve $repo at $ref; no skills installed." >&2
+    exit 1
+  fi
+  if ! pin=$(jq -esr '
+      if length == 1 and (.[0] | type == "object") and
+         (.[0].sha | type == "string" and test("\\A[0-9a-f]{40}\\z"))
+      then .[0].sha else error("expected one full commit SHA") end
+    ' <<<"$response"); then
+    echo "error: invalid source commit for $repo at $ref; no skills installed." >&2
+    exit 1
+  fi
+  pins+=("$pin")
+done
+
 echo "Installing ${#entries[@]} skill(s) for agent(s): ${agents[*]} (scope=user)"
 echo
 
 fail=0
 for agent in "${agents[@]}"; do
-  for entry in "${entries[@]}"; do
-    repo=${entry%% *}
-    skill=${entry##* }
+  for i in "${!entries[@]}"; do
+    read -r repo _ _ skill <<<"${entries[$i]}"
     # Capture output so the success path stays quiet but a failure can surface
     # the actual error (auth, network, missing skill, …) instead of swallowing it.
-    if out=$(gh skill install "$repo" "$skill" \
+    if out=$(gh skill install "$repo" "$skill" --pin "${pins[$i]}" \
         --agent "$agent" --scope user --force --allow-hidden-dirs 2>&1); then
       echo "  ok   [$agent] $repo $skill"
     else

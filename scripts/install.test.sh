@@ -180,6 +180,10 @@ printf '%s\n' "${GH_HOST:-unset}" >> "$GH_HOSTS"
 if [ "$*" = 'skill --help' ]; then
   exit "${GH_UNAVAILABLE:-0}"
 fi
+if [ "$1" = api ]; then
+  printf '{"sha":"1111111111111111111111111111111111111111"}\n'
+  exit 0
+fi
 if [ "${GH_FAIL_SKILL:-}" = "${4:-}" ]; then
   echo 'fixture download failed' >&2
   exit 1
@@ -235,7 +239,7 @@ check 'conflicting modes never call gh' test ! -s "$GH_CALLS"
 
 run_install "$alias_root" codex
 check 'repository casing aliases install successfully' test "$rc" -eq 0
-printf '<skill><--help>\n<skill><install><Fixture/One><alpha><--agent><codex><--scope><user><--force><--allow-hidden-dirs>\n' > "$tmp/expected"
+printf '<skill><--help>\n<api><--hostname><github.com><repos/Fixture/One/commits/main>\n<skill><install><Fixture/One><alpha><--pin><1111111111111111111111111111111111111111><--agent><codex><--scope><user><--force><--allow-hidden-dirs>\n' > "$tmp/expected"
 check 'repository casing aliases install only once' diff -u "$tmp/expected" "$GH_CALLS"
 
 # Different upstreams with the same destination name must be rejected before
@@ -259,10 +263,11 @@ done
 # two entries; positional arguments determine agents, not cwd filenames or AGENTS.
 expected_calls() {
   printf '<skill><--help>\n'
+  printf '<api><--hostname><github.com><repos/devantler-tech/agent-skills/commits/main>\n<api><--hostname><github.com><repos/fluxcd/agent-skills/commits/main>\n'
   local agent
   for agent in "$@"; do
-    printf '<skill><install><devantler-tech/agent-skills><beta><--agent><%s><--scope><user><--force><--allow-hidden-dirs>\n' "$agent"
-    printf '<skill><install><fluxcd/agent-skills><alpha><--agent><%s><--scope><user><--force><--allow-hidden-dirs>\n' "$agent"
+    printf '<skill><install><devantler-tech/agent-skills><beta><--pin><1111111111111111111111111111111111111111><--agent><%s><--scope><user><--force><--allow-hidden-dirs>\n' "$agent"
+    printf '<skill><install><fluxcd/agent-skills><alpha><--pin><1111111111111111111111111111111111111111><--agent><%s><--scope><user><--force><--allow-hidden-dirs>\n' "$agent"
   done
 }
 expected_calls github-copilot claude-code > "$tmp/expected"
@@ -272,7 +277,7 @@ check 'defaults make exactly four intended installs' diff -u "$tmp/expected" "$G
 GH_HOST=github.enterprise.test run_install "$two"
 check 'enterprise-default environment installs successfully' test "$rc" -eq 0
 check 'enterprise-default environment preserves installation arguments' diff -u "$tmp/expected" "$GH_CALLS"
-printf 'github.com\ngithub.com\ngithub.com\ngithub.com\ngithub.com\n' > "$tmp/expected-hosts"
+printf 'github.com\ngithub.com\ngithub.com\ngithub.com\ngithub.com\ngithub.com\ngithub.com\n' > "$tmp/expected-hosts"
 check 'preflight and every install target github.com' diff -u "$tmp/expected-hosts" "$GH_HOSTS"
 AGENTS='' run_install "$two"
 check 'empty AGENTS preserves defaults' diff -u "$tmp/expected" "$GH_CALLS"
