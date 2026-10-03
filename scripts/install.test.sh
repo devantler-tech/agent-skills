@@ -671,6 +671,61 @@ make_root "$tmp/table-html-boundary" <<'EOF'
 | `beta` | [`fixture/one`](https://github.com/fixture/one/tree/main/beta) | `gh skill install fixture/one beta` |
 EOF
 expect_list 'an established table still permits a following raw HTML block' "$tmp/table-html-boundary" $'fixture/one alpha\nfixture/one beta'
+for tag in pre script style textarea; do
+  html_root="$tmp/list-owned-html-$tag"
+  make_root "$html_root" <<EOF
+| \`alpha\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/alpha) | \`gh skill install fixture/one alpha\` |
+
+- explanatory item
+  <$tag>
+  raw example
+
+| Skill | Upstream | Install |
+| --- | --- | --- |
+| \`beta\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/beta) | \`gh skill install fixture/one beta\` |
+EOF
+  expect_list "raw $tag ends with its containing list" "$html_root" $'fixture/one alpha\nfixture/one beta'
+done
+for marker in '***' '___' '---'; do
+  html_root="$tmp/tab-indented-marker-$RANDOM"
+  make_root "$html_root" <<EOF
+| \`alpha\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/alpha) | \`gh skill install fixture/one alpha\` |
+
+An actual paragraph
+	$marker
+<example-widget>
+### More entries
+| Skill | Upstream | Install |
+| --- | --- | --- |
+| \`beta\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/beta) | \`gh skill install fixture/one beta\` |
+EOF
+  expect_list "tab-indented $marker remains paragraph content" "$html_root" $'fixture/one alpha\nfixture/one beta'
+done
+make_root "$tmp/tab-separated-thematic-break" <<'EOF'
+| `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/alpha) | `gh skill install fixture/one alpha` |
+
+An actual paragraph
+*	*	*
+<example-widget>
+| `hidden` | [`fixture/one`](https://github.com/fixture/one/tree/main/hidden) | `gh skill install fixture/one hidden` |
+</example-widget>
+
+| `beta` | [`fixture/one`](https://github.com/fixture/one/tree/main/beta) | `gh skill install fixture/one beta` |
+EOF
+expect_list 'tabs between thematic-break markers remain valid' "$tmp/tab-separated-thematic-break" $'fixture/one alpha\nfixture/one beta'
+make_root "$tmp/list-unclosed-comment" <<'EOF'
+| `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/alpha) | `gh skill install fixture/one alpha` |
+
+- explanatory item
+  <!-- unfinished comment
+
+| Skill | Upstream | Install |
+| --- | --- | --- |
+| `beta` | [`fixture/one`](https://github.com/fixture/one/tree/main/beta) | `gh skill install fixture/one beta` |
+EOF
+run_install "$tmp/list-unclosed-comment" --list
+check 'an unterminated list comment fails loudly' test "$rc" -ne 0
+check 'an unterminated list comment emits no partial catalogue' test ! -s "$tmp/stdout"
 make_root "$tmp/unclosed-reference-title" <<'EOF'
 | `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/alpha) | `gh skill install fixture/one alpha` |
 

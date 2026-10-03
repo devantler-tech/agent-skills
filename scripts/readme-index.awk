@@ -84,7 +84,7 @@ function table_separator_columns(s, cells, n, i) {
 function paragraph_line(s, previous, compact) {
   if (s ~ /^[ \t]*$/ || s ~ /^ ? ? ?(#{1,6}([ \t]|$)|>)/) return 0
   compact=s; gsub(/[ \t]/, "", compact)
-  if (compact ~ /^(-{3,}|\*{3,}|_{3,})$/ && s ~ /^ {0,3}[^ ]/) return 0
+  if (compact ~ /^(-{3,}|\*{3,}|_{3,})$/ && indent_width(s) <= 3) return 0
   if (previous && s ~ /^ ? ? ?(=+|-+)[ \t]*$/) return 0
   if (!previous && s ~ /^(    |\t)/) return 0
   if (s ~ /^ ? ? ?[-+*]([ \t]|$)/ &&
@@ -177,8 +177,16 @@ function reference_line(s, result, tail, prefix) {
 }
 {
   sub(/\r$/, "")
+  # A list-owned HTML block ends before the first line outside that container.
+  if (html && html_container && $0 !~ /^[ \t]*$/ &&
+      indent_width($0) < html_container) {
+    if (html == "comment") refuse("unterminated HTML comment")
+    html=""; html_container=0; list_indent=0; list_blank=0
+    clear_paragraph()
+  }
   if (html) {
-    if (html_end($0)) html=""
+    if (list_indent && $0 ~ /^[ \t]*$/) list_blank=1
+    if (html_end($0)) { html=""; html_container=0 }
     clear_paragraph()
     next
   }
@@ -200,7 +208,8 @@ function reference_line(s, result, tail, prefix) {
     }
     html=html_start($0)
     if (html) {
-      if (html_end($0)) html=""
+      html_container=(list_indent && indent_width($0) >= list_indent ? list_indent : 0)
+      if (html_end($0)) { html=""; html_container=0 }
       clear_paragraph()
       next
     }
