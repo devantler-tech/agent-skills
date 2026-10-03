@@ -49,6 +49,20 @@ fi
 # the persistent-transient → warning path runs without real backoff.
 UPSTREAM_RETRY_SLEEP=${UPSTREAM_RETRY_SLEEP:-sleep}
 
+# Keep repeated JSON paths visible before decoding a response into one identity.
+unambiguous_object() {
+  jq -es 'length==1 and (.[0]|type=="object")' >/dev/null <<< "$1" &&
+    jq --stream -es '
+      reduce .[] as $event ({complete:{}, valid:true};
+        if ($event|length)==2 then
+          .complete as $complete | $event[0] as $path |
+          .valid = (.valid and (any(range(0;($path|length)+1);
+            $complete[($path[0:.]|tojson)]==true)|not)) |
+          .complete[($path|tojson)] = true
+        else .complete[($event[0][0:-1]|tojson)] = true end) | .valid
+    ' >/dev/null <<< "$1"
+}
+
 # Resolve one upstream skill target. Echoes nothing on success; on a definitive
 # miss returns 1 (hard drift); on persistent transport failure returns 2 (warn);
 # on an invalid successful response returns 3 (verification failure).
@@ -66,6 +80,8 @@ resolve_target() {
     # Native cancellation/authentication errors may have no HTTP response.
     # Only general transport failure is eligible for the statusless retry path.
     case "$api_status" in 0|1) ;; *) return 3 ;; esac
+    # Every HTTP classification uses this same complete, unambiguous body.
+    if [ -n "$http_status" ] && ! unambiguous_object "$body"; then return 3; fi
     if [ "$http_status" = 200 ] && [ "$api_status" -eq 0 ]; then
       # Validate after the API call so a directory or malformed payload cannot be
       # mistaken for a transport error and downgraded to a transient warning.

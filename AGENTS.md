@@ -98,6 +98,10 @@ shellcheck scripts/*.sh
                                   # every row's Install command agrees with its Skill name + Upstream
                                   # link (cross-column consistency — no wrong-repo/slug install ships);
                                   # distinct upstream repositories cannot share an installed skill name
+# Source observations reject repeated JSON fields; explicitly named full commits must
+# match the resolved installation pin. The local index guard independently compares
+# direct-layout and find inventories, including hidden names, before accepting coverage.
+# Run bash scripts/source-boundaries.test.sh with the existing installer and index tests.
 # install.sh and both index guards share scripts/readme-index.{sh,awk}: validate every
 # table row before emitting any entries, ignore prose/fenced examples, HTML comments and raw HTML
 # blocks, and reject malformed

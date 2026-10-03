@@ -127,6 +127,18 @@ fi
 # Resolve the whole catalogue before the first user-scope write. Preserve the
 # CLI's exit status and require exactly one complete commit response: partial
 # output from a failed request and concatenated responses are not provenance.
+unambiguous_object() {
+  jq -es 'length==1 and (.[0]|type=="object")' >/dev/null <<< "$1" &&
+    jq --stream -es '
+      reduce .[] as $event ({complete:{}, valid:true};
+        if ($event|length)==2 then
+          .complete as $complete | $event[0] as $path |
+          .valid = (.valid and (any(range(0;($path|length)+1);
+            $complete[($path[0:.]|tojson)]==true)|not)) |
+          .complete[($path|tojson)] = true
+        else .complete[($event[0][0:-1]|tojson)] = true end) | .valid
+    ' >/dev/null <<< "$1"
+}
 pins=()
 sources=()
 source_pins=()
@@ -142,12 +154,16 @@ for entry in "${entries[@]}"; do
     echo "error: could not resolve $repo at $ref; no skills installed." >&2
     exit 1
   fi
-  if ! pin=$(jq -esr '
+  if ! unambiguous_object "$response" || ! pin=$(jq -esr '
       if length == 1 and (.[0] | type == "object") and
          (.[0].sha | type == "string" and test("\\A[0-9a-f]{40}\\z"))
       then .[0].sha else error("expected one full commit SHA") end
     ' <<<"$response"); then
     echo "error: invalid source commit for $repo at $ref; no skills installed." >&2
+    exit 1
+  fi
+  if [[ "$ref" =~ ^[0-9a-fA-F]{40}$ ]] && [ "$(printf '%s' "$ref" | LC_ALL=C tr '[:upper:]' '[:lower:]')" != "$pin" ]; then
+    echo "error: source commit differs from the requested literal commit for $repo; no skills installed." >&2
     exit 1
   fi
   pins+=("$pin")
