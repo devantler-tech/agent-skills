@@ -3,6 +3,23 @@
 def require($ok; $message): if $ok then . else error($message) end;
 def text: type == "string" and test("\\S");
 def number: type == "number" and isfinite;
+def decimal_integer:
+  tostring as $raw
+  | ($raw | ltrimstr("-")) as $unsigned
+  | ($unsigned == (1e-1147483647 | tostring)) as $underflowed
+  | ($unsigned | capture("^(?<whole>[0-9]+)(?:\\.(?<fraction>[0-9]+))?(?:[eE](?<exponent>[+-]?[0-9]+))?$")) as $parts
+  | ($parts.fraction // "") as $fraction
+  | ($parts.whole + $fraction) as $digits
+  | if ($digits | test("^0+$")) then ($underflowed | not)
+    else (($parts.exponent // "0") | tonumber) as $exponent
+      | (($fraction | length) - $exponent) as $scale
+      | if $scale <= 0 then true
+        elif $scale > ($digits | length) then false
+        else (($digits | length) - $scale) as $integer_length
+          | ($digits[$integer_length:] | test("^0+$"))
+        end
+    end;
+def integer: number and decimal_integer;
 def stamp:
   if type != "string" then false
   else try (test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")
@@ -11,7 +28,7 @@ def unique_ids: length == (map(.id) | unique | length);
 def interval: . == null or (type == "object" and (.lower | number) and (.upper | number) and .lower <= .upper);
 def kinds: ["measurement", "static", "behavior", "deployment", "live", "review", "holdout", "rollback"];
 def schema:
-  require(type == "object" and .schemaVersion == 1; "unsupported evidence-bundle schema")
+  require(type == "object" and (.schemaVersion | integer) and .schemaVersion == 1; "unsupported evidence-bundle schema")
   | require((.outcome | text) and (.baseline.id | text) and (.baseline.revision | text)
       and (.candidate.id | text) and (.candidate.revision | text)
       and .baseline.id != .candidate.id and .baseline.revision != .candidate.revision; "outcome, baseline and distinct candidate required")
@@ -20,8 +37,7 @@ def schema:
       and all(.alternatives[]; (.id | text) and (.reason | text))
       and any(.alternatives[]; .id == $baseline); "record alternatives including retaining the baseline and their disposition")
   | require((.plan.record | text) and (.plan.registeredAt | stamp) and (.plan.startedAt | stamp)
-      and (.plan.minRepeats | number) and .plan.minRepeats >= 2
-      and .plan.minRepeats == (.plan.minRepeats | floor); "invalid preregistration or repeat floor")
+      and (.plan.minRepeats | integer) and .plan.minRepeats >= 2; "invalid preregistration or repeat floor")
   | require((.plan.measures | type == "array" and length > 0 and unique_ids)
       and any(.plan.measures[]; .objective == true) and any(.plan.measures[]; .protected == true); "unique measures, objectives and protected dimensions required")
   | require(all(.plan.measures[];
@@ -67,7 +83,8 @@ def floor_known_bad($m; $v):
 def floor_proven($m; $v):
   ($m.protected | not) or (if $m.direction == "lower" then $v.candidate.upper <= $m.floor else $v.candidate.lower >= $m.floor end);
 
-require(type == "array" and length == 1; "use jq -s with exactly one evidence bundle")
+require(9007199254740991.1 > 9007199254740991; "evidence assessment requires decimal-preserving jq (1.7 or newer)")
+| require(type == "array" and length == 1; "use jq -s with exactly one evidence bundle")
 | .[0]
 | require($now | stamp; "--arg now must be a UTC timestamp")
 | schema

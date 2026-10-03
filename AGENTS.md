@@ -41,8 +41,9 @@ commands, and the [Installing](README.md#installing) / [Contributing](README.md#
 The **README `## Skills` tables are the source of truth** for what this repo offers. Two consumers
 parse them directly, so they never drift from the index:
 
-- [`scripts/install.sh`](scripts/install.sh) extracts each `gh skill install <owner/repo> <skill>`
-  command from the `## Skills` section and installs it for the named agents at user scope.
+- [`scripts/install.sh`](scripts/install.sh) validates the `## Skills` rows and resolves each
+  upstream ref to an immutable commit before installing for the named agents at user scope.
+  Installation requires `jq`; the public `--list` mode remains offline.
 - The composite actions
   [`setup-agent-skills`](https://github.com/devantler-tech/actions/tree/main/setup-agent-skills) /
   [`update-agent-skills`](https://github.com/devantler-tech/actions/tree/main/update-agent-skills)
@@ -51,8 +52,9 @@ parse them directly, so they never drift from the index:
 
 Because every row either hosts an in-house skill or installs **directly from its original upstream**,
 `gh skill` records the true source in the skill's `SKILL.md` frontmatter (`metadata.github-repo`,
-`github-path`, `github-ref`, `github-tree-sha`) and `gh skill update --all` works natively — **no
-lockfile, no sync bot, no custom metadata.** Prefer pointing at a canonical upstream over re-hosting a
+`github-path`, `github-ref`, `github-tree-sha`) — **no lockfile, no sync bot, no custom metadata.**
+The batch installer pins the advertised revision; rerun it to refresh moving catalogue refs.
+Prefer pointing at a canonical upstream over re-hosting a
 copy; only add a directory here for genuinely **in-house** skills.
 
 ## Conventions
@@ -110,6 +112,7 @@ shellcheck scripts/*.sh
                             # agent selection without glob expansion, github.com host binding,
                             # pre-install collision rejection,
                             # raw HTML exclusion, fence syntax, and partial-failure reporting
+./scripts/install-source.test.sh # source-ref pins and complete resolution before installation
 ./scripts/check-upstream-skills.test.sh   # self-test of the upstream guard (also in the lint-scripts
                                           # gate): runs the REAL script against fixtures with an offline
                                           # `gh` stub (no network) — pins ## Skills scoping, Upstream

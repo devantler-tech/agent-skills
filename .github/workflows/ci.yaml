@@ -192,6 +192,9 @@ jobs:
         # Self-contained (real install.sh into throwaway fixtures): no gh/network.
         run: ./scripts/install.test.sh
 
+      - name: 🧪 Verify catalogue source pins
+        run: bash ./scripts/install-source.test.sh
+
       - name: 🧪 Self-test the upstream-skills guard
         # The real check-upstream-skills.sh resolves upstream targets over the network
         # (the standalone scheduled `🔗 Upstream skill targets` workflow), so it can't
