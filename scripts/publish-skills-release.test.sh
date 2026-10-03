@@ -20,10 +20,12 @@ trap 'rm -rf "$work"' EXIT
 # Only GitHub is replaced: no test can create a remote release.
 git init -q "$work/fixture"
 printf 'fixture\n' >"$work/fixture/README.md"
+printf '#!/bin/sh\nexit 0\n' >"$work/fixture/helper.sh"
+chmod +x "$work/fixture/helper.sh"
 printf 'space\n' >"$work/fixture/space name.txt"
 printf 'newline\n' >"$work/fixture/"$'newline\nname.txt'
 ln -s README.md "$work/fixture/readme-link"
-git -C "$work/fixture" add README.md 'space name.txt' $'newline\nname.txt' readme-link
+git -C "$work/fixture" add README.md helper.sh 'space name.txt' $'newline\nname.txt' readme-link
 git -C "$work/fixture" -c user.name=Fixture -c user.email=fixture@example.test \
   -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -qm fixture --allow-empty
 fixture_commit=$(git -C "$work/fixture" rev-parse HEAD)
@@ -143,6 +145,14 @@ assert_case() {
   case_dir=$(make_stub "$name" "$2" "$3" "$4" "${7:-match}" "$test_tag" "${11:-v1.0.0}" "${12:-ok}")
   invocation_dir="$case_dir/repo"
   case "${9:-match}" in
+    mode-mismatch)
+      git -C "$case_dir/repo" config core.filemode false
+      chmod +x "$case_dir/repo/README.md"
+      [ -z "$(git -C "$case_dir/repo" status --porcelain)" ] || exit 1 ;;
+    lost-executable)
+      git -C "$case_dir/repo" config core.filemode false
+      chmod -x "$case_dir/repo/helper.sh"
+      [ -z "$(git -C "$case_dir/repo" status --porcelain)" ] || exit 1 ;;
     tree-tail|index-tail)
       [ "${9}" != index-tail ] || git -C "$case_dir/repo" update-index --assume-unchanged 'space name.txt'
       real_git=$(command -v git)
@@ -260,6 +270,8 @@ assert_case diagnostic404-is-not-absence false404 published ok 1 no
 assert_case validation-checkout-movement-refuses missing published mutates 1 no
 assert_case unterminated-tree-refuses missing published ok 1 no match "$fixture_commit" tree-tail
 assert_case unterminated-index-refuses missing published ok 1 no match "$fixture_commit" index-tail
+assert_case executable-mode-mismatch-refuses missing published ok 1 no match "$fixture_commit" mode-mismatch
+assert_case missing-executable-mode-refuses missing published ok 1 no match "$fixture_commit" lost-executable
 
 # The ordinary release: nothing published yet, so it publishes.
 assert_case unpublished-publishes missing published ok 0 yes
