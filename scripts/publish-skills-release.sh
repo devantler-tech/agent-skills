@@ -14,6 +14,11 @@
 #
 # Usage: publish-skills-release.sh --tag <tag> [--repo <owner/repo>] [--expected-commit <sha>]
 set -euo pipefail
+# Repository selectors from a hook or parent process must not substitute an
+# origin or object store for the checkout that the skill CLI will validate.
+unset GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR GIT_INDEX_FILE GIT_OBJECT_DIRECTORY \
+  GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_PREFIX GIT_NAMESPACE
+export GIT_NO_REPLACE_OBJECTS=1 GIT_NO_LAZY_FETCH=1
 
 # Print the supported arguments and exit-code contract to stderr without exiting.
 usage() {
@@ -81,14 +86,31 @@ export GH_HOST=github.com
 # once for API paths; release commands and JSON comparisons keep the literal tag.
 tag_path=$(jq -rn --arg tag "$tag" '$tag | @uri') || exit 1
 
+# Ordinary JSON decoding collapses repeated identity fields and containers.
+# Completed streaming paths retain that ambiguity; observations are one object.
+unambiguous_object() {
+  jq -es 'length==1 and (.[0]|type=="object")' >/dev/null <<< "$1" &&
+    jq --stream -es '
+      reduce .[] as $event ({complete:{}, valid:true};
+        if ($event|length)==2 then
+          .complete as $complete | $event[0] as $path |
+          .valid = (.valid and (any(range(0;($path|length)+1);
+            $complete[($path[0:.]|tojson)]==true)|not)) |
+          .complete[($path|tojson)] = true
+        else .complete[($event[0][0:-1]|tojson)] = true end) | .valid
+    ' >/dev/null <<< "$1"
+}
+
 # Verify the requested remote tag resolves to the expected commit. The commits
 # endpoint handles annotated tags; qualifying tags/ prevents branch collisions.
 verify_tag_commit() {
-  local tag_commit
-  tag_commit=$(gh api "repos/${repo}/commits/tags/${tag_path}" --jq '.sha') || {
+  local tag_commit response
+  response=$(gh api "repos/${repo}/commits/tags/${tag_path}") || {
     printf 'publish-skills-release: could not resolve tag %s to a commit; publication is unverified.\n' "$tag" >&2
     return 1
   }
+  unambiguous_object "$response" || return 1
+  tag_commit=$(jq -er '.sha | select(type=="string")' <<< "$response") || return 1
   if ! [[ "$tag_commit" =~ ^[0-9a-f]{40}$ ]] || [ "$tag_commit" != "$expected_commit" ]; then
     printf 'publish-skills-release: tag %s does not resolve to the expected release commit; publication is unverified.\n' "$tag" >&2
     return 1
@@ -101,13 +123,13 @@ tag_ref_status=0
 tag_response=$(gh api "repos/$repo/git/ref/tags/$tag_path" --include 2>/dev/null) || tag_ref_status=$?
 http_status=$(printf '%s\n' "$tag_response" | awk 'NR==1 && /^HTTP\/[0-9.]+ [0-9][0-9][0-9] / {print $2}') || exit 1
 tag_body=$(printf '%s\n' "$tag_response" | awk 'body {print; next} {sub(/\r$/, "")} /^$/ {body=1}') || exit 1
-if [ "$http_status" = 200 ] && [ "$tag_ref_status" -eq 0 ] &&
+if [ "$http_status" = 200 ] && [ "$tag_ref_status" -eq 0 ] && unambiguous_object "$tag_body" &&
    printf '%s' "$tag_body" | jq -es --arg ref "refs/tags/$tag" '
      length==1 and (.[0] | type=="object" and .ref==$ref and
        (.object.type=="commit" or .object.type=="tag") and
        (.object.sha|type=="string" and test("\\A[0-9a-f]{40}\\z")))' >/dev/null; then
   tag_exists=yes
-elif [ "$http_status" = 404 ] && [ "$tag_ref_status" -eq 1 ] &&
+elif [ "$http_status" = 404 ] && [ "$tag_ref_status" -eq 1 ] && unambiguous_object "$tag_body" &&
      printf '%s' "$tag_body" | jq -es 'length==1 and (.[0]|type=="object" and .message=="Not Found")' >/dev/null; then
   tag_exists=no
 else
@@ -155,11 +177,21 @@ verify_checkout() {
   # These index flags hide modified or absent tracked files from status. Reject
   # them rather than validating disk bytes that differ from the release commit.
   # NUL-delimited records preserve filenames containing whitespace or newlines.
-  if ! git --no-replace-objects ls-files -v -z | { entry=''; while IFS= read -r -d '' entry; do
+  checkout_observation=$(mktemp -d) || exit 1
+  trap 'rm -rf "$checkout_observation"' EXIT
+  git --no-replace-objects ls-files -v -z > "$checkout_observation/index" || exit 1
+  : > "$checkout_observation/index-paths"
+  entry=''
+  while IFS= read -r -d '' entry; do
     case "${entry:0:1}" in
-      S | [a-z]) exit 1 ;;
+      H) ;;
+      *) printf 'publish-skills-release: hidden or invalid index flags; refusing publication.\n' >&2; exit 1 ;;
     esac
-  done; [ -z "$entry" ]; }; then
+    [[ ${entry:1:1} = ' ' && -n ${entry:2} ]] || exit 1
+    printf '%s' "${entry:2}" | base64 | tr -d '\r\n' >> "$checkout_observation/index-paths" || exit 1
+    printf '\n' >> "$checkout_observation/index-paths"
+  done < "$checkout_observation/index"
+  if [ -n "$entry" ]; then
     printf 'publish-skills-release: hidden or unreadable index flags prevent checkout verification; refusing publication.\n' >&2
     exit 1
   fi
@@ -172,9 +204,10 @@ verify_checkout() {
 
   # Status compares cleaned content. Validate the actual disk bytes against
   # immutable blobs so filters or newline conversion cannot hide a different skill.
-  tracked_files=$(mktemp) || exit 1
-  trap 'rm -f "$tracked_files"' EXIT
+  tracked_files="$checkout_observation/tree"
   git --no-replace-objects ls-tree -r --full-tree -z "$expected_commit" >"$tracked_files" || exit 1
+  : > "$checkout_observation/tree-paths"
+  : > "$checkout_observation/tree-records"
   while IFS= read -r -d '' record; do
     header=${record%%$'\t'*}
     path=${record#*$'\t'}
@@ -184,6 +217,10 @@ verify_checkout() {
     }
     mode=${BASH_REMATCH[1]}
     expected_blob=${BASH_REMATCH[2]}
+    printf '%s' "$path" | base64 | tr -d '\r\n' >> "$checkout_observation/tree-paths" || exit 1
+    printf '\n' >> "$checkout_observation/tree-paths"
+    printf '%s %s\t%s\0' "$mode" "$expected_blob" "$path" | base64 | tr -d '\r\n' >> "$checkout_observation/tree-records" || exit 1
+    printf '\n' >> "$checkout_observation/tree-records"
     if [ "$mode" = 120000 ]; then
       [ -L "./$path" ] || exit 1
       link=$(readlink "./$path" && printf '.') || exit 1
@@ -207,7 +244,33 @@ verify_checkout() {
     printf 'publish-skills-release: incomplete tracked file record; refusing publication.\n' >&2
     exit 1
   }
-  rm -f "$tracked_files"
+  # An independently framed raw diff proves that a successful ls-tree listing
+  # did not omit any tracked leaf. No external diff, checkout filter or rename
+  # conversion participates in this observation.
+  empty_tree=$(git --no-replace-objects hash-object -t tree --stdin < /dev/null) || exit 1
+  git --no-replace-objects diff-tree -r --raw -z --no-abbrev --no-commit-id --no-renames \
+    --no-ext-diff --no-textconv --no-relative --no-color --ignore-submodules=none \
+    "$empty_tree" "$expected_commit" > "$checkout_observation/diff" || exit 1
+  : > "$checkout_observation/diff-records"
+  header=''
+  while IFS= read -r -d '' header; do
+    IFS= read -r -d '' path || exit 1
+    read -r old_mode new_mode old_blob new_blob change extra <<< "$header"
+    [[ $old_mode = :000000 && $new_mode =~ ^100(644|755)$|^120000$ &&
+       $old_blob =~ ^0{40}$ && $new_blob =~ ^[0-9a-f]{40}$ && $change = A && -z ${extra:-} && -n $path ]] || exit 1
+    printf '%s %s\t%s\0' "$new_mode" "$new_blob" "$path" | base64 | tr -d '\r\n' >> "$checkout_observation/diff-records" || exit 1
+    printf '\n' >> "$checkout_observation/diff-records"
+  done < "$checkout_observation/diff"
+  [ -z "$header" ] || exit 1
+  for inventory in tree-records diff-records tree-paths index-paths; do
+    LC_ALL=C sort "$checkout_observation/$inventory" > "$checkout_observation/$inventory.sorted" || exit 1
+  done
+  if ! cmp -s "$checkout_observation/tree-records.sorted" "$checkout_observation/diff-records.sorted" ||
+     ! cmp -s "$checkout_observation/tree-paths.sorted" "$checkout_observation/index-paths.sorted"; then
+      printf 'publish-skills-release: incomplete or inconsistent tracked inventory; refusing publication.\n' >&2
+      exit 1
+  fi
+  rm -rf "$checkout_observation"
   trap - EXIT
 
 }
@@ -245,7 +308,7 @@ release_json=$(gh release view "$tag" --repo "$repo" --json tagName,isDraft 2>&1
   exit 1
 }
 
-if ! printf '%s' "$release_json" | jq -es --arg tag "$tag" \
+if ! unambiguous_object "$release_json" || ! printf '%s' "$release_json" | jq -es --arg tag "$tag" \
   'length == 1 and (.[0] | type == "object" and .tagName == $tag and .isDraft == false)' >/dev/null; then
   printf 'publish-skills-release: tag %s exists on %s but a matching non-draft release was not established; publication is unverified.\n' \
     "$tag" "$repo" >&2
