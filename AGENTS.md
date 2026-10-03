@@ -175,7 +175,10 @@ verification fails separately. Invalid payloads never count as healthy or transi
 pass — fix the root cause.
 
 The CD workflow runs `scripts/publish-skills-release.sh` with the workflow commit as the expected tag
-target. Fresh publication requires a clean repository-root checkout at that commit and an effective
+target. Explicit selectors may be supplied once each; environment defaults may be overridden once.
+Help must be used alone. Repository selectors must be one github.com owner/repository pair;
+ambiguous arguments and path or URL syntax are usage errors before any GitHub request.
+Fresh publication requires a clean repository-root checkout at that commit and an effective
 `origin` URL matching the requested github.com repository (HTTPS or Git SSH, with optional explicit
 default ports 443 and 22 respectively). All forge calls use
 github.com even when `GH_HOST` names another host. Hidden index flags (`assume-unchanged` or
