@@ -578,6 +578,99 @@ make_root "$tmp/list-html-boundary" <<'EOF'
 | `beta` | [`fixture/one`](https://github.com/fixture/one/tree/main/beta) | `gh skill install fixture/one beta` |
 EOF
 expect_list 'deindented HTML after a list follows GitHub rendering' "$tmp/list-html-boundary" $'fixture/one alpha\nfixture/one beta'
+make_root "$tmp/list-ended-paragraph" <<'EOF'
+| `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/alpha) | `gh skill install fixture/one alpha` |
+
+- explanatory item
+
+An independent paragraph
+<example-widget>
+| `beta` | [`fixture/one`](https://github.com/fixture/one/tree/main/beta) | `gh skill install fixture/one beta` |
+EOF
+expect_list 'a completed list cannot hide rows in a later paragraph' "$tmp/list-ended-paragraph" $'fixture/one alpha\nfixture/one beta'
+make_root "$tmp/list-ended-heading" <<'EOF'
+| `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/alpha) | `gh skill install fixture/one alpha` |
+
+- explanatory item
+### Independent heading
+An independent paragraph
+<example-widget>
+| `beta` | [`fixture/one`](https://github.com/fixture/one/tree/main/beta) | `gh skill install fixture/one beta` |
+EOF
+expect_list 'an independent heading closes the preceding list context' "$tmp/list-ended-heading" $'fixture/one alpha\nfixture/one beta'
+make_root "$tmp/list-indented-paragraph" <<'EOF'
+| `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/alpha) | `gh skill install fixture/one alpha` |
+
+- explanatory item
+
+  continued item paragraph
+<example-widget>
+| `hidden` | [`fixture/one`](https://github.com/fixture/one/tree/main/hidden) | `gh skill install fixture/one hidden` |
+</example-widget>
+
+| `beta` | [`fixture/one`](https://github.com/fixture/one/tree/main/beta) | `gh skill install fixture/one beta` |
+EOF
+expect_list 'indented continuation retains its list boundary after a blank line' "$tmp/list-indented-paragraph" $'fixture/one alpha\nfixture/one beta'
+make_root "$tmp/list-tab-paragraph" <<'EOF'
+| `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/alpha) | `gh skill install fixture/one alpha` |
+
+- explanatory item
+
+	continued item paragraph
+lazy continued item text
+<example-widget>
+| `hidden` | [`fixture/one`](https://github.com/fixture/one/tree/main/hidden) | `gh skill install fixture/one hidden` |
+</example-widget>
+
+| `beta` | [`fixture/one`](https://github.com/fixture/one/tree/main/beta) | `gh skill install fixture/one beta` |
+EOF
+expect_list 'tab indentation retains a continuing list container' "$tmp/list-tab-paragraph" $'fixture/one alpha\nfixture/one beta'
+for destination in '/foo(bar' '/foo)bar'; do
+  html_root="$tmp/reference-invalid-destination-$RANDOM"
+  make_root "$html_root" <<EOF
+| \`alpha\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/alpha) | \`gh skill install fixture/one alpha\` |
+
+[example]: $destination
+<example-widget>
+| \`beta\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/beta) | \`gh skill install fixture/one beta\` |
+EOF
+  expect_list 'unbalanced destination remains ordinary paragraph content' "$html_root" $'fixture/one alpha\nfixture/one beta'
+done
+for definition in '[foo\]bar]: /url' '[foo\[bar]: /url' '[foo]: /foo(bar(baz))' '[foo]: /foo\(bar' '[foo]: </foo\>bar>'; do
+  html_root="$tmp/reference-escaped-grammar-$RANDOM"
+  make_root "$html_root" <<EOF
+| \`alpha\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/alpha) | \`gh skill install fixture/one alpha\` |
+
+$definition
+<example-widget>
+| \`hidden\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/hidden) | \`gh skill install fixture/one hidden\` |
+</example-widget>
+
+| \`beta\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/beta) | \`gh skill install fixture/one beta\` |
+EOF
+  expect_list 'valid reference escapes and balanced destinations retain block context' "$html_root" $'fixture/one alpha\nfixture/one beta'
+done
+make_root "$tmp/pipe-prefixed-prose" <<'EOF'
+| `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/alpha) | `gh skill install fixture/one alpha` |
+EOF
+cat > "$tmp/pipe-prefixed-prose/README.md" <<'EOF'
+| explanatory text
+<example-widget>
+## Skills
+| Skill | Upstream | Install |
+| --- | --- | --- |
+| `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/alpha) | `gh skill install fixture/one alpha` |
+EOF
+expect_list 'pipe-prefixed prose cannot hide a visible catalogue heading' "$tmp/pipe-prefixed-prose" 'fixture/one alpha'
+make_root "$tmp/table-html-boundary" <<'EOF'
+| `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/alpha) | `gh skill install fixture/one alpha` |
+<example-widget>
+| `hidden` | [`fixture/one`](https://github.com/fixture/one/tree/main/hidden) | `gh skill install fixture/one hidden` |
+</example-widget>
+
+| `beta` | [`fixture/one`](https://github.com/fixture/one/tree/main/beta) | `gh skill install fixture/one beta` |
+EOF
+expect_list 'an established table still permits a following raw HTML block' "$tmp/table-html-boundary" $'fixture/one alpha\nfixture/one beta'
 make_root "$tmp/unclosed-reference-title" <<'EOF'
 | `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/alpha) | `gh skill install fixture/one alpha` |
 

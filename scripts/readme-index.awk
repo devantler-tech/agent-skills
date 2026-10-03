@@ -55,8 +55,34 @@ function html_start(s, lower, tags, attr, open_tag) {
       lower !~ /^<(pre|script|style|textarea)([ \t\/>]|$)/) return "blank"
   return ""
 }
+function clear_paragraph() { paragraph=0; table=0; pipe_columns=0 }
+function column_width(s, i, width) {
+  width=0
+  for (i=1; i<=length(s); i++)
+    width += (substr(s,i,1) == "\t" ? 4-width%4 : 1)
+  return width
+}
+function indent_width(s, i) {
+  for (i=1; i<=length(s); i++) if (substr(s,i,1) !~ /[ \t]/) break
+  return column_width(substr(s,1,i-1))
+}
+function pipe_header_columns(s, i, last, n) {
+  if (s !~ /^ ? ? ?\|/) return 0
+  s=trim(s); n=0
+  for (i=2; i<=length(s); i++) {
+    if (substr(s,i,1) == "\\") { i++; continue }
+    if (substr(s,i,1) == "|") { n++; last=i }
+  }
+  return n + (last == length(s) ? 0 : 1)
+}
+function table_separator_columns(s, cells, n, i) {
+  s=trim(s); sub(/^\|/, "", s); sub(/\|$/, "", s)
+  n=split(s,cells,"|")
+  for (i=1; i<=n; i++) if (trim(cells[i]) !~ /^:?-+:?$/) return 0
+  return n
+}
 function paragraph_line(s, previous, compact) {
-  if (s ~ /^[ \t]*$/ || s ~ /^ ? ? ?(#{1,6}([ \t]|$)|\||>)/) return 0
+  if (s ~ /^[ \t]*$/ || s ~ /^ ? ? ?(#{1,6}([ \t]|$)|>)/) return 0
   compact=s; gsub(/[ \t]/, "", compact)
   if (compact ~ /^(-{3,}|\*{3,}|_{3,})$/ && s ~ /^ {0,3}[^ ]/) return 0
   if (previous && s ~ /^ ? ? ?(=+|-+)[ \t]*$/) return 0
@@ -65,7 +91,6 @@ function paragraph_line(s, previous, compact) {
       (!previous || s ~ /^ ? ? ?[-+*][ \t]+[^ \t]/)) return 0
   if (s ~ /^ ? ? ?[0-9]{1,9}[.)]([ \t]|$)/ &&
       (!previous || s ~ /^ ? ? ?1[.)][ \t]+[^ \t]/)) return 0
-  if (!previous && s ~ /^ ? ? ?\[[^]]+\]:[ \t]*[^ \t]+([ \t]+("[^"]*"|'[^']*'|\([^)]*\)))?[ \t]*$/) return 0
   return 1
 }
 # Reference definitions are block content, including a following destination
@@ -87,15 +112,47 @@ function reference_title_line(s, opening, closing, result) {
   reference_title_end=(result ? "" : closing)
   return 1
 }
-function reference_destination_line(s, tail) {
+function reference_destination_line(s, tail, angled, i, ch, depth, closed) {
   s=trim(s)
-  if (!match(s, /^(<[^<>]*>|[^ \t<>]+)/)) return 0
-  tail=substr(s,RLENGTH+1)
+  angled=(substr(s,1,1) == "<")
+  depth=0; closed=0
+  for (i=(angled ? 2 : 1); i<=length(s); i++) {
+    ch=substr(s,i,1)
+    if (ch == "\\" && substr(s,i+1,1) ~ /[[:punct:]]/) { i++; continue }
+    if (ch ~ /[[:cntrl:]]/ && ch != "\t") return 0
+    if (angled) {
+      if (ch == "<") return 0
+      if (ch == ">") { closed=1; i++; break }
+    } else {
+      if (ch ~ /[ \t]/) break
+      if (ch == "<" || ch == ">") return 0
+      if (ch == "(") depth++
+      if (ch == ")" && --depth < 0) return 0
+    }
+  }
+  if ((angled && !closed) || (!angled && (i == 1 || depth))) return 0
+  tail=substr(s,i)
+  if (tail != "" && tail !~ /^[ \t]/) return 0
   if (tail !~ /^[ \t]*$/ && !reference_title_line(tail)) return 0
   reference_title=(tail ~ /^[ \t]*$/)
   return 1
 }
-function reference_line(s, result, tail) {
+function reference_prefix(s, i, start, ch, label) {
+  if (!match(s,/^ ? ? ?\[/)) return 0
+  start=RLENGTH+1
+  for (i=start; i<=length(s); i++) {
+    ch=substr(s,i,1)
+    if (ch == "\\" && substr(s,i+1,1) ~ /[[:punct:]]/) { i++; continue }
+    if (ch == "[") return 0
+    if (ch == "]") {
+      label=substr(s,start,i-start)
+      if (length(label) > 999 || label ~ /^[ \t]*$/ || substr(s,i+1,1) != ":") return 0
+      return i+1
+    }
+  }
+  return 0
+}
+function reference_line(s, result, tail, prefix) {
   if (reference_title_end) {
     if (s ~ /^[ \t]*$/) { refuse("unterminated reference title"); reference_title_end=""; return 0 }
     result=title_close(s,reference_title_end)
@@ -111,8 +168,8 @@ function reference_line(s, result, tail) {
     reference_title=0
     if (reference_title_line(s)) return 1
   }
-  if (!paragraph && match(s,/^ ? ? ?\[[^]]+\]:[ \t]*/)) {
-    tail=substr(s,RLENGTH+1)
+  if (!paragraph && (prefix=reference_prefix(s))) {
+    tail=trim(substr(s,prefix+1))
     if (tail == "") { reference_destination_pending=1; return 1 }
     return reference_destination_line(tail)
   }
@@ -122,14 +179,21 @@ function reference_line(s, result, tail) {
   sub(/\r$/, "")
   if (html) {
     if (html_end($0)) html=""
-    paragraph=0
+    clear_paragraph()
     next
   }
   if (!fence && !comment) {
-    if (reference_line($0)) { paragraph=0; next }
+    if (list_indent) {
+      if ($0 ~ /^[ \t]*$/) list_blank=1
+      else if (list_blank) {
+        if (indent_width($0) < list_indent) list_indent=0
+        list_blank=0
+      }
+    }
+    if (reference_line($0)) { clear_paragraph(); next }
     # GitHub ends a list container before a deindented standalone HTML block.
     # Ordinary text can still lazily continue the list paragraph.
-    if (list_indent && match($0,/^ */) && RLENGTH < list_indent) {
+    if (list_indent && indent_width($0) < list_indent) {
       previous_paragraph=paragraph; paragraph=0
       if (!html_start($0)) paragraph=previous_paragraph
       else list_indent=0
@@ -137,7 +201,7 @@ function reference_line(s, result, tail) {
     html=html_start($0)
     if (html) {
       if (html_end($0)) html=""
-      paragraph=0
+      clear_paragraph()
       next
     }
   }
@@ -152,10 +216,12 @@ function reference_line(s, result, tail) {
   if (width >= 3) {
     if (!fence) {
       if (mark == "~" || index(substr(stripped, width+1), "`") == 0) {
-        fence=mark; fence_width=width; paragraph=0; next
+        fence=mark; fence_width=width
+        if (indent < list_indent) list_indent=0
+        clear_paragraph(); next
       }
     } else {
-      if (mark == fence && width >= fence_width && trim(substr(stripped, width+1)) == "") { fence=""; paragraph=0 }
+      if (mark == fence && width >= fence_width && trim(substr(stripped, width+1)) == "") { fence=""; clear_paragraph() }
       next
     }
   }
@@ -177,9 +243,14 @@ function reference_line(s, result, tail) {
     }
     $0=visible
   }
-  if (match($0,/^ ? ? ?([-+*]|[0-9]{1,9}[.)])[ \t]+[^ \t]/))
-    list_indent=RLENGTH-1
-  paragraph=paragraph_line($0, paragraph)
+  list_item=match($0,/^ ? ? ?([-+*]|[0-9]{1,9}[.)])[ \t]+[^ \t]/)
+  if (list_item) list_indent=column_width(substr($0,1,RLENGTH-1))
+  if (table && $0 ~ /^ ? ? ?\|/) paragraph=0
+  else if (pipe_columns && table_separator_columns($0) == pipe_columns) { table=1; paragraph=0 }
+  else { table=0; paragraph=paragraph_line($0, paragraph) }
+  pipe_columns=(!table && paragraph ? pipe_header_columns($0) : 0)
+  if (list_indent && !list_item && !paragraph && $0 !~ /^[ \t]*$/ &&
+      indent_width($0) < list_indent) list_indent=0
 }
 /^## Skills[ \t]*$/ {
   if (seen_section++) refuse("multiple Skills sections")
