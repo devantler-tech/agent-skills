@@ -62,21 +62,21 @@ while [ "$#" -gt 0 ]; do
   case "$1" in
     --tag)
       [ "$tag_seen" = false ] || die_usage '--tag must be supplied once'
-      [ "$#" -ge 2 ] && [ -n "$2" ] && [[ "$2" != -* ]] || die_usage "--tag needs a value"
+      if [ "$#" -lt 2 ] || [ -z "$2" ] || [[ "$2" == -* ]]; then die_usage '--tag needs a value'; fi
       tag_seen=true
       tag="$2"
       shift 2
       ;;
     --repo)
       [ "$repo_seen" = false ] || die_usage '--repo must be supplied once'
-      [ "$#" -ge 2 ] && [ -n "$2" ] && [[ "$2" != -* ]] || die_usage "--repo needs a value"
+      if [ "$#" -lt 2 ] || [ -z "$2" ] || [[ "$2" == -* ]]; then die_usage '--repo needs a value'; fi
       repo_seen=true
       repo="$2"
       shift 2
       ;;
     --expected-commit)
       [ "$commit_seen" = false ] || die_usage '--expected-commit must be supplied once'
-      [ "$#" -ge 2 ] && [ -n "$2" ] && [[ "$2" != -* ]] || die_usage "--expected-commit needs a value"
+      if [ "$#" -lt 2 ] || [ -z "$2" ] || [[ "$2" == -* ]]; then die_usage '--expected-commit needs a value'; fi
       commit_seen=true
       expected_commit="$2"
       shift 2
