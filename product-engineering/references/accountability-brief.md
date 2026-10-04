@@ -64,6 +64,11 @@ bash scripts/accountability-brief.sh --mode check brief.json
 bash scripts/accountability-brief.sh --mode render brief.json
 ```
 
+The installed bundle carries executable checks beside the entrypoint and its raw-byte boundary. Run
+`bash scripts/accountability-brief.test.sh` and
+`bash scripts/validate-json-unicode-escapes.test.sh` after synchronizing a new
+copy.
+
 The first command returns `STRUCTURALLY_VALID`, `semanticReview: REQUIRED`, and `authority: none`,
 plus counts of declared unknowns and open human decisions. The second prints the layered Markdown
 brief. Both reject malformed input with a nonzero exit status. They do not change the input or
