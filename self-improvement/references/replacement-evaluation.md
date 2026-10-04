@@ -81,13 +81,12 @@ zero authority violations are observed in the finite fixture census. These count
 population reliability or prove universal safety. Two repeats illustrate the format, not sufficient
 statistical power for a real change.
 
-Resolve both directories explicitly; they need not share a parent. With decimal-preserving jq 1.7 or newer:
+Resolve both directories explicitly; they need not share a parent. With decimal-preserving jq 1.7 or newer and `iconv`:
 
 ```bash
 engineering_skill=/absolute/path/to/installed/product-engineering
 improvement_skill=/absolute/path/to/installed/self-improvement
-jq --stream -s --arg now 2026-09-24T00:00:00Z \
-  -f "$engineering_skill/scripts/check-evidence.jq" \
+bash "$engineering_skill/scripts/check-evidence.sh" --now 2026-09-24T00:00:00Z \
   "$improvement_skill/references/procedure-evidence-example.json" > assessment.json
 ```
 

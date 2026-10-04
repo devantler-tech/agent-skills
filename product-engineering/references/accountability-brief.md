@@ -51,13 +51,15 @@ and source has been replaced with actual information. Label an unavailable resul
 than inventing a measurement. The `example://` sources are deliberately fictional and must never
 be cited as real evidence.
 
-With jq 1.6 or later, run these commands using this installed skill's directory as the working
-directory. The input is one JSON object; the helper reads no files beyond that input and makes no
-network calls. It emits either one complete result or an error before emitting any result. End the input file with a newline: before jq 1.8.0, a streamed file without one can be refused as incomplete.
+With jq 1.6 or later and `iconv`, run these installed entrypoints. Each privately snapshots the input,
+strictly validates its UTF-8 bytes, and evaluates that same snapshot. A genuinely encoded replacement
+character remains valid. No network calls are made; temporary snapshots are removed on exit. The
+result is complete or absent on failure. End the input file with a newline: before jq 1.8.0, a streamed
+file without one can be refused as incomplete.
 
 ```sh
-jq --stream -s --arg mode check -f scripts/accountability-brief.jq brief.json
-jq --stream -sr --arg mode render -f scripts/accountability-brief.jq brief.json
+bash scripts/accountability-brief.sh --mode check brief.json
+bash scripts/accountability-brief.sh --mode render brief.json
 ```
 
 The first command returns `STRUCTURALLY_VALID`, `semanticReview: REQUIRED`, and `authority: none`,

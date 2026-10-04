@@ -26,6 +26,14 @@ for ref in 'fixture://run-a ' ' fixture://run-a' 'fixture://run-a\n' 'fixture://
   refuse "ambiguous measurement $ref" "$proof" "$work/proof.json" --arg now 2026-09-24T00:00:00Z
 done
 # Visible international references remain exact and support distinct observations.
+for field in '.baseline.id' '.baseline.revision' '.candidate.id' '.candidate.revision' '.alternatives[0].id' '.plan.record' '.rollback.procedure' '.plan.measures[0].id' '.evidence[0].id' '.evidence[0].revision' '.observations[0].id' '.observations[0].evidenceId' '.observations[0].values[0].measure'; do
+  jq "$field += \"\\u202e\"" "$root/product-engineering/references/evidence-example.json" > "$work/proof.json"
+  refuse "invisible machine identity $field" "$proof" "$work/proof.json" --arg now 2026-09-24T00:00:00Z
+done
+jq '.candidate.id="測定-é"' "$root/product-engineering/references/evidence-example.json" > "$work/proof.json"
+jq --stream -s --arg now 2026-09-24T00:00:00Z -f "$proof" "$work/proof.json" > "$work/output"
+jq -e '.decision=="ADOPT" and .authority=="assessment-only"' "$work/output" >/dev/null
+passed=$((passed+1))
 jq '.evidence[1].uri="artifact://測定-é"' "$root/product-engineering/references/evidence-example.json" > "$work/proof.json"
 jq --stream -s --arg now 2026-09-24T00:00:00Z -f "$proof" "$work/proof.json" > "$work/output"
 jq -e '.decision=="ADOPT" and .authority=="assessment-only"' "$work/output" >/dev/null

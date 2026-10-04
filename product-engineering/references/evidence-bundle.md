@@ -116,14 +116,17 @@ still permits improvement remain inconclusive.
 
 ## Run the optional offline check
 
-Requires decimal-preserving jq 1.7 or newer. Numeric repeat counts must be integers;
+Requires decimal-preserving jq 1.7 or newer and `iconv`. Numeric repeat counts must be integers;
 fractional values fail validation before any adoption assessment. Resolve paths relative to this
 installed skill, not the consuming repository.
-The helper reads JSON, performs no network calls or writes, and is **not enabled as a runtime gate**.
+The installed entrypoint privately retains the input, strictly validates its raw UTF-8 bytes, and
+evaluates the same snapshot. It removes temporary files on exit, performs no network calls, and is
+**not enabled as a runtime gate**. Genuinely encoded replacement characters remain valid. Machine
+identities and artifact references must remain visibly exact, including revisions and diagnostic IDs.
 
 ```bash
-jq --stream -s --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-  -f /path/to/product-engineering/scripts/check-evidence.jq bundle.json > assessment.json
+bash /path/to/product-engineering/scripts/check-evidence.sh \
+  --now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" bundle.json > assessment.json
 ```
 
 Check the command's exit status first. Nonzero means invalid input or evaluation failure, never a
