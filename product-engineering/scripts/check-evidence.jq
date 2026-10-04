@@ -28,6 +28,7 @@ def raw_document:
 # jq --stream -s --arg now YYYY-MM-DDTHH:MM:SSZ -f check-evidence.jq bundle.json
 def require($ok; $message): if $ok then . else error($message) end;
 def text: type == "string" and test("\\S");
+def source_identity: type == "string" and test("\\A[^\\s\\p{C}\\p{Default_Ignorable_Code_Point}]+\\z");
 def number: type == "number" and isfinite;
 def decimal_integer:
   tostring as $raw
@@ -87,7 +88,7 @@ def schema:
       and (.observation.nextCheck | stamp); "observation owner, evidence, ordered window bounds and next check required")
   | require((.evidence | type == "array" and unique_ids) and all(.evidence[];
       (.id | text) and (.kind as $kind | kinds | index($kind) != null)
-      and .provenance == "observed" and (.revision | text) and (.uri | text)
+      and .provenance == "observed" and (.revision | text) and (.uri | source_identity)
       and (.observedAt | stamp) and (.expiresAt | stamp)
       and (.result == "pass" or .result == "fail" or .result == "unknown")); "invalid evidence or provenance; confidence is not observation")
   | require((.observations | type == "array" and unique_ids) and all(.observations[];

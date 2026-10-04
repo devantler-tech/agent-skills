@@ -1,5 +1,9 @@
 # Evidence bundles for unfamiliar engineering methods
 
+Evidence source identities must be visible, exact strings without whitespace, controls, or
+Unicode default-ignorable characters. Encode spaces in URI paths. This prevents visually equivalent
+references from establishing independent measurement repeats; it does not authenticate a source.
+
 Use this protocol when deciding whether an unfamiliar method can replace a proven one. It works for
 an application design, infrastructure change, library implementation, or operational procedure.
 Scale the experiment to the consequence of being wrong. Routine repairs do not need a new ceremony.

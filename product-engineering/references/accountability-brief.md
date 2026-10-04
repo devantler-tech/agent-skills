@@ -94,7 +94,8 @@ spaces, with no other whitespace, no invisible formatting characters, and nothin
 trailing. The fictional `example://` scheme is recognized case-insensitively, and a brief that is not
 marked synthetic cannot use it anywhere in an evidence source or a human-decision reference.
 No text field may contain control characters other than tab and line feed, which render as spaces,
-or invisible formatting characters, such as bidirectional overrides or zero-width characters, because
+or Unicode default-ignorable characters, including invisible combining marks, variation selectors,
+fillers, bidirectional overrides and zero-width characters, because
 they can reorder or hide what the rendered brief says.
 
 Observed claims need observed evidence, simulated claims need simulated evidence, and inferences
