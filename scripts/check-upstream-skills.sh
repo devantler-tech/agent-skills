@@ -63,9 +63,10 @@ unambiguous_object() {
     ' >/dev/null <<< "$1"
 }
 
-# Resolve one upstream skill target. Echoes nothing on success; on a definitive
-# miss returns 1 (hard drift); on persistent transport failure returns 2 (warn);
-# on an invalid successful response returns 3 (verification failure).
+# Verify a file target or resolve a source revision when kind is commit.
+# Commit success prints its immutable SHA; file success prints nothing. A definitive
+# miss returns 1 (hard drift), persistent transport failure returns 2 (warn), and
+# an invalid successful response returns 3 (verification failure).
 resolve_target() {
   local owner=$1 repo=$2 ref=$3 path=$4 kind=${5:-file}
   local attempt err api_status http_status body endpoint pin

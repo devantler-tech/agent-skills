@@ -3,6 +3,8 @@
 function trim(s) { sub(/^[ \t]+/, "", s); sub(/[ \t]+$/, "", s); return s }
 function plain(s) { if (s ~ /^`.*`$/) return substr(s, 2, length(s)-2); return s }
 function identifier(s) { return s ~ /^[A-Za-z0-9][A-Za-z0-9_.-]*$/ }
+# Check separate owner/repository components; leading repository punctuation is
+# legal, but the literal dot traversal components never identify a repository.
 function repository(s, a) {
   return split(s, a, "/") == 2 && identifier(a[1]) &&
     a[2] ~ /^[A-Za-z0-9_.-]+$/ && a[2] != "." && a[2] != ".."

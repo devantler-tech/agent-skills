@@ -58,7 +58,7 @@ run() {
 }
 run good
 label='branch and tag resolve to immutable pins'; check test "$rc" -eq 0
-printf '%s\n' '<skill><install><devantler-tech/agent-plugins><beta/SKILL.md><--pin><2222222222222222222222222222222222222222><--agent><codex><--scope><user><--force><--allow-hidden-dirs>' '<skill><install><devantler-tech/agent-skills><alpha/SKILL.md><--pin><1111111111111111111111111111111111111111><--agent><codex><--scope><user><--force><--allow-hidden-dirs>' > "$work/want"
+printf '%s\n' '<skill><install><devantler-tech/agent-plugins><beta/SKILL.md><--pin><2222222222222222222222222222222222222222><--agent><codex><--scope><user><--force>' '<skill><install><devantler-tech/agent-skills><alpha/SKILL.md><--pin><1111111111111111111111111111111111111111><--agent><codex><--scope><user><--force>' > "$work/want"
 label='installs use exactly the named source commits'; check cmp -s "$work/want" "$INSTALL_CALLS"
 printf 'api\napi\ninstall\ninstall\n' > "$work/want-order"
 label='every source resolves before any install'; check cmp -s "$work/want-order" "$CALL_ORDER"

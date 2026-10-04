@@ -5,7 +5,9 @@ here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 fail=0
+# Record an assertion without stopping so the fixture reports every failed outcome.
 check() { if "$@"; then printf 'PASS %s\n' "$label"; else printf 'FAIL %s\n' "$label"; fail=$((fail+1)); fi; }
+# Create an isolated two-skill catalogue with copies of the real production helpers.
 fixture() {
   root="$work/$1"
   mkdir -p "$root/scripts" "$root/alpha" "$root/beta"
@@ -13,6 +15,7 @@ fixture() {
   printf fixture > "$root/alpha/SKILL.md"; printf fixture > "$root/beta/SKILL.md"
   printf '## Skills\n\n| Skill | Upstream | Install |\n|---|---|---|\n' > "$root/README.md"
 }
+# Emit one advertised source and command row at the requested Markdown indentation.
 row() { printf '%s| %s | [%s](https://github.com/%s/tree/main/%s) | gh skill install %s %s |\n' "$1" "$2" "$3" "$3" "$4" "$3" "$2"; }
 for indent in '' ' ' '  ' '   '; do
   fixture "indent-${#indent}"
@@ -41,7 +44,7 @@ for repo in .github _skills -skills . ..; do
 done
 # The stub models the native CLI destination derived from frontmatter; it records
 # only user writes, while --dir materializes that identity in a private stage.
-for mode in valid mismatched colliding failed-stage extra-stage; do
+for mode in valid minimum-cli mismatched colliding failed-stage extra-stage; do
   fixture "$mode"
   row '' alpha devantler-tech/agent-skills alpha >> "$root/README.md"
   row '' beta devantler-tech/agent-plugins beta >> "$root/README.md"
@@ -52,6 +55,11 @@ set -eu
 if [[ "$1 $2" == 'skill --help' ]]; then exit 0; fi
 if [[ "$1" == api ]]; then printf '{"sha":"1111111111111111111111111111111111111111"}\n'; exit 0; fi
 [[ "$1 $2" == 'skill install' ]] || exit 1
+if [[ $MODE == minimum-cli ]]; then
+  for argument in "$@"; do
+    [[ $argument != --allow-hidden-dirs ]] || { echo 'unknown flag: --allow-hidden-dirs' >&2; exit 1; }
+  done
+fi
 path=$4; slug=${path%/SKILL.md}; slug=${slug##*/}; actual=$slug
 case $MODE in colliding) actual=shared ;; mismatched) [[ $slug != beta ]] || actual=other ;; esac
 dir=''
@@ -68,9 +76,9 @@ STUB
   chmod +x "$root/bin/gh"
   rc=0
   PATH="$root/bin:$PATH" MODE="$mode" USER_WRITES="$root/user-writes" bash "$root/scripts/install.sh" codex > "$root/out" 2>&1 || rc=$?
-  if [[ $mode == valid ]]; then
-    label='valid native destination identities still install'; check test "$rc" -eq 0
-    label='valid batch writes both user destinations'; check test "$(wc -l < "$root/user-writes" | tr -d ' ')" = 2
+  if [[ $mode == valid || $mode == minimum-cli ]]; then
+    label="$mode native destination identities still install"; check test "$rc" -eq 0
+    label="$mode batch writes both user destinations"; check test "$(wc -l < "$root/user-writes" | tr -d ' ')" = 2
   else
     label="$mode destination preflight fails"; check test "$rc" -ne 0
     label="$mode refuses before any user write"; check test ! -s "$root/user-writes"

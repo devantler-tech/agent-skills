@@ -182,7 +182,7 @@ for i in "${!entries[@]}"; do
   stage="$stage_root/$i"
   mkdir "$stage"
   if ! out=$(gh skill install "$repo" "$path/SKILL.md" --pin "${pins[$i]}" \
-      --dir "$stage" --force --allow-hidden-dirs 2>&1); then
+      --dir "$stage" --force 2>&1); then
     echo "error: could not stage $repo $skill; no skills installed." >&2
     printf '%s\n' "$out" >&2
     exit 1
@@ -206,7 +206,7 @@ for agent in "${agents[@]}"; do
     # Capture output so the success path stays quiet but a failure can surface
     # the actual error (auth, network, missing skill, …) instead of swallowing it.
     if out=$(gh skill install "$repo" "$path/SKILL.md" --pin "${pins[$i]}" \
-        --agent "$agent" --scope user --force --allow-hidden-dirs 2>&1); then
+        --agent "$agent" --scope user --force 2>&1); then
       echo "  ok   [$agent] $repo $skill"
     else
       echo "  FAIL [$agent] $repo $skill" >&2
