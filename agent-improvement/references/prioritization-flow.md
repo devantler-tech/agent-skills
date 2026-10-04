@@ -56,6 +56,11 @@ on a consumer-normalized evidence file; no scheduled execution or collection is 
 bash agent-improvement/scripts/measure-flow.sh evidence.json
 ```
 
+The installed bundle carries executable checks beside both helpers. Run
+`bash scripts/measure-flow.test.sh` and
+`bash scripts/validate-json-unicode-escapes.test.sh` from the installed skill
+before relying on a newly synchronized copy.
+
 The path above is relative to this skill repository; after installation resolve `scripts/measure-flow.sh`
 relative to the installed skill. `jq` must preserve decimal number literals (standard jq 1.7 or newer); the filter checks that capability and refuses a lossy backend. `--stream -s` is required: repeated decoded fields are rejected before reconstruction, and zero or multiple documents are refused. End the input file with a newline: before jq 1.8.0, a streamed file without one can be refused as incomplete.
 The entrypoint also requires `iconv`: it privately snapshots all input bytes, strictly validates UTF-8,
