@@ -49,7 +49,9 @@ fi
 # the persistent-transient → warning path runs without real backoff.
 UPSTREAM_RETRY_SLEEP=${UPSTREAM_RETRY_SLEEP:-sleep}
 
-# Keep repeated JSON paths visible before decoding a response into one identity.
+# Validate one supplied JSON string as a single object without repeated paths.
+# Return success without output only for an unambiguous object; stream parsing
+# preserves duplicate paths that ordinary object decoding would silently replace.
 unambiguous_object() {
   jq -es 'length==1 and (.[0]|type=="object")' >/dev/null <<< "$1" &&
     jq --stream -es '

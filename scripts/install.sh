@@ -17,6 +17,8 @@
 # (`--list` only parses the README, so it needs neither gh nor network access.)
 set -euo pipefail
 
+# Print command modes, agent selection and prerequisites to standard output.
+# This standalone help path reads no catalogue and performs no forge requests.
 usage() {
   cat <<'EOF'
 Usage: install.sh [AGENT ...]
@@ -39,6 +41,8 @@ to gh skill install; run gh skill install --help for supported agents.
 EOF
 }
 
+# Report the supplied argument error and usage on standard error, then exit 2.
+# Argument rejection completes before any catalogue resolution or installation.
 usage_error() {
   printf 'error: %s\n' "$1" >&2
   usage >&2
@@ -124,9 +128,9 @@ if ! command -v jq >/dev/null 2>&1; then
   exit 1
 fi
 
-# Resolve the whole catalogue before the first user-scope write. Preserve the
-# CLI's exit status and require exactly one complete commit response: partial
-# output from a failed request and concatenated responses are not provenance.
+# Validate one supplied JSON string as a single object without repeated paths.
+# Return success without output only for an unambiguous object; invalid or
+# concatenated responses return nonzero before they can establish provenance.
 unambiguous_object() {
   jq -es 'length==1 and (.[0]|type=="object")' >/dev/null <<< "$1" &&
     jq --stream -es '
