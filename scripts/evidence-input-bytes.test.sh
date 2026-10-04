@@ -43,6 +43,52 @@ for tool in proof brief flow; do
     esac
   done
 done
+# Failed scanner reads must not turn unexamined retained bytes into a valid result.
+mkdir "$work/read-failure-bin"
+REAL_CAT=$(command -v cat)
+export REAL_CAT
+cat > "$work/read-failure-bin/cat" <<'STUB'
+#!/usr/bin/env bash
+if [[ ${!#} == */input ]]; then
+  [[ $READ_FAILURE_KIND != partial ]] || printf '%s' '{"prefix":"ordinary"}'
+  exit 1
+fi
+exec "$REAL_CAT" "$@"
+STUB
+chmod +x "$work/read-failure-bin/cat"
+for tool in proof brief-check brief-render flow; do
+  case $tool in
+    proof) wrapper="$root/product-engineering/scripts/check-evidence.sh"; example="$root/product-engineering/references/evidence-example.json"; args=(--now 2026-09-24T00:00:00Z); field='.evidence[1].uri' ;;
+    brief-check|brief-render)
+      wrapper="$root/product-engineering/scripts/accountability-brief.sh"; example="$root/product-engineering/references/accountability-product.json"; field='.evidence[0].source'
+      args=(--mode "${tool#brief-}") ;;
+    flow) wrapper="$root/agent-improvement/scripts/measure-flow.sh"; example="$root/agent-improvement/references/flow-example.json"; args=(); field='.run.evidence' ;;
+  esac
+  for input_kind in healthy unpaired; do
+    jq -c . "$example" > "$work/input.json"
+    if [[ $input_kind == unpaired ]]; then
+      jq "$field += \"PLACEHOLDER\"" "$example" > "$work/new"
+      sed 's/PLACEHOLDER/\\udfff/' "$work/new" > "$work/input.json"
+      rc=0
+      bash "$wrapper" "${args[@]}" "$work/input.json" > "$work/out" 2> "$work/err" || rc=$?
+      if [[ $rc == 2 && ! -s $work/out && -s $work/err ]]; then
+        passed=$((passed+1))
+      else
+        printf 'FAIL %s ordinary unpaired refusal exit=%s\n' "$tool" "$rc"; failed=$((failed+1))
+      fi
+    fi
+    for kind in empty partial; do
+      rc=0
+      PATH="$work/read-failure-bin:$PATH" READ_FAILURE_KIND="$kind" bash "$wrapper" "${args[@]}" "$work/input.json" > "$work/out" 2> "$work/err" || rc=$?
+      if [[ $rc == 2 && ! -s $work/out && -s $work/err ]]; then
+        passed=$((passed+1))
+      else
+        printf 'FAIL %s %s scanner-read-%s exit=%s\n' "$tool" "$input_kind" "$kind" "$rc"; failed=$((failed+1))
+      fi
+    done
+  done
+done
+
 # Independently installed directories retain their complete path, including final newlines.
 mkdir -p "$work/installed" "$work/installed"$'\n' "$work/bin"
 # The stub must expand its own argument when invoked.
