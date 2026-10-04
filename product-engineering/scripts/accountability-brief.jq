@@ -25,8 +25,7 @@ def raw_document:
   | .[0];
 
 # Offline jq 1.6+ checker and Markdown renderer. Stream and slurp exactly one brief; no external reads.
-# jq --stream -s --arg mode check -f accountability-brief.jq brief.json
-# jq --stream -sr --arg mode render -f accountability-brief.jq brief.json
+# Use accountability-brief.sh for byte-validated check or render invocation.
 # Tab and line feed render as spaces; every other C0 or C1 control and every format control
 # Default-ignorable marks and fillers can also hide a source without belonging to Cf.
 def text: type == "string" and test("\\S") and (test("[\u0000-\u0008\u000b-\u001f\u007f-\u009f]|\\p{Cf}|\\p{Default_Ignorable_Code_Point}") | not);

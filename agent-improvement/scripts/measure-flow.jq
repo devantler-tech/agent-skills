@@ -24,7 +24,7 @@ def raw_document:
   | raw_need(length == 1; "expected exactly one JSON document; before jq 1.8.0 the file must also end with a newline")
   | .[0];
 
-# Read one completed run with: jq --stream -e -s -f measure-flow.jq evidence.json
+# Read completed runs with measure-flow.sh, which validates retained bytes before this filter.
 # This computes descriptive metrics; evidence authenticity and policy stay with the consumer.
 def text: type == "string" and test("\\S");
 def decimal_integer:
