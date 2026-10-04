@@ -67,6 +67,7 @@ read_git diff-tree -r --raw -z --no-abbrev --no-commit-id --no-renames \
 # Base64 permits a portable line sort without splitting filenames containing newlines.
 encode_record() { printf '%s %s\t%s\0' "$1" "$2" "$3" | base64 | tr -d '\r\n' || return; printf '\n'; }
 : > "$tmp/tree-records"
+: > "$tmp/tree-paths"
 entry=
 while IFS= read -r -d '' entry; do
   [[ $entry == *$'\t'* ]] || unknown 'malformed tree entry'
@@ -79,6 +80,7 @@ while IFS= read -r -d '' entry; do
     *) unknown 'unsupported tree metadata' ;;
   esac
   encode_record "$mode" "$blob" "$path" >> "$tmp/tree-records" || unknown 'tree record could not be encoded'
+  encode_record '' '' "$path" >> "$tmp/tree-paths" || unknown 'tree path could not be encoded'
 done < "$tmp/tree"
 [[ -z $entry ]] || unknown 'committed tree has an unterminated record'
 : > "$tmp/diff-records"
@@ -95,6 +97,9 @@ done < "$tmp/diff"
 LC_ALL=C sort "$tmp/tree-records" > "$tmp/tree-sorted" || unknown 'tree records could not be compared'
 LC_ALL=C sort "$tmp/diff-records" > "$tmp/diff-sorted" || unknown 'independent tree records could not be compared'
 cmp -s "$tmp/tree-sorted" "$tmp/diff-sorted" || unknown 'committed tree observations disagree'
+LC_ALL=C sort "$tmp/tree-paths" > "$tmp/paths-sorted" || unknown 'tree paths could not be compared'
+LC_ALL=C sort -u "$tmp/tree-paths" > "$tmp/paths-unique" || unknown 'unique tree paths could not be compared'
+cmp -s "$tmp/paths-sorted" "$tmp/paths-unique" || unknown 'committed tree has repeated leaf paths'
 if [[ $include_go == true ]]; then
   command -v go >/dev/null || unknown 'missing dependency: go'
   case ${BASH_SOURCE[0]} in
