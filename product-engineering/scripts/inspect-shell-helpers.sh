@@ -36,18 +36,23 @@ fi
 for dependency in git jq mktemp iconv base64 tr sort cmp; do
   command -v "$dependency" >/dev/null || unknown "missing dependency: $dependency"
 done
-repo=$(cd "$repo" 2>/dev/null && pwd -P) || unknown 'repository directory is unavailable'
+repo=$(cd "$repo" 2>/dev/null && pwd -P && printf '.') || unknown 'repository directory is unavailable'
+repo=${repo%$'\n.'} # Remove the output delimiter, preserving every byte of the path.
 # No checkout, filters, replacement objects or automatic promisor fetches.
 export GIT_NO_LAZY_FETCH=1
 unset GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR GIT_INDEX_FILE GIT_OBJECT_DIRECTORY \
   GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_NAMESPACE
 # Explicit no-fetch capability is required; unsupported Git refuses before reads.
 read_git() { git --no-lazy-fetch --no-replace-objects --no-optional-locks -C "$repo" "$@"; }
-top=$(read_git rev-parse --show-toplevel 2>/dev/null) || unknown 'not a worktree repository'
-top=$(cd "$top" && pwd -P) || unknown 'repository root is unavailable'
+top=$(read_git rev-parse --show-toplevel 2>/dev/null && printf '.') || unknown 'not a worktree repository'
+top=${top%$'\n.'}
+top=$(cd "$top" && pwd -P && printf '.') || unknown 'repository root is unavailable'
+top=${top%$'\n.'}
 [[ $top == "$repo" ]] || unknown 'repo-dir must be the repository root'
 kind=$(read_git cat-file -t "$revision" 2>/dev/null) || unknown 'commit object is unavailable'
 [[ $kind == commit ]] || unknown 'revision is not a commit'
+resolved=$(read_git rev-parse --verify "$revision^{commit}" 2>/dev/null) || unknown 'commit identity is unavailable'
+[[ $resolved == "$revision" ]] || unknown 'revision is not the complete commit identifier'
 umask 077
 tmp=$(mktemp -d) || unknown 'temporary observation directory is unavailable'
 trap 'rm -rf "$tmp"' EXIT
@@ -92,7 +97,12 @@ LC_ALL=C sort "$tmp/diff-records" > "$tmp/diff-sorted" || unknown 'independent t
 cmp -s "$tmp/tree-sorted" "$tmp/diff-sorted" || unknown 'committed tree observations disagree'
 if [[ $include_go == true ]]; then
   command -v go >/dev/null || unknown 'missing dependency: go'
-  script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P) || unknown 'installed helper directory is unavailable'
+  case ${BASH_SOURCE[0]} in
+    */*) script_parent=${BASH_SOURCE[0]%/*} ;;
+    *) script_parent=. ;;
+  esac
+  script_dir=$(cd "$script_parent" && pwd -P && printf '.') || unknown 'installed helper directory is unavailable'
+  script_dir=${script_dir%$'\n.'}
   # Compile only this installed parser, never a surveyed package or its dependencies.
   GOENV=off GOWORK=off GO111MODULE=off GOTOOLCHAIN=local GOFLAGS='' CGO_ENABLED=0 \
     GOOS='' GOARCH='' GOCACHEPROG='' GOTMPDIR="$tmp" \

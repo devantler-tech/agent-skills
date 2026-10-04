@@ -135,6 +135,9 @@ jobs:
       - name: 🐚 ShellCheck scripts
         run: shellcheck scripts/*.sh product-engineering/scripts/*.sh
 
+      - name: 🧪 Verify exact shell census repository and commit identities
+        run: bash product-engineering/scripts/inspect-shell-identity.test.sh
+
       - name: 🔗 Smoke-test the README index parser
         # Proves the load-bearing lockstep between the curated README index and
         # every consumer install path: a non-empty parse, the parsed count equal
