@@ -105,16 +105,16 @@ done < "$inventory"
 # self-pointers are checked here — a typo'd or stale in-house slug would otherwise
 # pass count-lockstep and only fail at `gh skill install` time for every consumer.
 unresolved=0
+targets=$(bash "$script_dir/readme-index.sh" --targets)
 while IFS= read -r entry; do
   [ -n "$entry" ] || continue
-  repo=${entry%% *}
-  skill=${entry##* }
+  read -r repo _ref path skill <<<"$entry"
   [ "$(printf '%s' "$repo" | LC_ALL=C tr '[:upper:]' '[:lower:]')" = "devantler-tech/agent-skills" ] || continue
-  if [ ! -f "$skill/SKILL.md" ]; then
-    echo "::error::in-house index entry '$repo $skill' does not resolve — no '$skill/SKILL.md' on disk."
+  if [ ! -f "$path/SKILL.md" ]; then
+    echo "::error::in-house index entry '$repo $skill' does not resolve — no '$path/SKILL.md' on disk."
     unresolved=1
   fi
-done <<<"$entries"
+done <<<"$targets"
 
 # Row consistency and destination collisions were checked by the shared parser
 # before any entries were emitted. Keep only the repository-specific disk checks here.

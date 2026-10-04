@@ -174,6 +174,15 @@ expect_fail "zero parsed entries exits non-zero (## Installing not parsed)" "$em
 # Record argument boundaries, not a shell command that could expand wildcards.
 cat > "$ghbin/gh" <<'STUB'
 #!/usr/bin/env bash
+# Model private staging separately from final user-scope call assertions.
+if [[ "${1:-} ${2:-}" == 'skill install' && " $* " == *' --dir '* ]]; then
+  stage=''
+  for ((i=1;i<=$#;i++)); do if [[ ${!i} == --dir ]]; then i=$((i+1)); stage=${!i}; fi; done
+  slug=${4%/SKILL.md}; slug=${slug##*/}
+  mkdir -p "$stage/$slug"
+  printf -- '---\nname: %s\ndescription: Fixture.\n---\n' "$slug" > "$stage/$slug/SKILL.md"
+  exit 0
+fi
 printf '<%s>' "$@" >> "$GH_CALLS"
 printf '\n' >> "$GH_CALLS"
 printf '%s\n' "${GH_HOST:-unset}" >> "$GH_HOSTS"
