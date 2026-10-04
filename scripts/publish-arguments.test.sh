@@ -30,12 +30,12 @@ reject empty-then-tag --tag '' --tag v1.0.0
 reject missing-value-before-help --tag --help
 reject help-before-invalid --help --invented
 reject help-after-selectors --tag v1.0.0 --help
-for selector in '/owner/repo' 'owner/repo/other' 'owner/../other' 'owner/repo?ref=other' 'owner/repo#fragment' 'owner/repo%2fother' 'owner//repo' '-owner/repo' 'owner-/repo' 'owner/repo name'; do
+for selector in '/owner/repo' 'owner/repo/other' 'owner/../other' 'owner/repo?ref=other' 'owner/repo#fragment' 'owner/repo%2fother' 'owner//repo' '-owner/repo' 'owner-/repo' 'owner/repo name' 'owner/.' 'owner/..'; do
   reject "repository $selector" --tag v1.0.0 --repo "$selector"
 done
 # Valid selectors proceed to the independently failed API boundary. These are
 # argument acceptance controls, not evidence of a completed publication.
-for selector in 'Owner/Repo_name.test' 'owner/repo' 'a/repo'; do
+for selector in 'devantler-tech/.github' 'owner/_repo' 'owner/-repo' 'Owner/Repo_name.test' 'owner/repo' 'a/repo'; do
   : > "$CALLS"; rc=0
   PATH="$work/bin:$PATH" GITHUB_REPOSITORY=other/repo GITHUB_SHA=2222222222222222222222222222222222222222 \
     bash "$here/publish-skills-release.sh" --tag v1.0.0 --repo "$selector" \
