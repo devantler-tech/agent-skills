@@ -5,7 +5,7 @@ validate_json_unicode_escapes() {
   local LC_ALL=C
 
   # The sentinel prevents command substitution from stripping input newlines.
-  data=$(cat -- "$input"; printf x) || return 1
+  data=$(cat -- "$input" && printf x) || return 1
   data=${data%x}
   length=${#data}
 
