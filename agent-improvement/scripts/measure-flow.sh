@@ -13,7 +13,12 @@ trap 'rm -rf "$work"' EXIT
 # Evaluate exactly the privately retained bytes that passed strict decoding.
 cat -- "$input" > "$work/input" || refuse 'input snapshot could not be read'
 iconv -f UTF-8 -t UTF-8 "$work/input" >/dev/null 2>&1 || refuse 'input is not valid UTF-8'
-script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P && printf '.') || refuse 'installed tool directory unavailable'
+# Parameter expansion preserves trailing newlines in the installed parent.
+case ${BASH_SOURCE[0]} in
+  */*) script_parent=${BASH_SOURCE[0]%/*} ;;
+  *) script_parent=. ;;
+esac
+script_dir=$(cd "$script_parent" && pwd -P && printf '.') || refuse 'installed tool directory unavailable'
 script_dir=${script_dir%$'\n.'}
 jq --stream -e -s -f "$script_dir/measure-flow.jq" "$work/input" > "$work/result" || refuse 'flow evaluation failed'
 cat "$work/result"

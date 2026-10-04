@@ -34,6 +34,31 @@ for tool in proof brief flow; do
     esac
   done
 done
+# Independently installed directories retain their complete path, including final newlines.
+mkdir -p "$work/installed" "$work/installed"$'\n' "$work/bin"
+# The stub must expand its own argument when invoked.
+# shellcheck disable=SC2016
+printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$1"\nexit 71\n' > "$work/bin/dirname"
+chmod +x "$work/bin/dirname"
+for tool in proof brief flow; do
+  case $tool in
+    proof) name=check-evidence; origin=product-engineering; example="$root/product-engineering/references/evidence-example.json"; args=(--now 2026-09-24T00:00:00Z) ;;
+    brief) name=accountability-brief; origin=product-engineering; example="$root/product-engineering/references/accountability-product.json"; args=(--mode check) ;;
+    flow) name=measure-flow; origin=agent-improvement; example="$root/agent-improvement/references/flow-example.json"; args=() ;;
+  esac
+  cp "$root/$origin/scripts/$name.sh" "$work/installed"$'\n'/
+  printf 'error("requested installed filter refuses")\n' > "$work/installed"$'\n'/"$name.jq"
+  printf '{decision:"ADOPT",unexamined:true}\n' > "$work/installed/$name.jq"
+  for scenario in newline dirname-failure; do
+    rc=0
+    if [[ $scenario == dirname-failure ]]; then
+      PATH="$work/bin:$PATH" bash "$work/installed"$'\n'/"$name.sh" "${args[@]}" "$example" > "$work/out" 2> "$work/err" || rc=$?
+    else
+      bash "$work/installed"$'\n'/"$name.sh" "${args[@]}" "$example" > "$work/out" 2> "$work/err" || rc=$?
+    fi
+    if [[ $rc == 2 && ! -s $work/out && -s $work/err ]]; then passed=$((passed+1)); else printf 'FAIL installed %s %s exit=%s\n' "$tool" "$scenario" "$rc"; failed=$((failed+1)); fi
+  done
+done
 # Rendering also uses the actual installed byte boundary before the jq renderer.
 bash "$root/product-engineering/scripts/accountability-brief.sh" --mode render "$root/product-engineering/references/accountability-product.json" > "$work/render" || failed=$((failed+1))
 grep -q SIMULATED "$work/render" || failed=$((failed+1))

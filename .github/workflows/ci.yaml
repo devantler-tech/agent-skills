@@ -133,7 +133,7 @@ jobs:
           persist-credentials: false
 
       - name: 🐚 ShellCheck scripts
-        run: shellcheck scripts/*.sh product-engineering/scripts/*.sh
+        run: shellcheck scripts/*.sh product-engineering/scripts/*.sh agent-improvement/scripts/*.sh
 
       - name: 🧪 Verify exact shell census repository and commit identities
         run: bash product-engineering/scripts/inspect-shell-identity.test.sh
@@ -169,6 +169,9 @@ jobs:
 
       - name: 🧪 Verify raw evidence input boundaries
         run: bash ./scripts/evidence-json-boundaries.test.sh
+
+      - name: 🧪 Verify retained raw evidence bytes and installed paths
+        run: bash ./scripts/evidence-input-bytes.test.sh
 
       - name: 🧪 Verify visible evidence references
         run: bash ./scripts/evidence-reference-visibility.test.sh
