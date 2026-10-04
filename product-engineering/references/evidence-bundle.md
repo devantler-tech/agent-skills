@@ -131,6 +131,11 @@ bash /path/to/product-engineering/scripts/check-evidence.sh \
   --now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" bundle.json > assessment.json
 ```
 
+The installed bundle carries executable checks beside the entrypoint and its raw-byte boundary. Run
+`bash scripts/check-evidence.test.sh` and
+`bash scripts/validate-json-unicode-escapes.test.sh` after synchronizing a new
+copy.
+
 Check the command's exit status first. Nonzero means invalid input or evaluation failure, never a
 decision. Streaming and slurp mode (`--stream -s`) reject repeated decoded fields before reconstruction, as well as empty or multiple bundles. End the input file with a newline: before jq 1.8.0, a streamed file without one can be refused as incomplete.
 Successful evaluation emits `decision`, `reasons`, revisions, evaluation time and
