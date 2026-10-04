@@ -38,6 +38,7 @@ stub_bin="$tmp/bin"
 mkdir -p "$stub_bin"
 cat >"$stub_bin/gh" <<'STUB'
 #!/usr/bin/env bash
+if [[ $2 == */commits/* ]]; then printf 'HTTP/1.1 200 OK\r\n\r\n{"sha":"1111111111111111111111111111111111111111"}\n'; exit 0; fi
 target=""
 filter=""
 for a in "$@"; do

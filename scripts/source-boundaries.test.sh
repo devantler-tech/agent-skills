@@ -14,8 +14,20 @@ fixture() {
   cat > "$root/bin/gh" <<'STUB'
 #!/usr/bin/env bash
 set -eu
+# Model private staging separately from final user-scope call assertions.
+if [[ "${1:-} ${2:-}" == 'skill install' && " $* " == *' --dir '* ]]; then
+  stage=''
+  for ((i=1;i<=$#;i++)); do if [[ ${!i} == --dir ]]; then i=$((i+1)); stage=${!i}; fi; done
+  slug=${4%/SKILL.md}; slug=${slug##*/}
+  mkdir -p "$stage/$slug"
+  printf -- '---\nname: %s\ndescription: Fixture.\n---\n' "$slug" > "$stage/$slug/SKILL.md"
+  exit 0
+fi
 if [[ "$1 $2" == 'skill --help' ]]; then exit 0; fi
-if [[ "$1" == api ]]; then cat "$RESPONSE_FILE"; exit 0; fi
+if [[ "$1" == api ]]; then
+  if [[ $2 == */commits/* ]]; then printf 'HTTP/1.1 200 OK\r\n\r\n{"sha":"1111111111111111111111111111111111111111"}\n'; else cat "$RESPONSE_FILE"; fi
+  exit 0
+fi
 printf 'installed\n' >> "$INSTALL_TRACE"
 STUB
   chmod +x "$root/bin/gh"
@@ -63,6 +75,7 @@ for kind in empty-timeout html-rate-limit empty-server html-server malformed-ser
   cat > "$root/bin/gh" <<'STUB'
 #!/usr/bin/env bash
 set -eu
+if [[ $2 == */commits/* ]]; then printf 'HTTP/1.1 200 OK\r\n\r\n{"sha":"1111111111111111111111111111111111111111"}\n'; exit 0; fi
 printf 'call\n' >> "$RETRY_TRACE"
 case "$RETRY_KIND" in
   empty-timeout) status=408; body='' ;;

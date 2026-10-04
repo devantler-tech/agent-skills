@@ -17,6 +17,15 @@ EOF
 cat > "$work/bin/gh" <<'EOF'
 #!/usr/bin/env bash
 set -eu
+# Model private staging separately from final user-scope call assertions.
+if [[ "${1:-} ${2:-}" == 'skill install' && " $* " == *' --dir '* ]]; then
+  stage=''
+  for ((i=1;i<=$#;i++)); do if [[ ${!i} == --dir ]]; then i=$((i+1)); stage=${!i}; fi; done
+  slug=${4%/SKILL.md}; slug=${slug##*/}
+  mkdir -p "$stage/$slug"
+  printf -- '---\nname: %s\ndescription: Fixture.\n---\n' "$slug" > "$stage/$slug/SKILL.md"
+  exit 0
+fi
 printf '%s\n' "${GH_HOST:-unset}" >> "$CALL_HOSTS"
 if [[ "$1 $2" == 'skill --help' ]]; then exit 0; fi
 if [[ "$1" == api ]]; then
@@ -49,7 +58,7 @@ run() {
 }
 run good
 label='branch and tag resolve to immutable pins'; check test "$rc" -eq 0
-printf '%s\n' '<skill><install><devantler-tech/agent-plugins><beta/SKILL.md><--pin><2222222222222222222222222222222222222222><--agent><codex><--scope><user><--force><--allow-hidden-dirs>' '<skill><install><devantler-tech/agent-skills><alpha/SKILL.md><--pin><1111111111111111111111111111111111111111><--agent><codex><--scope><user><--force><--allow-hidden-dirs>' > "$work/want"
+printf '%s\n' '<skill><install><devantler-tech/agent-plugins><beta/SKILL.md><--pin><2222222222222222222222222222222222222222><--agent><codex><--scope><user><--force>' '<skill><install><devantler-tech/agent-skills><alpha/SKILL.md><--pin><1111111111111111111111111111111111111111><--agent><codex><--scope><user><--force>' > "$work/want"
 label='installs use exactly the named source commits'; check cmp -s "$work/want" "$INSTALL_CALLS"
 printf 'api\napi\ninstall\ninstall\n' > "$work/want-order"
 label='every source resolves before any install'; check cmp -s "$work/want-order" "$CALL_ORDER"
@@ -67,6 +76,15 @@ EOF
 cat > "$work/bin/gh" <<'EOF'
 #!/usr/bin/env bash
 set -eu
+# Model private staging separately from final user-scope call assertions.
+if [[ "${1:-} ${2:-}" == 'skill install' && " $* " == *' --dir '* ]]; then
+  stage=''
+  for ((i=1;i<=$#;i++)); do if [[ ${!i} == --dir ]]; then i=$((i+1)); stage=${!i}; fi; done
+  slug=${4%/SKILL.md}; slug=${slug##*/}
+  mkdir -p "$stage/$slug"
+  printf -- '---\nname: %s\ndescription: Fixture.\n---\n' "$slug" > "$stage/$slug/SKILL.md"
+  exit 0
+fi
 if [[ "$1 $2" == 'skill --help' ]]; then exit 0; fi
 if [[ "$1" == api ]]; then
   printf '%s\n' "$*" >> "$CALL_ORDER"

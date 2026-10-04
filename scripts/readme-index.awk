@@ -3,7 +3,12 @@
 function trim(s) { sub(/^[ \t]+/, "", s); sub(/[ \t]+$/, "", s); return s }
 function plain(s) { if (s ~ /^`.*`$/) return substr(s, 2, length(s)-2); return s }
 function identifier(s) { return s ~ /^[A-Za-z0-9][A-Za-z0-9_.-]*$/ }
-function repository(s, a) { return split(s, a, "/") == 2 && identifier(a[1]) && identifier(a[2]) }
+# Check separate owner/repository components; leading repository punctuation is
+# legal, but the literal dot traversal components never identify a repository.
+function repository(s, a) {
+  return split(s, a, "/") == 2 && identifier(a[1]) &&
+    a[2] ~ /^[A-Za-z0-9_.-]+$/ && a[2] != "." && a[2] != ".."
+}
 # Validate the complete literal option grammar and bind any explicit pin to the
 # advertised source ref, without executing or forwarding catalogue arguments.
 function options_ok(arg, words, ref, i, flag, value, equal, seen) {
@@ -328,7 +333,7 @@ function reference_line(s, result, tail, prefix) {
 }
 /^## / { in_skills=0 }
 !in_skills { next }
-!/^\|/ { next }
+!/^ ? ? ?\|/ { next }
 {
   n=split($0, cell, "|")
   if (n != 5 || trim(cell[1]) != "" || trim(cell[5]) != "") {

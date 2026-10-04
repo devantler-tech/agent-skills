@@ -174,6 +174,15 @@ expect_fail "zero parsed entries exits non-zero (## Installing not parsed)" "$em
 # Record argument boundaries, not a shell command that could expand wildcards.
 cat > "$ghbin/gh" <<'STUB'
 #!/usr/bin/env bash
+# Model private staging separately from final user-scope call assertions.
+if [[ "${1:-} ${2:-}" == 'skill install' && " $* " == *' --dir '* ]]; then
+  stage=''
+  for ((i=1;i<=$#;i++)); do if [[ ${!i} == --dir ]]; then i=$((i+1)); stage=${!i}; fi; done
+  slug=${4%/SKILL.md}; slug=${slug##*/}
+  mkdir -p "$stage/$slug"
+  printf -- '---\nname: %s\ndescription: Fixture.\n---\n' "$slug" > "$stage/$slug/SKILL.md"
+  exit 0
+fi
 printf '<%s>' "$@" >> "$GH_CALLS"
 printf '\n' >> "$GH_CALLS"
 printf '%s\n' "${GH_HOST:-unset}" >> "$GH_HOSTS"
@@ -239,7 +248,7 @@ check 'conflicting modes never call gh' test ! -s "$GH_CALLS"
 
 run_install "$alias_root" codex
 check 'repository casing aliases install successfully' test "$rc" -eq 0
-printf '<skill><--help>\n<api><--hostname><github.com><repos/Fixture/One/commits/main>\n<skill><install><Fixture/One><alpha/SKILL.md><--pin><1111111111111111111111111111111111111111><--agent><codex><--scope><user><--force><--allow-hidden-dirs>\n' > "$tmp/expected"
+printf '<skill><--help>\n<api><--hostname><github.com><repos/Fixture/One/commits/main>\n<skill><install><Fixture/One><alpha/SKILL.md><--pin><1111111111111111111111111111111111111111><--agent><codex><--scope><user><--force>\n' > "$tmp/expected"
 check 'repository casing aliases install only once' diff -u "$tmp/expected" "$GH_CALLS"
 
 # Different upstreams with the same destination name must be rejected before
@@ -266,8 +275,8 @@ expected_calls() {
   printf '<api><--hostname><github.com><repos/devantler-tech/agent-skills/commits/main>\n<api><--hostname><github.com><repos/fluxcd/agent-skills/commits/main>\n'
   local agent
   for agent in "$@"; do
-    printf '<skill><install><devantler-tech/agent-skills><beta/SKILL.md><--pin><1111111111111111111111111111111111111111><--agent><%s><--scope><user><--force><--allow-hidden-dirs>\n' "$agent"
-    printf '<skill><install><fluxcd/agent-skills><skills/alpha/SKILL.md><--pin><1111111111111111111111111111111111111111><--agent><%s><--scope><user><--force><--allow-hidden-dirs>\n' "$agent"
+    printf '<skill><install><devantler-tech/agent-skills><beta/SKILL.md><--pin><1111111111111111111111111111111111111111><--agent><%s><--scope><user><--force>\n' "$agent"
+    printf '<skill><install><fluxcd/agent-skills><skills/alpha/SKILL.md><--pin><1111111111111111111111111111111111111111><--agent><%s><--scope><user><--force>\n' "$agent"
   done
 }
 expected_calls github-copilot claude-code > "$tmp/expected"

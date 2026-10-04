@@ -89,6 +89,10 @@ Each repository and source ref resolves once before installation. Skills sharing
 the same frozen commit even if its branch moves during the run; different refs remain separate.
 Installation selects the exact source directory from the catalogue link, with a `SKILL.md` suffix.
 Another skill with the same name elsewhere in that repository cannot replace that selection.
+Before writing user scope, the batch command stages every pinned source in a separate private
+directory using GitHub CLI. Its actual installed name must match the advertised skill, so a
+different frontmatter name cannot overwrite another entry. Failed or incomplete staging stops
+the batch before any user skill is replaced. Final installs keep the original remote provenance.
 Catalogue commands support literal `--agent`, `--scope`, `--dir`, `--pin`, `--force` (`-f`) and
 `--allow-hidden-dirs` options. Value options also accept `--option=value`. Each option occurs once;
 an explicit pin must match the link's source ref. Unsupported options, missing values and extra
@@ -98,6 +102,8 @@ Source responses must contain one unambiguous commit identity. When a catalogue 
 a full commit, the returned identity must match it. A conflicting or incomplete response stops
 the complete installation before any skill is replaced. The upstream target checker also refuses
 repeated file declarations instead of selecting one interpretation.
+It resolves each repository/ref once and checks all sibling files at that immutable revision;
+a moving branch cannot supply a successful catalogue from files that never coexisted.
 
 The offline index guard compares two independent inventories of local skill files, including
 hidden directories. A partial listing cannot establish that every maintained skill is indexed.

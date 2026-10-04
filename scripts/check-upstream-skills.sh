@@ -49,7 +49,9 @@ fi
 # the persistent-transient → warning path runs without real backoff.
 UPSTREAM_RETRY_SLEEP=${UPSTREAM_RETRY_SLEEP:-sleep}
 
-# Keep repeated JSON paths visible before decoding a response into one identity.
+# Validate one supplied JSON string as a single object without repeated paths.
+# Return success without output only for an unambiguous object; stream parsing
+# preserves duplicate paths that ordinary object decoding would silently replace.
 unambiguous_object() {
   jq -es 'length==1 and (.[0]|type=="object")' >/dev/null <<< "$1" &&
     jq --stream -es '
@@ -63,15 +65,18 @@ unambiguous_object() {
     ' >/dev/null <<< "$1"
 }
 
-# Resolve one upstream skill target. Echoes nothing on success; on a definitive
-# miss returns 1 (hard drift); on persistent transport failure returns 2 (warn);
-# on an invalid successful response returns 3 (verification failure).
+# Verify a file target or resolve a source revision when kind is commit.
+# Commit success prints its immutable SHA; file success prints nothing. A definitive
+# miss returns 1 (hard drift), persistent transport failure returns 2 (warn), and
+# an invalid successful response returns 3 (verification failure).
 resolve_target() {
-  local owner=$1 repo=$2 ref=$3 path=$4
-  local attempt err api_status http_status body
+  local owner=$1 repo=$2 ref=$3 path=$4 kind=${5:-file}
+  local attempt err api_status http_status body endpoint pin
+  endpoint="repos/$owner/$repo/contents/$path/SKILL.md?ref=$ref"
+  [ "$kind" != commit ] || endpoint="repos/$owner/$repo/commits/$ref"
   for attempt in 1 2 3; do
     api_status=0
-    gh api "repos/$owner/$repo/contents/$path/SKILL.md?ref=$ref" --include > "$response_dir/response" 2> "$response_dir/error" || api_status=$?
+    gh api "$endpoint" --include > "$response_dir/response" 2> "$response_dir/error" || api_status=$?
     # This function is called in a conditional, so errexit cannot protect reads.
     # Partial output from a failed parser is not an observation of the response.
     http_status=$(awk 'NR==1 && /^HTTP\/[0-9.]+ [0-9][0-9][0-9] / {print $2}' "$response_dir/response") || return 3
@@ -87,6 +92,12 @@ resolve_target() {
       *) unambiguous_object "$body" || return 3 ;;
     esac
     if [ "$http_status" = 200 ] && [ "$api_status" -eq 0 ]; then
+      if [ "$kind" = commit ]; then
+        pin=$(jq -esr 'if length==1 and (.[0].sha | type=="string" and test("\\A[0-9a-f]{40}\\z")) then .[0].sha else error("invalid commit") end' <<<"$body") || return 3
+        if [[ "$ref" =~ ^[0-9a-fA-F]{40}$ ]] && [ "$(printf '%s' "$ref" | LC_ALL=C tr '[:upper:]' '[:lower:]')" != "$pin" ]; then return 3; fi
+        printf '%s' "$pin"
+        return 0
+      fi
       # Validate after the API call so a directory or malformed payload cannot be
       # mistaken for a transport error and downgraded to a transient warning.
       if printf '%s' "$body" | jq -es --arg path "$path/SKILL.md" '
@@ -137,15 +148,32 @@ warned=0
 invalid=0
 # Tree links explicitly name github.com regardless of the operator's default.
 export GH_HOST=github.com
+sources=() source_pins=() source_statuses=() source_details=()
 while read -r source ref path _skill; do
   owner=${source%%/*}
   repo=${source#*/}
 
   checked=$((checked + 1))
-  if detail=$(resolve_target "$owner" "$repo" "$ref" "$path"); then
+  identity="$(printf '%s' "$source" | LC_ALL=C tr '[:upper:]' '[:lower:]')/$ref"
+  index=-1
+  for i in "${!sources[@]}"; do
+    if [ "${sources[$i]}" = "$identity" ]; then index=$i; break; fi
+  done
+  if [ "$index" -eq -1 ]; then
+    index=${#sources[@]}
+    status=0
+    detail=$(resolve_target "$owner" "$repo" "$ref" '' commit) || status=$?
+    sources+=("$identity"); source_statuses+=("$status"); source_details+=("$detail")
+    source_pins+=("$detail")
+  fi
+  status=${source_statuses[$index]}; detail=${source_details[$index]}
+  if [ "$status" -eq 0 ]; then
+    detail=$(resolve_target "$owner" "$repo" "${source_pins[$index]}" "$path") || status=$?
+  fi
+  if [ "$status" -eq 0 ]; then
     echo "  ok    $owner/$repo @ $ref :: $path/SKILL.md"
   else
-    case $? in
+    case "$status" in
       1)
         echo "::error::upstream skill target '$owner/$repo $path' (ref $ref) no longer resolves — no '$path/SKILL.md' on $ref. The README row points at a renamed/deleted upstream skill; every consumer's 'gh skill install' will fail."
         drift=1

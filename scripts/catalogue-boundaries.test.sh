@@ -48,6 +48,15 @@ else printf 'FAIL partial output for option-leading source path\n'; fail=$((fail
 cat > "$work/bin/gh" <<'STUB'
 #!/usr/bin/env bash
 set -eu
+# Model private staging separately from final user-scope call assertions.
+if [[ "${1:-} ${2:-}" == 'skill install' && " $* " == *' --dir '* ]]; then
+  stage=''
+  for ((i=1;i<=$#;i++)); do if [[ ${!i} == --dir ]]; then i=$((i+1)); stage=${!i}; fi; done
+  slug=${4%/SKILL.md}; slug=${slug##*/}
+  mkdir -p "$stage/$slug"
+  printf -- '---\nname: %s\ndescription: Fixture.\n---\n' "$slug" > "$stage/$slug/SKILL.md"
+  exit 0
+fi
 if [ "$1 $2" = 'skill --help' ]; then exit 0; fi
 if [ "$1" = api ]; then printf '{"sha":"1111111111111111111111111111111111111111"}\n'; exit 0; fi
 [ "$1 $2" = 'skill install' ] || exit 1
