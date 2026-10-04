@@ -12,7 +12,7 @@ for tool in proof flow brief; do
     flow) filter="$root/agent-improvement/scripts/measure-flow.jq"; example="$root/agent-improvement/references/flow-example.json"; args=(--arg unused unused) ;;
     brief) filter="$root/product-engineering/scripts/accountability-brief.jq"; example="$root/product-engineering/references/accountability-product.json"; args=(--arg mode check) ;;
   esac
-  for scenario in healthy scalar empty-container disjoint-container escaped nested-array multiple malformed ordinary-slurp wrapped-slurp; do
+  for scenario in healthy scalar empty-container disjoint-container escaped nested-array multiple malformed ordinary-slurp wrapped-slurp newline-free; do
     jq -c . "$example" > "$work/input.json"
     case $scenario in
       scalar)
@@ -26,6 +26,11 @@ for tool in proof flow brief; do
       nested-array) sed 's/^{/{"boundary":[{"a":false,"a":true}],/' "$work/input.json" > "$work/new"; mv "$work/new" "$work/input.json" ;;
       multiple) cat "$example" >> "$work/input.json" ;;
       malformed) printf '\n{"broken":' >> "$work/input.json" ;;
+      # Before jq 1.8.0 a streamed file that ends in a scalar member with no newline loses its
+      # closing event. Either outcome is safe; a partial result is not.
+      newline-free)
+        jq -c 'to_entries | sort_by(.value | type != "object" and type != "array") | from_entries' "$example" |
+          tr -d '\n' > "$work/input.json" ;;
       # One hand-wrapped event: the parser has already collapsed the repeated field inside it.
       wrapped-slurp)
         sed 's/"result":"pass"/"result":"fail","result":"pass"/; s/"artifactsComplete":true/"artifactsComplete":false,"artifactsComplete":true/' "$work/input.json" > "$work/new"
@@ -40,8 +45,10 @@ for tool in proof flow brief; do
           printf 'FAIL missing duplicate-path diagnostic: %s %s\n' "$tool" "$scenario"; failed=$((failed+1))
         fi ;;
     esac
-    if { [ "$scenario" = healthy ] && [ "$rc" -eq 0 ] && [ -s "$work/output" ]; } ||
-       { [ "$scenario" != healthy ] && [ "$rc" -ne 0 ] && [ ! -s "$work/output" ]; }; then
+    if { [ "$scenario" = newline-free ] && [ "$rc" -ne 0 ] && [ ! -s "$work/output" ] &&
+         grep -q 'must also end with a newline' "$work/error"; } ||
+       { { [ "$scenario" = healthy ] || [ "$scenario" = newline-free ]; } && [ "$rc" -eq 0 ] && [ -s "$work/output" ]; } ||
+       { [ "$scenario" != healthy ] && [ "$scenario" != newline-free ] && [ "$rc" -ne 0 ] && [ ! -s "$work/output" ]; }; then
       passed=$((passed+1))
     else printf 'FAIL %s %s exit=%s\n' "$tool" "$scenario" "$rc"; failed=$((failed+1)); fi
   done

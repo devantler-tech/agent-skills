@@ -21,7 +21,7 @@ def raw_document:
           | .active = $path[0:-1]
         else .active = $path[0:-2] end)
   | [$events | fromstream(.[])]
-  | raw_need(length == 1; "expected exactly one JSON document")
+  | raw_need(length == 1; "expected exactly one JSON document; before jq 1.8.0 the file must also end with a newline")
   | .[0];
 
 # Read one completed run with: jq --stream -e -s -f measure-flow.jq evidence.json
