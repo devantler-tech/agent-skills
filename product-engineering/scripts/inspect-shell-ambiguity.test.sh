@@ -2,7 +2,8 @@
 # Real Git objects with repeated paths must never produce a successful census.
 set -euo pipefail
 unset GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR GIT_INDEX_FILE GIT_OBJECT_DIRECTORY \
-  GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_NAMESPACE GIT_PREFIX
+  GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_NAMESPACE GIT_PREFIX GIT_CONFIG_COUNT GIT_CONFIG_PARAMETERS \
+  GIT_CONFIG GIT_CONFIG_GLOBAL GIT_CONFIG_SYSTEM GIT_CONFIG_NOSYSTEM GIT_CEILING_DIRECTORIES
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
@@ -75,8 +76,11 @@ bash "$here/inspect-shell-helpers.sh" --inspect --repo-dir "$work/repo" --revisi
 jq -e '.status=="OBSERVED" and .coverage.selectedPaths==1 and .candidates[0].path=="scripts.sh/a.sh"' "$work/out" >/dev/null
 passed=$((passed+1))
 if [[ ${CENSUS_AMBIGUITY_CHILD:-} != 1 ]]; then
-  CENSUS_AMBIGUITY_CHILD=1 GIT_INDEX_FILE="$work/caller-index" bash "$0" > "$work/child" 2>&1
+  printf '[user]\nname = Caller\n' > "$work/caller.config"
+  cp "$work/caller.config" "$work/caller.before"
+  CENSUS_AMBIGUITY_CHILD=1 GIT_INDEX_FILE="$work/caller-index" GIT_CONFIG="$work/caller.config" bash "$0" > "$work/child" 2>&1
   [[ ! -e $work/caller-index ]] || { printf 'FAIL caller index was created\n'; exit 1; }
+  cmp "$work/caller.config" "$work/caller.before"
   passed=$((passed+1))
 fi
 printf 'committed path uniqueness: %s passes, %s failures\n' "$passed" "$failed"
