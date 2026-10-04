@@ -167,6 +167,9 @@ jobs:
       - name: 🧪 Verify raw evidence input boundaries
         run: bash ./scripts/evidence-json-boundaries.test.sh
 
+      - name: 🧪 Verify visible evidence references
+        run: bash ./scripts/evidence-reference-visibility.test.sh
+
       - name: 🧪 Verify self-improvement evidence scenarios
         run: bash ./scripts/self-improvement-evidence.test.sh
 

@@ -28,8 +28,8 @@ def raw_document:
 # jq --stream -s --arg mode check -f accountability-brief.jq brief.json
 # jq --stream -sr --arg mode render -f accountability-brief.jq brief.json
 # Tab and line feed render as spaces; every other C0 or C1 control and every format control
-# (bidi overrides, zero-width characters) renders invisibly and can reorder or hide claims.
-def text: type == "string" and test("\\S") and (test("[\u0000-\u0008\u000b-\u001f\u007f-\u009f]|\\p{Cf}") | not);
+# Default-ignorable marks and fillers can also hide a source without belonging to Cf.
+def text: type == "string" and test("\\S") and (test("[\u0000-\u0008\u000b-\u001f\u007f-\u009f]|\\p{Cf}|\\p{Default_Ignorable_Code_Point}") | not);
 def shape($fields): type == "object" and (keys == ($fields | sort));
 def oneof($values): . as $v | $values | index($v) != null;
 def texts: type == "array" and all(.[]; text);
