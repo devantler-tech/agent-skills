@@ -20,6 +20,9 @@ case ${BASH_SOURCE[0]} in
 esac
 script_dir=$(cd "$script_parent" && pwd -P && printf '.') || refuse 'installed tool directory unavailable'
 script_dir=${script_dir%$'\n.'}
+unicode_boundary="$script_dir/validate-json-unicode-escapes.sh"
+[[ -f $unicode_boundary && -r $unicode_boundary ]] || refuse 'JSON Unicode boundary unavailable'
+bash "$unicode_boundary" "$work/input" || refuse 'input contains an unpaired JSON surrogate escape'
 jq --stream -s --arg mode "$mode" -f "$script_dir/accountability-brief.jq" "$work/input" > "$work/result" || refuse 'brief evaluation failed'
 if [[ $mode == render ]]; then jq -r . "$work/result" > "$work/render" || refuse 'brief rendering failed'; cat "$work/render"; exit 0; fi
 cat "$work/result"

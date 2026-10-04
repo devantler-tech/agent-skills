@@ -20,5 +20,8 @@ case ${BASH_SOURCE[0]} in
 esac
 script_dir=$(cd "$script_parent" && pwd -P && printf '.') || refuse 'installed tool directory unavailable'
 script_dir=${script_dir%$'\n.'}
+unicode_boundary="$script_dir/validate-json-unicode-escapes.sh"
+[[ -f $unicode_boundary && -r $unicode_boundary ]] || refuse 'JSON Unicode boundary unavailable'
+bash "$unicode_boundary" "$work/input" || refuse 'input contains an unpaired JSON surrogate escape'
 jq --stream -s --arg now "$now" -f "$script_dir/check-evidence.jq" "$work/input" > "$work/result" || refuse 'evidence evaluation failed'
 cat "$work/result"

@@ -56,6 +56,8 @@ strictly validates its UTF-8 bytes, and evaluates that same snapshot. A genuinel
 character remains valid. No network calls are made; temporary snapshots are removed on exit. The
 result is complete or absent on failure. End the input file with a newline: before jq 1.8.0, a streamed
 file without one can be refused as incomplete.
+Unpaired UTF-16 surrogate escapes are refused before jq can replace them during decoding; valid
+surrogate pairs and escaped literal `\\u...` text remain supported.
 
 ```sh
 bash scripts/accountability-brief.sh --mode check brief.json

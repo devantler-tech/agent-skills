@@ -62,6 +62,8 @@ The entrypoint also requires `iconv`: it privately snapshots all input bytes, st
 and evaluates that retained file. Temporary input is removed on exit. A genuinely encoded U+FFFD and
 visible international source identities remain valid. Direct jq decoding alone cannot prove the raw
 bytes were valid because malformed UTF-8 can be replaced during parsing.
+Unpaired UTF-16 surrogate escapes are likewise refused before jq can replace them; valid surrogate
+pairs and escaped literal `\\u...` text remain supported.
 A malformed input fails without a result; record UNKNOWN and repair the evidence, never substitute
 zero. A valid but incomplete input preserves partial observations and exposes the incomplete flags.
 The consumer must verify source identity, scope, timestamps and join completeness before assigning
