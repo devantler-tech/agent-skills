@@ -75,13 +75,13 @@ revision=$(printf 'Ordinary shell-named directory\n' | git -C "$work/repo" commi
 bash "$here/inspect-shell-helpers.sh" --inspect --repo-dir "$work/repo" --revision "$revision" > "$work/out"
 jq -e '.status=="OBSERVED" and .coverage.selectedPaths==1 and .candidates[0].path=="scripts.sh/a.sh"' "$work/out" >/dev/null
 passed=$((passed+1))
-if [[ ${CENSUS_AMBIGUITY_CHILD:-} != 1 ]]; then
-  printf '[user]\nname = Caller\n' > "$work/caller.config"
-  cp "$work/caller.config" "$work/caller.before"
-  CENSUS_AMBIGUITY_CHILD=1 GIT_INDEX_FILE="$work/caller-index" GIT_CONFIG="$work/caller.config" bash "$0" > "$work/child" 2>&1
-  [[ ! -e $work/caller-index ]] || { printf 'FAIL caller index was created\n'; exit 1; }
-  cmp "$work/caller.config" "$work/caller.before"
-  passed=$((passed+1))
-fi
+printf '[user]\nname = Caller\n' > "$work/caller.config"
+cp "$work/caller.config" "$work/caller.before"
+GIT_INDEX_FILE="$work/caller-index" GIT_CONFIG="$work/caller.config" \
+  bash "$here/inspect-shell-helpers.sh" --inspect --repo-dir "$work/repo" --revision "$revision" > "$work/child" 2>&1
+jq -e '.status=="OBSERVED" and .coverage.selectedPaths==1' "$work/child" >/dev/null
+[[ ! -e $work/caller-index ]] || { printf 'FAIL caller index was created\n'; exit 1; }
+cmp "$work/caller.config" "$work/caller.before"
+passed=$((passed+1))
 printf 'committed path uniqueness: %s passes, %s failures\n' "$passed" "$failed"
 [[ $failed == 0 ]]
