@@ -5,6 +5,9 @@ def raw_need($ok; $why): if $ok then . else error($why) end;
 def raw_document:
   raw_need(type == "array" and all(.[]; type == "array" and (length == 1 or length == 2)
     and (.[0] | type == "array")); "use jq --stream -s")
+  # A real stream leaf is a scalar or an empty container; a non-empty one is a hand-wrapped document.
+  | raw_need(all(.[]; length == 1 or (.[1] | (type != "object" and type != "array") or length == 0));
+      "use jq --stream -s")
   | . as $events
   | reduce .[] as $event ({active: [], seen: {}};
       $event[0] as $path

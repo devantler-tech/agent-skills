@@ -12,7 +12,7 @@ for tool in proof flow brief; do
     flow) filter="$root/agent-improvement/scripts/measure-flow.jq"; example="$root/agent-improvement/references/flow-example.json"; args=(--arg unused unused) ;;
     brief) filter="$root/product-engineering/scripts/accountability-brief.jq"; example="$root/product-engineering/references/accountability-product.json"; args=(--arg mode check) ;;
   esac
-  for scenario in healthy scalar empty-container disjoint-container escaped nested-array multiple malformed ordinary-slurp; do
+  for scenario in healthy scalar empty-container disjoint-container escaped nested-array multiple malformed ordinary-slurp wrapped-slurp; do
     jq -c . "$example" > "$work/input.json"
     case $scenario in
       scalar)
@@ -26,9 +26,13 @@ for tool in proof flow brief; do
       nested-array) sed 's/^{/{"boundary":[{"a":false,"a":true}],/' "$work/input.json" > "$work/new"; mv "$work/new" "$work/input.json" ;;
       multiple) cat "$example" >> "$work/input.json" ;;
       malformed) printf '\n{"broken":' >> "$work/input.json" ;;
+      # One hand-wrapped event: the parser has already collapsed the repeated field inside it.
+      wrapped-slurp)
+        sed 's/"result":"pass"/"result":"fail","result":"pass"/; s/"artifactsComplete":true/"artifactsComplete":false,"artifactsComplete":true/' "$work/input.json" > "$work/new"
+        { printf '[[],'; tr -d '\n' < "$work/new"; printf ']'; } > "$work/input.json" ;;
     esac
     rc=0
-    stream=(--stream -s); [ "$scenario" != ordinary-slurp ] || stream=(-s)
+    stream=(--stream -s); case $scenario in ordinary-slurp|wrapped-slurp) stream=(-s) ;; esac
     jq "${stream[@]}" "${args[@]}" -f "$filter" "$work/input.json" > "$work/output" 2> "$work/error" || rc=$?
     case $scenario in
       scalar|empty-container|disjoint-container|escaped|nested-array)
