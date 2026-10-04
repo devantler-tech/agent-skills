@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Real Git objects with repeated paths must never produce a successful census.
 set -euo pipefail
+unset GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR GIT_INDEX_FILE GIT_OBJECT_DIRECTORY \
+  GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_NAMESPACE GIT_PREFIX
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
@@ -35,6 +37,29 @@ for mode in shell go; do
     done
   done
 done
+# Distinct flattened leaves can still hide repeated ancestor or empty-tree names.
+printf '100644 blob %s\ta.sh\0' "$first" > "$work/tree"
+left=$(git -C "$work/repo" mktree -z < "$work/tree")
+printf '100644 blob %s\tb.sh\0' "$second" > "$work/tree"
+right=$(git -C "$work/repo" mktree -z < "$work/tree")
+empty=$(git -C "$work/repo" mktree < /dev/null)
+for mode in shell go; do
+  args=()
+  [[ $mode != go ]] || args=(--include-go)
+  for kind in disjoint identical empty file-directory; do
+    printf '040000 tree %s\tscripts\0' "$left" > "$work/tree"
+    case $kind in
+      disjoint) printf '040000 tree %s\tscripts\0' "$right" >> "$work/tree" ;;
+      identical) printf '040000 tree %s\tscripts\0' "$left" >> "$work/tree" ;;
+      empty) printf '040000 tree %s\tscripts\0' "$empty" > "$work/tree"; printf '040000 tree %s\tscripts\0' "$empty" >> "$work/tree" ;;
+      file-directory) printf '100644 blob %s\tscripts\0' "$first" >> "$work/tree" ;;
+    esac
+    tree=$(git -C "$work/repo" mktree -z < "$work/tree")
+    revision=$(printf 'Repeated ancestor\n' | git -C "$work/repo" commit-tree "$tree")
+    path=scripts
+    refuse
+  done
+done
 # Unique byte-exact newline and whitespace names remain supported.
 printf '100644 blob %s\t%s\0' "$first" ' task.sh ' > "$work/tree"
 printf '100644 blob %s\t%s\0' "$first" $'new\nline.sh' >> "$work/tree"
@@ -43,6 +68,16 @@ revision=$(printf 'Unique paths\n' | git -C "$work/repo" commit-tree "$tree")
 bash "$here/inspect-shell-helpers.sh" --inspect --repo-dir "$work/repo" --revision "$revision" > "$work/out"
 jq -e '.status=="OBSERVED" and .coverage.selectedPaths==1 and .candidates[0].path=="new\nline.sh"' "$work/out" >/dev/null
 passed=$((passed+1))
+printf '040000 tree %s\tscripts.sh\0' "$left" > "$work/tree"
+tree=$(git -C "$work/repo" mktree -z < "$work/tree")
+revision=$(printf 'Ordinary shell-named directory\n' | git -C "$work/repo" commit-tree "$tree")
+bash "$here/inspect-shell-helpers.sh" --inspect --repo-dir "$work/repo" --revision "$revision" > "$work/out"
+jq -e '.status=="OBSERVED" and .coverage.selectedPaths==1 and .candidates[0].path=="scripts.sh/a.sh"' "$work/out" >/dev/null
+passed=$((passed+1))
+if [[ ${CENSUS_AMBIGUITY_CHILD:-} != 1 ]]; then
+  CENSUS_AMBIGUITY_CHILD=1 GIT_INDEX_FILE="$work/caller-index" bash "$0" > "$work/child" 2>&1
+  [[ ! -e $work/caller-index ]] || { printf 'FAIL caller index was created\n'; exit 1; }
+  passed=$((passed+1))
+fi
 printf 'committed path uniqueness: %s passes, %s failures\n' "$passed" "$failed"
 [[ $failed == 0 ]]
-
