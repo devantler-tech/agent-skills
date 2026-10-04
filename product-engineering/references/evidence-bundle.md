@@ -123,6 +123,8 @@ The installed entrypoint privately retains the input, strictly validates its raw
 evaluates the same snapshot. It removes temporary files on exit, performs no network calls, and is
 **not enabled as a runtime gate**. Genuinely encoded replacement characters remain valid. Machine
 identities and artifact references must remain visibly exact, including revisions and diagnostic IDs.
+Unpaired UTF-16 surrogate escapes are refused before jq can replace them during decoding; valid
+surrogate pairs and escaped literal `\\u...` text remain supported.
 
 ```bash
 bash /path/to/product-engineering/scripts/check-evidence.sh \
