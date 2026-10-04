@@ -86,7 +86,17 @@ Input version 1 is a JSON object:
 | `selections` | Array of unique `{id, at, selectedId, selectedClass, evidence, candidatesComplete, candidates}` records. `at` is within the run; the class uses the same three values. |
 | `candidates` | Unique `{id, createdAt, actionable, startedByEnd, evidence}` records. Timestamps cannot follow selection. Both booleans also accept explicit `null` for unknown; missing keys are malformed. A complete census includes the selected item. |
 
-All source pointers must be nonblank opaque strings. Keep sensitive evidence in the consumer's private
+All IDs, instance names, rubric names and source pointers must be visibly exact strings: no control,
+separator or default-ignorable code points, leading/trailing whitespace, or repeated spaces. Ordinary
+single ASCII spaces between visible words and visible international characters remain supported.
+The calculator refuses ambiguous identities rather than trimming or normalizing them.
+
+Candidates observed in multiple selections must agree on their creation timestamp and any conclusive
+completed-run start state. An explicit unknown may gain a conclusive observation; actionability may
+change between selections. Conflicting facts refuse the whole result rather than producing incompatible
+ages or silently choosing an observation.
+
+Keep sensitive evidence in the consumer's private
 store rather than embedding transcript text or private repository URLs in exported measurements.
 
 Output preserves the run (including `scoringVersion`), selection evidence pointers, and each
