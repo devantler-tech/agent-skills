@@ -118,12 +118,12 @@ installed skill, not the consuming repository.
 The helper reads JSON, performs no network calls or writes, and is **not enabled as a runtime gate**.
 
 ```bash
-jq -s --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+jq --stream -s --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   -f /path/to/product-engineering/scripts/check-evidence.jq bundle.json > assessment.json
 ```
 
 Check the command's exit status first. Nonzero means invalid input or evaluation failure, never a
-decision. Slurp mode (`-s`) lets the evaluator reject empty or multiple input bundles.
+decision. Streaming and slurp mode (`--stream -s`) reject repeated decoded fields before reconstruction, as well as empty or multiple bundles. End the input file with a newline: before jq 1.8.0, a streamed file without one can be refused as incomplete.
 Successful evaluation emits `decision`, `reasons`, revisions, evaluation time and
 `authority: "assessment-only"`. It exits zero for all three decisions; inspect the JSON explicitly:
 

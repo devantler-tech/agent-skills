@@ -1,6 +1,32 @@
-# Offline jq 1.6+ checker and Markdown renderer. Slurp exactly one brief; no external reads.
-# jq -s --arg mode check -f accountability-brief.jq brief.json
-# jq -sr --arg mode render -f accountability-brief.jq brief.json
+# Inspect decoded member paths before object reconstruction can overwrite them.
+# A container prefix is declared once while active; after its closing event, a
+# repeated prefix is a second declaration, even when its children are disjoint.
+def raw_need($ok; $why): if $ok then . else error($why) end;
+def raw_document:
+  raw_need(type == "array" and all(.[]; type == "array" and (length == 1 or length == 2)
+    and (.[0] | type == "array")); "use jq --stream -s")
+  # A real stream leaf is a scalar or an empty container; a non-empty one is a hand-wrapped document.
+  | raw_need(all(.[]; length == 1 or (.[1] | (type != "object" and type != "array") or length == 0));
+      "use jq --stream -s")
+  | . as $events
+  | reduce .[] as $event ({active: [], seen: {}};
+      $event[0] as $path
+      | if ($event | length) == 2 then
+          reduce range(1; ($path | length) + 1) as $n (.;
+            $path[0:$n] as $prefix
+            | if $n < ($path | length) and .active[0:$n] == $prefix then .
+              else ($prefix | tojson) as $key
+                | raw_need(.seen[$key] != true; "repeated decoded field path: " + $key)
+                | .seen[$key] = true end)
+          | .active = $path[0:-1]
+        else .active = $path[0:-2] end)
+  | [$events | fromstream(.[])]
+  | raw_need(length == 1; "expected exactly one JSON document; before jq 1.8.0 the file must also end with a newline")
+  | .[0];
+
+# Offline jq 1.6+ checker and Markdown renderer. Stream and slurp exactly one brief; no external reads.
+# jq --stream -s --arg mode check -f accountability-brief.jq brief.json
+# jq --stream -sr --arg mode render -f accountability-brief.jq brief.json
 # Tab and line feed render as spaces; every other C0 or C1 control and every format control
 # (bidi overrides, zero-width characters) renders invisibly and can reorder or hide claims.
 def text: type == "string" and test("\\S") and (test("[\u0000-\u0008\u000b-\u001f\u007f-\u009f]|\\p{Cf}") | not);
@@ -130,7 +156,7 @@ def render:
       $b.humanDecisions[] | "- \(.question | md) Owner: \(.owner | md). Resolution: \(if .resolution == null then "OPEN" else (.resolution.decision | md) + ". Reference: " + (.resolution.reference | md) end)." end)
   ] | join("\n\n") + "\n";
 
-need(type == "array" and length == 1; "supply exactly one JSON brief with jq -s")
+[raw_document] | need(type == "array" and length == 1; "supply exactly one JSON brief with jq --stream -s")
 | .[0] | validate
 | if $mode == "check" then {
     status: "STRUCTURALLY_VALID", semanticReview: "REQUIRED", authority: "none",

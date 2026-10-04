@@ -34,7 +34,7 @@ passed=0
 check() {
   local name=$1 change=$2 expected=$3
   jq "$change" "$work/base.json" > "$work/input.json"
-  jq -e -s -f "$calculator" "$work/input.json" > "$work/output.json"
+  jq --stream -e -s -f "$calculator" "$work/input.json" > "$work/output.json"
   jq -e "$expected" "$work/output.json" > /dev/null || {
     printf 'FAIL: %s\n' "$name" >&2
     cat "$work/output.json" >&2
@@ -47,7 +47,7 @@ check() {
 reject() {
   local name=$1 change=$2
   jq "$change" "$work/base.json" > "$work/input.json"
-  if jq -e -s -f "$calculator" "$work/input.json" > "$work/output.json" 2> "$work/error"; then
+  if jq --stream -e -s -f "$calculator" "$work/input.json" > "$work/output.json" 2> "$work/error"; then
     printf 'FAIL: accepted %s\n' "$name" >&2; exit 1
   fi
   [ ! -s "$work/output.json" ] || { printf 'FAIL: partial result for %s\n' "$name" >&2; exit 1; }
@@ -116,7 +116,7 @@ check 'negative exponent zero timestamp remains supported' '.run.startedAt=-0e10
 
 # Ablate only the decimal-preservation capability probe, modeling a lossy backend.
 sed 's/9007199254740991\.1 > 9007199254740991/9007199254740991 > 9007199254740991/' "$calculator" > "$work/lossy.jq"
-if jq -e -s -f "$work/lossy.jq" "$work/base.json" > "$work/output.json" 2> "$work/error" || [ -s "$work/output.json" ]; then
+if jq --stream -e -s -f "$work/lossy.jq" "$work/base.json" > "$work/output.json" 2> "$work/error" || [ -s "$work/output.json" ]; then
   printf 'FAIL: a lossy numeric backend produced a scorecard\n' >&2; exit 1
 fi
 grep -q 'decimal-preserving jq' "$work/error"

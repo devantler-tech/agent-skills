@@ -53,11 +53,11 @@ It has no network access, writes no state and makes no policy or regression verd
 on a consumer-normalized evidence file; no scheduled execution or collection is enabled by it:
 
 ```sh
-jq -e -s -f agent-improvement/scripts/measure-flow.jq evidence.json
+jq --stream -e -s -f agent-improvement/scripts/measure-flow.jq evidence.json
 ```
 
 The path above is relative to this skill repository; after installation resolve `scripts/measure-flow.jq`
-relative to the installed skill. `jq` must preserve decimal number literals (standard jq 1.7 or newer); the filter checks that capability and refuses a lossy backend. `-s` is required: the filter rejects zero or multiple input documents.
+relative to the installed skill. `jq` must preserve decimal number literals (standard jq 1.7 or newer); the filter checks that capability and refuses a lossy backend. `--stream -s` is required: repeated decoded fields are rejected before reconstruction, and zero or multiple documents are refused. End the input file with a newline: before jq 1.8.0, a streamed file without one can be refused as incomplete.
 A malformed input fails without a result; record UNKNOWN and repair the evidence, never substitute
 zero. A valid but incomplete input preserves partial observations and exposes the incomplete flags.
 The consumer must verify source identity, scope, timestamps and join completeness before assigning
@@ -101,7 +101,7 @@ preemption legitimacy, artifact classification, or a trend from one run.
 Run the bundled [synthetic example](flow-example.json) from the repository root:
 
 ```sh
-jq -e -s -f agent-improvement/scripts/measure-flow.jq agent-improvement/references/flow-example.json
+jq --stream -e -s -f agent-improvement/scripts/measure-flow.jq agent-improvement/references/flow-example.json
 ```
 
 This fixture is invented for demonstration; it is not operational evidence and must not enter a

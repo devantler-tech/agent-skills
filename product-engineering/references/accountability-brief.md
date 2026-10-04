@@ -53,11 +53,11 @@ be cited as real evidence.
 
 With jq 1.6 or later, run these commands using this installed skill's directory as the working
 directory. The input is one JSON object; the helper reads no files beyond that input and makes no
-network calls. It emits either one complete result or an error before emitting any result.
+network calls. It emits either one complete result or an error before emitting any result. End the input file with a newline: before jq 1.8.0, a streamed file without one can be refused as incomplete.
 
 ```sh
-jq -s --arg mode check -f scripts/accountability-brief.jq brief.json
-jq -sr --arg mode render -f scripts/accountability-brief.jq brief.json
+jq --stream -s --arg mode check -f scripts/accountability-brief.jq brief.json
+jq --stream -sr --arg mode render -f scripts/accountability-brief.jq brief.json
 ```
 
 The first command returns `STRUCTURALLY_VALID`, `semanticReview: REQUIRED`, and `authority: none`,

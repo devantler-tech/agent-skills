@@ -13,7 +13,7 @@ passed=0
 check() {
   local name=$1 want=$2 mutation=$3 reason=${4:-}
   jq "$mutation" "$example" > "$work/bundle.json"
-  jq -s --arg now 2026-09-24T00:00:00Z -f "$filter" "$work/bundle.json" > "$work/result.json"
+  jq --stream -s --arg now 2026-09-24T00:00:00Z -f "$filter" "$work/bundle.json" > "$work/result.json"
   jq -e --arg want "$want" --arg reason "$reason" '
     .decision==$want and .authority=="assessment-only"
     and ($reason=="" or (.reasons | index($reason)!=null))
