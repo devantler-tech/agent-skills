@@ -151,6 +151,7 @@ bash ./scripts/product-engineering-accountability.test.sh # checks and renders o
 bash ./scripts/evidence-reference-visibility.test.sh # preserves visibly exact evidence source identities
 bash ./scripts/evidence-input-bytes.test.sh # verifies installed raw-byte entrypoints before JSON decoding
 bash ./product-engineering/scripts/inspect-shell-helpers.test.sh # exercises the optional installed shell census:
+bash ./product-engineering/scripts/inspect-shell-ambiguity.test.sh # rejects repeated committed paths and ancestors before selection
                                                                # exact Git objects, default-off and failed reads
 shellcheck product-engineering/scripts/*.sh
 bash ./scripts/self-improvement-evidence.test.sh # runs the procedure example through the canonical

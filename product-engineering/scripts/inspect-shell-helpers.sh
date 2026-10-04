@@ -56,17 +56,19 @@ resolved=$(read_git rev-parse --verify "$revision^{commit}" 2>/dev/null) || unkn
 umask 077
 tmp=$(mktemp -d) || unknown 'temporary observation directory is unavailable'
 trap 'rm -rf "$tmp"' EXIT
-read_git ls-tree -r -z "$revision" > "$tmp/tree" 2>/dev/null || unknown 'committed tree could not be read'
-# Check the complete leaf inventory against an independent raw Git view of this commit.
+read_git ls-tree -r -t -z "$revision" > "$tmp/tree" 2>/dev/null || unknown 'committed tree could not be read'
+# Include ancestor entries: unique flattened leaves cannot establish unique directories.
+# Check the complete inventory against an independent raw Git view of this commit.
 # Neither command writes objects or uses checkout content, external diffs or text conversions.
 empty_tree=$(read_git hash-object -t tree --stdin < /dev/null) || unknown 'empty tree identity is unavailable'
 [[ $empty_tree =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]] || unknown 'empty tree identity is invalid'
-read_git diff-tree -r --raw -z --no-abbrev --no-commit-id --no-renames \
+read_git diff-tree -r -t --raw -z --no-abbrev --no-commit-id --no-renames \
   --no-ext-diff --no-textconv --no-relative --no-color --ignore-submodules=none "$empty_tree" "$revision" \
   > "$tmp/diff" 2>/dev/null || unknown 'independent committed tree could not be read'
 # Base64 permits a portable line sort without splitting filenames containing newlines.
 encode_record() { printf '%s %s\t%s\0' "$1" "$2" "$3" | base64 | tr -d '\r\n' || return; printf '\n'; }
 : > "$tmp/tree-records"
+: > "$tmp/tree-paths"
 entry=
 while IFS= read -r -d '' entry; do
   [[ $entry == *$'\t'* ]] || unknown 'malformed tree entry'
@@ -75,10 +77,11 @@ while IFS= read -r -d '' entry; do
   read -r mode type blob extra <<< "$metadata"
   [[ -n $path && -z ${extra:-} && $blob =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]] || unknown 'invalid tree metadata'
   case $mode:$type in
-    100644:blob|100755:blob|120000:blob|160000:commit) : ;;
+    040000:tree|100644:blob|100755:blob|120000:blob|160000:commit) : ;;
     *) unknown 'unsupported tree metadata' ;;
   esac
   encode_record "$mode" "$blob" "$path" >> "$tmp/tree-records" || unknown 'tree record could not be encoded'
+  encode_record '' '' "$path" >> "$tmp/tree-paths" || unknown 'tree path could not be encoded'
 done < "$tmp/tree"
 [[ -z $entry ]] || unknown 'committed tree has an unterminated record'
 : > "$tmp/diff-records"
@@ -86,7 +89,7 @@ header=
 while IFS= read -r -d '' header; do
   IFS= read -r -d '' path || unknown 'independent tree has an incomplete path'
   read -r old_mode mode old_blob blob status extra <<< "$header"
-  [[ $old_mode == :000000 && $mode =~ ^(100644|100755|120000|160000)$ &&
+  [[ $old_mode == :000000 && $mode =~ ^(040000|100644|100755|120000|160000)$ &&
     $old_blob =~ ^(0{40}|0{64})$ && $blob =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ &&
     ${#old_blob} == "${#blob}" && $status == A && -z ${extra:-} && -n $path ]] || unknown 'invalid independent tree metadata'
   encode_record "$mode" "$blob" "$path" >> "$tmp/diff-records" || unknown 'independent tree record could not be encoded'
@@ -95,6 +98,9 @@ done < "$tmp/diff"
 LC_ALL=C sort "$tmp/tree-records" > "$tmp/tree-sorted" || unknown 'tree records could not be compared'
 LC_ALL=C sort "$tmp/diff-records" > "$tmp/diff-sorted" || unknown 'independent tree records could not be compared'
 cmp -s "$tmp/tree-sorted" "$tmp/diff-sorted" || unknown 'committed tree observations disagree'
+LC_ALL=C sort "$tmp/tree-paths" > "$tmp/paths-sorted" || unknown 'tree paths could not be compared'
+LC_ALL=C sort -u "$tmp/tree-paths" > "$tmp/paths-unique" || unknown 'unique tree paths could not be compared'
+cmp -s "$tmp/paths-sorted" "$tmp/paths-unique" || unknown 'committed tree has repeated paths'
 if [[ $include_go == true ]]; then
   command -v go >/dev/null || unknown 'missing dependency: go'
   case ${BASH_SOURCE[0]} in
@@ -113,6 +119,9 @@ go_files_examined=0
 while IFS= read -r -d '' entry; do
   [[ $entry == *$'\t'* ]] || unknown 'malformed tree entry'
   path=${entry#*$'\t'}
+  metadata=${entry%%$'\t'*}
+  read -r mode type blob extra <<< "$metadata"
+  [[ $type != tree ]] || continue # Directories are identity evidence, never tool candidates.
   candidate_kind=shell-path
   if [[ $path == *.sh && $path != *.test.sh ]]; then
     :
@@ -121,8 +130,6 @@ while IFS= read -r -d '' entry; do
   else
     continue
   fi
-  metadata=${entry%%$'\t'*}
-  read -r mode type blob extra <<< "$metadata"
   [[ -z ${extra:-} && $type == blob && $mode =~ ^100(644|755)$ &&
     $blob =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]] || unknown 'selected path is not a supported regular blob'
   printf '%s' "$path" | iconv -f UTF-8 -t UTF-8 >/dev/null 2>&1 || unknown 'selected path is not valid UTF-8'

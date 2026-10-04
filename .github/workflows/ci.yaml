@@ -138,6 +138,9 @@ jobs:
       - name: 🧪 Verify exact shell census repository and commit identities
         run: bash product-engineering/scripts/inspect-shell-identity.test.sh
 
+      - name: 🧪 Verify unique committed census paths
+        run: bash product-engineering/scripts/inspect-shell-ambiguity.test.sh
+
       - name: 🔗 Smoke-test the README index parser
         # Proves the load-bearing lockstep between the curated README index and
         # every consumer install path: a non-empty parse, the parsed count equal
