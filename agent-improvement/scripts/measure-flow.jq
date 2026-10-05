@@ -99,7 +99,8 @@ def selection_metric:
        {state: "UNKNOWN", oldestUnstarted: null}
      elif .selectedClass != "easy" then
        {state: "NOT-APPLICABLE", oldestUnstarted: null}
-     elif (.candidatesComplete | not) or any(.candidates[] | select(.id != $selection.selectedId);
+     elif (.candidatesComplete | not) or any(.candidates[] |
+         select(.id != $selection.selectedId and .startedByEnd != true);
          .actionable == null or (.actionable == true and .startedByEnd == null)) then
        {state: "UNKNOWN", oldestUnstarted: null}
      else
