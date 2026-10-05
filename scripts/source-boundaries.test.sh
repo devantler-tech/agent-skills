@@ -4,6 +4,10 @@ here=${SOURCE_SCRIPTS:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 fail=0
+# Create an isolated catalogue and native-CLI fixture for a source response.
+# Arguments: $1 is the fixture directory; $2 is the advertised source ref.
+# Writes copied installer resources and a CLI stub that records private staging
+# separately from final user-scope installation; it performs no real installs.
 fixture() {
   local root=$1 ref=$2
   mkdir -p "$root/scripts" "$root/bin" "$root/alpha"
@@ -16,6 +20,7 @@ fixture() {
 set -eu
 # Model private staging separately from final user-scope call assertions.
 if [[ "${1:-} ${2:-}" == 'skill install' && " $* " == *' --dir '* ]]; then
+  if [[ -n ${STAGE_TRACE:-} ]]; then printf 'staged\n' >> "$STAGE_TRACE"; fi
   stage=''
   for ((i=1;i<=$#;i++)); do if [[ ${!i} == --dir ]]; then i=$((i+1)); stage=${!i}; fi; done
   slug=${4%/SKILL.md}; slug=${slug##*/}
@@ -26,12 +31,15 @@ fi
 if [[ "$1 $2" == 'skill --help' ]]; then exit 0; fi
 if [[ "$1" == api ]]; then
   if [[ $2 == */commits/* ]]; then printf 'HTTP/1.1 200 OK\r\n\r\n{"sha":"1111111111111111111111111111111111111111"}\n'; else cat "$RESPONSE_FILE"; fi
-  exit 0
+  exit "${RESPONSE_STATUS:-0}"
 fi
 printf 'installed\n' >> "$INSTALL_TRACE"
 STUB
   chmod +x "$root/bin/gh"
 }
+# Run one source-identity case and report whether its final write was admitted.
+# Arguments: case name, source ref, response JSON, and expected pass/reject result.
+# Prints one result and increments fail on a mismatch; fixtures stay under work.
 install_case() {
   local name=$1 ref=$2 response=$3 expect=$4 root="$work/$1" rc=0
   fixture "$root" "$ref"
@@ -52,6 +60,36 @@ install_case branch-source main "{\"sha\":\"$one\"}" pass
 install_case repeated-source-container main "{\"sha\":\"$one\",\"commit\":{},\"commit\":{\"message\":\"other\"}}" reject
 install_case escaped-repeated-sha main "{\"sha\":\"$one\",\"sh\\u0061\":\"$two\"}" reject
 install_case malformed-source main '{"sha":' reject
+# Observe the original bytes before Bash can discard NULs or jq can repair UTF-8.
+# A malformed or failed response must not reach even the private native installer.
+for interpreter in /bin/bash bash; do
+  for kind in valid newline replacement astral nul-key nul-sha nul-tail invalid-utf8 above-unicode obsolete-five obsolete-six partial-failure; do
+    root="$work/raw-${interpreter##*/}-$kind"; fixture "$root" main
+    status=0; expected=reject
+    case "$kind" in
+      valid) printf '{"sha":"%s"}' "$one" > "$root/response"; expected=pass ;;
+      newline) printf '{"sha":"%s"}\n\n' "$one" > "$root/response"; expected=pass ;;
+      replacement) printf '{"sha":"%s","message":"\357\277\275"}' "$one" > "$root/response"; expected=pass ;;
+      astral) printf '{"sha":"%s","message":"\360\237\230\200"}' "$one" > "$root/response"; expected=pass ;;
+      nul-key) printf '{"sh\000a":"%s"}' "$one" > "$root/response" ;;
+      nul-sha) printf '{"sha":"%s\000"}' "$one" > "$root/response" ;;
+      nul-tail) printf '{"sha":"%s"}\000' "$one" > "$root/response" ;;
+      invalid-utf8) printf '{"sha":"%s","message":"\377"}' "$one" > "$root/response" ;;
+      above-unicode) printf '{"sha":"%s","message":"\364\220\200\200"}' "$one" > "$root/response" ;;
+      obsolete-five) printf '{"sha":"%s","message":"\370\210\200\200\200"}' "$one" > "$root/response" ;;
+      obsolete-six) printf '{"sha":"%s","message":"\374\204\200\200\200\200"}' "$one" > "$root/response" ;;
+      partial-failure) printf '{"sha":"%s"}' "$one" > "$root/response"; status=1 ;;
+    esac
+    : > "$root/stages"; : > "$root/installs"; rc=0
+    PATH="$root/bin:$PATH" RESPONSE_FILE="$root/response" RESPONSE_STATUS="$status" \
+      STAGE_TRACE="$root/stages" INSTALL_TRACE="$root/installs" \
+      "$interpreter" "$root/scripts/install.sh" codex > "$root/out" 2>&1 || rc=$?
+    if { [[ $expected == pass && $rc -eq 0 && -s $root/stages && -s $root/installs ]]; } ||
+       { [[ $expected == reject && $rc -ne 0 && ! -s $root/stages && ! -s $root/installs ]]; }; then
+      printf 'PASS raw-response-%s-%s\n' "$interpreter" "$kind"
+    else printf 'FAIL raw-response-%s-%s (exit=%s)\n' "$interpreter" "$kind" "$rc"; fail=$((fail+1)); fi
+  done
+done
 root="$work/upstream"; fixture "$root" main
 sed 's@devantler-tech/agent-skills@test/source@g' "$root/README.md" > "$root/new"; mv "$root/new" "$root/README.md"
 for kind in clean repeated-path repeated-container; do

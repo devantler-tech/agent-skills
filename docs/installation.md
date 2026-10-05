@@ -101,7 +101,10 @@ an explicit pin must match the link's source ref. Unsupported options, missing v
 arguments refuse the whole catalogue before installation. The batch command chooses its own agents
 and user scope; those documented options describe commands run directly.
 Source responses must contain one unambiguous commit identity. When a catalogue link names
-a full commit, the returned identity must match it. A conflicting or incomplete response stops
+a full commit, the returned identity must match it. Installation requires `jq` and `iconv` and
+validates the original response bytes as UTF-8 JSON before decoding the commit. Raw NULs,
+malformed UTF-8, repeated declarations and failed API reads refuse before private staging.
+A conflicting or incomplete response stops
 the complete installation before any skill is replaced. The upstream target checker also refuses
 repeated file declarations instead of selecting one interpretation.
 It resolves each repository/ref once and checks all sibling files at that immutable revision;
