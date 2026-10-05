@@ -68,7 +68,6 @@ jobs:
         uses: devantler-tech/.github/actions/validate-retired-repo-links@bd0035dd8f41fcf1459b878882b8897443f8dc59 # v4.9.4
         with:
           enabled: "true"
-          working-directory: ${{ steps.fixture.outputs.directory }}
           config-file: .github/missing-retired-repo-links.json
       - name: Require both negative controls to fail without success output
         if: always()

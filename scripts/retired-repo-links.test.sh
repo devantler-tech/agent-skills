@@ -15,8 +15,8 @@ jq -n --slurpfile ci "$work/ci.json" --slurpfile config "$work/config.json" \
   '{ci:$ci[0],config:$config[0]}' >"$work/bundle.json"
 
 # Validate the JSON bundle at $1: bounded scope, read-only execution,
-# complete validation output, and required-check aggregation. Return nonzero with
-# a diagnostic when any contract is weakened; print nothing on success.
+# complete output, independent missing-configuration control, and required CI.
+# Return nonzero with a diagnostic for weakened contracts; no output on success.
 guard() {
   jq -e '
     def runnable: .if == null and (.["continue-on-error"] // false) == false;
@@ -31,13 +31,24 @@ guard() {
       select(runnable and .with.enabled == "true" and
         ((.uses // "") | test("^devantler-tech/[.]github/actions/validate-retired-repo-links@[0-9a-f]{40}$")))] | length) != 1
     then error("released consumer action must execute explicitly enabled")
+    elif ([$job.steps[] | select(.id == "missing-config") |
+      select(.if == null and .["continue-on-error"] == true and
+        .uses == ($job.steps[] | select(.id == "links") | .uses) and
+        .with == {enabled:"true","config-file":".github/missing-retired-repo-links.json"})] | length) != 1
+    then error("missing configuration must use the clean consumer root")
     elif ([$job.steps[] | select(.name == "Require a complete scan") |
       select(runnable and .env.VALIDATED == "${{ steps.links.outputs.validated }}" and
         .run == "test \"$VALIDATED\" = true")] | length) != 1
     then error("consumer scan must prove complete validation")
-    elif ($ci.jobs["ci-required-checks"].needs | index("validate-retired-links")) == null or
-      ($ci.jobs["ci-required-checks"].steps | any(.with["job-results"] // "" |
-        contains("needs.validate-retired-links.result"))) != true
+    elif (["always()", "${{ always() }}"] | index($ci.jobs["ci-required-checks"].if)) == null or
+      ($ci.jobs["ci-required-checks"].needs | index("validate-retired-links")) == null or
+      ($ci.jobs["ci-required-checks"].steps | any(runnable and
+        .uses == "devantler-tech/.github/actions/aggregate-job-checks@8927f40e06cf2446dfee4e3dfa10172758b72fb0" and
+        .with == {"job-results": (
+          "${{ needs.validate.result }} ${{ needs.discover-skills.result }} " +
+          "${{ needs.validate-spec.result }} ${{ needs.lint-scripts.result }} " +
+          "${{ needs.validate-retired-links.result }}"
+        )})) != true
     then error("consumer scan must gate required CI")
     else true end' "$1" >/dev/null
 }
@@ -60,7 +71,14 @@ skipped job	.ci.jobs["validate-retired-links"].if="false"	execute without write
 write access	.ci.jobs["validate-retired-links"].permissions.contents="write"	execute without write
 disabled caller	.ci.jobs["validate-retired-links"].steps |= map(if .id == "links" then .with.enabled="false" else . end)	explicitly enabled
 action bypass	.ci.jobs["validate-retired-links"].steps |= map(if .id == "links" then del(.uses) | .run="echo PASS" else . end)	explicitly enabled
+dirty missing-config root	.ci.jobs["validate-retired-links"].steps |= map(if .id == "missing-config" then .with["working-directory"]="${{ steps.fixture.outputs.directory }}" else . end)	clean consumer root
 lost success proof	.ci.jobs["validate-retired-links"].steps |= map(select(.name != "Require a complete scan"))	complete validation
+skipped aggregation	.ci.jobs["ci-required-checks"].if="false"	gate required CI
+missing aggregate condition	del(.ci.jobs["ci-required-checks"].if)	gate required CI
+skipped aggregate step	.ci.jobs["ci-required-checks"].steps[0].if="false"	gate required CI
+ignored aggregate failure	.ci.jobs["ci-required-checks"].steps[0]["continue-on-error"]=true	gate required CI
+aggregate action bypass	.ci.jobs["ci-required-checks"].steps[0].uses="actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"	gate required CI
+masked guard result	.ci.jobs["ci-required-checks"].steps[0].with["job-results"] |= sub("needs[.]validate-retired-links[.]result";"needs.validate-retired-links.result && 'success'")	gate required CI
 lost aggregation	.ci.jobs["ci-required-checks"].needs |= map(select(. != "validate-retired-links"))	gate required CI
 lost result	.ci.jobs["ci-required-checks"].steps |= map(if .with["job-results"] then .with["job-results"] |= gsub("needs.validate-retired-links.result";"needs.other.result") else . end)	gate required CI
 CASES
@@ -79,9 +97,8 @@ result=0
 "$validator" --root "$work/fixture" >"$work/negative.log" 2>&1 || result=$?
 [[ "$result" == 1 ]]
 grep -E '^README.md:[0-9]+: link targets retired repository devantler-tech/reusable-workflows$' "$work/negative.log"
-rm "$work/fixture/.github/retired-repo-links.json"
 result=0
-"$validator" --root "$work/fixture" >"$work/missing.log" 2>&1 || result=$?
+"$validator" --root "$root" --config .github/missing-retired-repo-links.json >"$work/missing.log" 2>&1 || result=$?
 [[ "$result" == 2 ]]
 grep -qF 'configuration' "$work/missing.log"
 echo 'PASS: released validator accepts clean documentation and rejects the seeded link and missing configuration'
