@@ -72,12 +72,15 @@ jq -e '[.selections[].oldestUnstarted.ageSeconds] == [100,110]' "$work/out" >/de
 
 # Actionability is observed at selection time and may change; unknown end facts may
 # gain a conclusive observation without inventing a contradiction or filling a gap.
-for mutation in '.selections[1].candidates[0].actionable = false' \
-    '.selections[0].candidates[0].startedByEnd = null' \
-    '.selections[].candidates[0].startedByEnd = true | .selections[0].candidates[0].startedByEnd = null' \
-    '.selections[1].candidatesComplete = false'; do
+while IFS=$'\t' read -r mutation expected; do
   jq "$mutation" "$work/cohort.json" > "$work/input.json"
   bash "$script_dir/measure-flow.sh" "$work/input.json" > "$work/out"
-done
+  jq -e "$expected" "$work/out" >/dev/null
+done <<'CASES'
+.selections[1].candidates[0].actionable = false	[.selections[].state] == ["MEASURED","NONE"] and .selections[0].oldestUnstarted.ageSeconds == 100 and .selections[1].oldestUnstarted == null
+.selections[0].candidates[0].startedByEnd = null	[.selections[].state] == ["UNKNOWN","MEASURED"] and .selections[0].oldestUnstarted == null and .selections[1].oldestUnstarted.ageSeconds == 110
+.selections[].candidates[0].startedByEnd = true | .selections[0].candidates[0].startedByEnd = null	[.selections[].state] == ["UNKNOWN","NONE"] and all(.selections[]; .oldestUnstarted == null)
+.selections[1].candidatesComplete = false	[.selections[].state] == ["MEASURED","UNKNOWN"] and .selections[0].oldestUnstarted.ageSeconds == 100 and .selections[1].oldestUnstarted == null
+CASES
 
 printf 'measure-flow entrypoint: PASS (identity matrix and candidate coherence)\n'
