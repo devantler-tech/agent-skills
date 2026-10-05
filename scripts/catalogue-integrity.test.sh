@@ -164,6 +164,51 @@ for repo in .github _skills -skills . ..; do
     label="legal repository $repo is accepted"; check test "$rc" -eq 0
   fi
 done
+# Canonical skill names cannot alias each other by case on a destination
+# filesystem. Complete parsing must refuse unsupported names before native calls.
+for scenario in uppercase dotted underscored leading-hyphen trailing-hyphen double-hyphen oversized; do
+  case "$scenario" in
+    uppercase) name=Alpha ;;
+    dotted) name=alpha.beta ;;
+    underscored) name=alpha_beta ;;
+    leading-hyphen) name=-alpha ;;
+    trailing-hyphen) name=alpha- ;;
+    double-hyphen) name=alpha--beta ;;
+    oversized) name=abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklm ;;
+  esac
+  fixture "skill-name-$scenario"
+  row '' alpha fixture/one alpha >> "$root/README.md"
+  row '' "$name" fixture/two "$name" >> "$root/README.md"
+  mkdir "$root/bin"
+  cat > "$root/bin/gh" <<'STUB'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$NATIVE_CALLS"
+exit 99
+STUB
+  chmod +x "$root/bin/gh"
+  for consumer in preview installer upstream; do
+    : > "$root/calls"
+    rc=0
+    case "$consumer" in
+      preview) command=(bash "$root/scripts/install.sh" --list) ;;
+      installer) command=(bash "$root/scripts/install.sh" codex) ;;
+      upstream) command=(bash "$root/scripts/check-upstream-skills.sh") ;;
+    esac
+    PATH="$root/bin:$PATH" NATIVE_CALLS="$root/calls" "${command[@]}" > "$root/out" 2> "$root/err" || rc=$?
+    label="$consumer rejects $scenario skill names"; check test "$rc" -ne 0
+    label="$consumer refuses $scenario before any native call"; check test ! -s "$root/calls"
+    if [[ "$consumer" == preview ]]; then
+      label="$scenario refusal emits no partial catalogue"; check test ! -s "$root/out"
+    fi
+  done
+done
+for name in alpha alpha-2 7 abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijkl; do
+  fixture "valid-skill-name-$name"
+  row '' "$name" Fixture/Source "$name" >> "$root/README.md"
+  rc=0; bash "$root/scripts/install.sh" --list > "$root/out" 2> "$root/err" || rc=$?
+  label="canonical skill name $name remains valid"; check test "$rc" -eq 0
+  label="canonical skill name preserves repository casing"; check test "$(cat "$root/out")" = "Fixture/Source $name"
+done
 # The stub models the native CLI destination derived from frontmatter; it records
 # only user writes, while --dir materializes that identity in a private stage.
 for mode in valid minimum-cli mismatched colliding failed-stage extra-stage; do

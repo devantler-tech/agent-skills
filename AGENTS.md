@@ -107,6 +107,8 @@ bash scripts/retired-repo-links.test.sh # verifies the documentation guard remai
 # table row before emitting any entries, ignore prose/fenced examples, HTML comments and raw HTML
 # blocks, and reject malformed
 # or contradictory catalogues before any GitHub call. Upstream requests bind github.com.
+# Skill names use 1–64 lowercase ASCII letters/digits separated by single hyphens;
+# repository, ref and source-path identifiers retain their separate case-aware rules.
 ./scripts/check-readme-index.test.sh   # self-test of the guard above (also in the lint-scripts gate):
                                        # proves it PASSES a consistent fixture and FAILS each drift it
                                        # catches, so a refactor can't silently weaken a check
