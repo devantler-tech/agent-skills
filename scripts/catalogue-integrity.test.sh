@@ -48,7 +48,7 @@ for shape in both none left right; do
 done
 # Actual peer and parent headings end the index; deeper and non-heading examples
 # do not. These are shipped parser consumers rather than a duplicate recognizer.
-for heading in ordinary one-space two-space three-space tabbed parent setext setext-parent closing-hashes child no-space indented-code list-child fenced; do
+for heading in ordinary one-space two-space three-space tabbed parent setext setext-parent closing-hashes child no-space indented-code list-child fenced list-lazy quote-lazy quote-heading quote-explicit quote-list quote-blank quote-reference list-heading list-empty; do
   fixture "scope-$heading"
   row '' alpha devantler-tech/agent-skills alpha >> "$root/README.md"
   printf '\n' >> "$root/README.md"
@@ -70,6 +70,15 @@ for heading in ordinary one-space two-space three-space tabbed parent setext set
     indented-code) printf '    ## Other\n'; expected=2 ;;
     list-child) printf -- '- Example\n  ## Other\n'; expected=2 ;;
     fenced) printf '```markdown\n## Other\n```\n'; expected=2 ;;
+    list-lazy) printf -- '- Note\n  continued\n---\n'; expected=2 ;;
+    quote-lazy) printf '> Note\ncontinued\n---\n'; expected=2 ;;
+    quote-heading) printf '> ## Quoted heading\nOther\n---\n' ;;
+    quote-explicit) printf '> Note\n> continued\n---\n'; expected=2 ;;
+    quote-list) printf '> - Note\ncontinued\n---\n'; expected=2 ;;
+    quote-blank) printf '> Note\n\nOther\n---\n' ;;
+    quote-reference) printf '> [example]: /url\nOther\n---\n' ;;
+    list-heading) printf -- '- ## Quoted heading\nOther\n---\n' ;;
+    list-empty) printf -- '-\nOther\n---\n' ;;
   esac
   printf '\n| Skill | Upstream | Install |\n|---|---|---|\n'
   row '' beta devantler-tech/agent-skills beta

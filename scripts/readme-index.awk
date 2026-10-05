@@ -86,7 +86,7 @@ function html_start(s, lower, tags, attr, open_tag) {
   return ""
 }
 function clear_paragraph() {
-  paragraph=0; paragraph_text=""; table=0; catalogue_table=0
+  paragraph=0; paragraph_text=""; quote_paragraph=0; list_paragraph=0; table=0; catalogue_table=0
   pipe_columns=0; pipe_catalogue=0; reference_paragraph=0
 }
 function column_width(s, i, width) {
@@ -98,6 +98,14 @@ function column_width(s, i, width) {
 function indent_width(s, i) {
   for (i=1; i<=length(s); i++) if (substr(s,i,1) !~ /[ \t]/) break
   return column_width(substr(s,1,i-1))
+}
+function remove_indent(s, columns, i, width, extra) {
+  width=0; i=1
+  while (width < columns && substr(s,i,1) ~ /[ \t]/) {
+    width += (substr(s,i,1) == "\t" ? 4-width%4 : 1); i++
+  }
+  extra=""; while (width-- > columns) extra=extra " "
+  return extra substr(s,i)
 }
 # Recognize visible ATX headings and Setext underlines after a real paragraph.
 # The enclosing block and list checks decide whether this is a document heading.
@@ -112,7 +120,8 @@ function rendered_heading(s, previous, text, stripped, width) {
     heading_text=trim(heading_text)
     return width
   }
-  if (previous && text != "" && stripped ~ /^(=+|-+)[ \t]*$/) {
+  if (previous && text != "" && !quote_paragraph &&
+      (!list_indent || indent_width(s) >= list_indent) && stripped ~ /^(=+|-+)[ \t]*$/) {
     heading_text=text
     return substr(stripped,1,1) == "=" ? 1 : 2
   }
@@ -156,6 +165,30 @@ function paragraph_line(s, previous) {
   if (s ~ /^ ? ? ?[0-9]{1,9}[.)]([ \t]|$)/ &&
       (!previous || s ~ /^ ? ? ?0*1[.)][ \t]+[^ \t]/)) return 0
   return 1
+}
+# Preserve paragraph ownership through a block quote's unmarked lazy lines.
+# A quoted heading, fence or raw block cannot own such a continuation.
+function content_paragraph(s, previous, saved_paragraph, block, prefix, saved_title, saved_end, reference) {
+  # Container markers expose the content that can actually own lazy text.
+  while (match(s,/^ ? ? ?(>[ \t]?|([-+*]|[0-9]{1,9}[.)])[ \t]+)/)) {
+    s=substr(s,RLENGTH+1); previous=0
+  }
+  saved_paragraph=paragraph; paragraph=previous
+  block=html_start(s); paragraph=saved_paragraph
+  if (fence_start(s) || block) return 0
+  if (!previous && (prefix=reference_prefix(s))) {
+    saved_title=reference_title; saved_end=reference_title_end
+    reference=reference_destination_line(trim(substr(s,prefix+1)))
+    reference_title=saved_title; reference_title_end=saved_end
+    if (reference) return 0
+  }
+  return paragraph_line(s,previous)
+}
+function quoted_paragraph(s, quoted) {
+  quoted=0
+  while (match(s,/^ ? ? ?>[ \t]?/)) { quoted=1; s=substr(s,RLENGTH+1) }
+  if (!quoted) return -1
+  return content_paragraph(s,quote_paragraph)
 }
 # Reference definitions are block content, including a following destination
 # and optional multiline title. Their quoted content is not inline Markdown.
@@ -334,6 +367,8 @@ function reference_line(s, result, tail, prefix) {
     }
     $0=visible
   }
+  if (list_indent && !list_paragraph && $0 !~ /^[ \t]*$/ &&
+      indent_width($0) < list_indent) list_indent=0
   heading=rendered_heading($0,paragraph,paragraph_text)
   if (heading) {
     if (!list_indent || indent_width($0) < list_indent) {
@@ -363,6 +398,17 @@ function reference_line(s, result, tail, prefix) {
     paragraph_text=(previous_paragraph ? previous_text : "")
     if (trim($0) != "") paragraph_text=paragraph_text (paragraph_text != "" ? " " : "") trim($0)
   } else paragraph_text=""
+  quoted=quoted_paragraph($0)
+  if (quoted >= 0) quote_paragraph=quoted
+  else if (!paragraph) quote_paragraph=0
+  if (list_item) {
+    item_content=$0; sub(/^ ? ? ?([-+*]|[0-9]{1,9}[.)])[ \t]*/, "", item_content)
+    list_paragraph=content_paragraph(item_content,0)
+  } else if (list_indent) {
+    if (indent_width($0) >= list_indent)
+      list_paragraph=content_paragraph(remove_indent($0,list_indent),list_paragraph)
+    else list_paragraph=(paragraph || quote_paragraph)
+  }
   pipe_columns=(!table && paragraph ? pipe_header_columns($0) : 0)
   pipe_catalogue=(!table && pipe_columns == 3)
   if (list_indent && !list_item && !paragraph && $0 !~ /^[ \t]*$/ &&
