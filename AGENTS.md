@@ -43,7 +43,7 @@ parse them directly, so they never drift from the index:
 
 - [`scripts/install.sh`](scripts/install.sh) validates the `## Skills` rows and resolves each
   upstream ref to an immutable commit before installing for the named agents at user scope.
-  Installation requires `jq`; the public `--list` mode remains offline.
+  Installation requires `jq` and `iconv`; the public `--list` mode remains offline.
 - The composite actions
   [`setup-agent-skills`](https://github.com/devantler-tech/actions/tree/main/setup-agent-skills) /
   [`update-agent-skills`](https://github.com/devantler-tech/actions/tree/main/update-agent-skills)
