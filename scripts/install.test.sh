@@ -364,6 +364,8 @@ make_root "$fenced_root" <<'EOF'
 
 ````markdown
 ```
+| Skill | Upstream | Install |
+| --- | --- | --- |
 | `extra` | [`fixture/unintended`](https://github.com/fixture/unintended/tree/main/extra) | `gh skill install fixture/unintended extra` |
 ````
 EOF
