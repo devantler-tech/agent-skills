@@ -14,6 +14,9 @@ fi
 jq -n --slurpfile ci "$work/ci.json" --slurpfile config "$work/config.json" \
   '{ci:$ci[0],config:$config[0]}' >"$work/bundle.json"
 
+# Validate the JSON bundle at $1: bounded scope, read-only execution,
+# complete validation output, and required-check aggregation. Return nonzero with
+# a diagnostic when any contract is weakened; print nothing on success.
 guard() {
   jq -e '
     def runnable: .if == null and (.["continue-on-error"] // false) == false;
