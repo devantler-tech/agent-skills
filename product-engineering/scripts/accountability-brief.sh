@@ -4,6 +4,8 @@ set -euo pipefail
 refuse() { printf '%s\n' "$*" >&2; exit 2; }
 [[ $# == 3 && $1 == --mode && ( $2 == check || $2 == render ) ]] || refuse 'usage: accountability-brief.sh --mode check|render INPUT.json'
 mode=$2 input=$3
+# Keep every relative operand a named file, including the literal filename '-'.
+[[ $input == /* ]] || input="./$input"
 [[ -f $input && -r $input ]] || refuse 'input must be a readable regular file'
 command -v jq >/dev/null || refuse 'missing dependency: jq'
 command -v iconv >/dev/null || refuse 'missing dependency: iconv'

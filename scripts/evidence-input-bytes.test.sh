@@ -140,6 +140,36 @@ for tool in proof brief-check brief-render flow; do
     PATH="$work/read-failure-bin:$PATH" READ_FAILURE_KIND="$kind" bash "$work/installed"$'\n'/"$name.sh" "${args[@]}" "$work/copied-input.json" > "$work/out" 2> "$work/err" || rc=$?
     if [[ $rc == 2 && ! -s $work/out && -s $work/err ]]; then passed=$((passed+1)); else printf 'FAIL copied %s scanner-read-%s exit=%s\n' "$tool" "$kind" "$rc"; failed=$((failed+1)); fi
   done
+  # A filename is always a file producer, even when cat would interpret it as stdin.
+  mkdir -p "$work/named-input"
+  printf '{"broken":' > "$work/malformed-input.json"
+  bash "$work/installed"$'\n'/"$name.sh" "${args[@]}" "$example" > "$work/expected"
+  for selector in dash qualified absolute option-like; do
+    case $selector in
+      dash) operand=-; filename=- ;;
+      qualified) operand=./-; filename=- ;;
+      absolute) operand="$work/named-input/-"; filename=- ;;
+      option-like) operand=--version; filename=--version ;;
+    esac
+    for input_kind in malformed healthy; do
+      if [[ $input_kind == malformed ]]; then
+        cp "$work/malformed-input.json" "$work/named-input/$filename"
+        stdin=$example
+      else
+        cp "$example" "$work/named-input/$filename"
+        stdin="$work/malformed-input.json"
+      fi
+      rc=0
+      (cd "$work/named-input" && bash "$work/installed"$'\n'/"$name.sh" "${args[@]}" "$operand" < "$stdin") > "$work/out" 2> "$work/err" || rc=$?
+      if [[ $input_kind == malformed ]]; then
+        if [[ $rc == 2 && ! -s $work/out && -s $work/err ]]; then passed=$((passed+1)); else printf 'FAIL copied %s %s malformed named file exit=%s\n' "$tool" "$selector" "$rc"; failed=$((failed+1)); fi
+      elif [[ $rc == 0 ]] && cmp -s "$work/expected" "$work/out"; then
+        passed=$((passed+1))
+      else
+        printf 'FAIL copied %s %s healthy named file exit=%s\n' "$tool" "$selector" "$rc"; failed=$((failed+1))
+      fi
+    done
+  done
 done
 cmp "$root/product-engineering/scripts/validate-json-unicode-escapes.sh" "$root/agent-improvement/scripts/validate-json-unicode-escapes.sh" || failed=$((failed+1))
 # Rendering also uses the actual installed byte boundary before the jq renderer.
