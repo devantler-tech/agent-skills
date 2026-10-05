@@ -333,6 +333,7 @@ function reference_line(s, result, tail, prefix) {
 }
 /^## / { in_skills=0 }
 !in_skills { next }
+!table { next }
 !/^ ? ? ?\|/ { next }
 {
   n=split($0, cell, "|")

@@ -27,6 +27,25 @@ for indent in '' ' ' '  ' '   '; do
   rc=0; bash "$root/scripts/install.sh" --list > "$root/out" 2>&1 || rc=$?
   label="visible table indent ${#indent} includes both rows"; check test "$rc:$(wc -l < "$root/out" | tr -d ' ')" = 0:2
 done
+for framing in prose missing-header mismatched-delimiter; do
+  fixture "framing-$framing"
+  case $framing in
+    prose) printf '## Skills\n\nAn ordinary paragraph containing a command example.\n' > "$root/README.md" ;;
+    missing-header) printf '## Skills\n\n' > "$root/README.md" ;;
+    mismatched-delimiter) printf '## Skills\n\n| Skill | Upstream | Install |\n|---|---|\n' > "$root/README.md" ;;
+  esac
+  row '' alpha devantler-tech/agent-skills alpha >> "$root/README.md"
+  for consumer in install.sh check-readme-index.sh; do
+    arguments=(); [[ $consumer != install.sh ]] || arguments=(--list)
+    rc=0; bash "$root/scripts/$consumer" "${arguments[@]}" > "$root/out" 2> "$root/err" || rc=$?
+    label="$consumer refuses an empty catalogue with $framing framing"; check test "$rc" -ne 0
+    label="$consumer emits no entries from $framing framing"; check test ! -s "$root/out"
+  done
+  printf '\n| Skill | Upstream | Install |\n|---|---|---|\n' >> "$root/README.md"
+  row '' beta devantler-tech/agent-plugins beta >> "$root/README.md"
+  rc=0; bash "$root/scripts/install.sh" --list > "$root/out" 2> "$root/err" || rc=$?
+  label="a real table following $framing includes only its own row"; check test "$rc:$(cat "$root/out")" = '0:devantler-tech/agent-plugins beta'
+done
 fixture target
 row '' alpha devantler-tech/agent-skills missing/alpha >> "$root/README.md"
 row '' beta devantler-tech/agent-skills beta >> "$root/README.md"
