@@ -92,6 +92,7 @@ skills-ref validate ways-of-working
 
 # 3. Lint the scripts + check the README index lockstep (the `lint-scripts` CI job).
 shellcheck scripts/*.sh
+bash scripts/retired-repo-links.test.sh # verifies the documentation guard remains required and scoped
 ./scripts/check-readme-index.sh   # the exact check CI runs (no gh needed): non-empty parse,
                                   # parsed count == Skills-table rows, every in-house skill indexed,
                                   # every in-house index entry resolves to an on-disk skill dir, and
@@ -168,7 +169,10 @@ actionlint
 ```
 
 The required gate is the aggregated **`CI - Required Checks`** job (validate + discover-skills +
-validate-spec + lint-scripts). `actionlint` and `check-upstream-skills.sh` are **not** part of it:
+validate-spec + lint-scripts + validate-retired-links). The documentation guard scans only
+`README.md` and `AGENTS.md` using `.github/retired-repo-links.json`; its native job requires a
+complete clean scan and rejects a seeded retired link and missing configuration. The shared
+action remains default-off; this consumer explicitly opts in. `actionlint` and `check-upstream-skills.sh` are **not** part of the required gate:
 `actionlint` is a local-only convenience, and the upstream-resolution check runs as the standalone
 scheduled **`🔗 Upstream skill targets`** workflow (weekly + on index-touch PRs) so a third-party
 outage never gates a contributor PR — it downgrades transport errors to warnings after bounded retries.

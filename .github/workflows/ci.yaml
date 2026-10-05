@@ -22,6 +22,85 @@ concurrency:
 permissions: {}
 
 jobs:
+  validate-retired-links:
+    name: Validate retired repository links
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check documentation
+        id: links
+        uses: devantler-tech/.github/actions/validate-retired-repo-links@bd0035dd8f41fcf1459b878882b8897443f8dc59 # v4.9.4
+        with:
+          enabled: "true"
+      - name: Require a complete scan
+        env:
+          VALIDATED: ${{ steps.links.outputs.validated }}
+        run: test "$VALIDATED" = true
+      - name: Prepare an isolated retired-link fixture
+        id: fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          fixture=$(mktemp -d "$RUNNER_TEMP/retired-link-fixture.XXXXXX")
+          git archive HEAD | tar -x -C "$fixture"
+          printf '\n[Retired-link fixture](https://github.com/devantler-tech/reusable-workflows)\n' >> "$fixture/README.md"
+          echo "directory=$fixture" >> "$GITHUB_OUTPUT"
+      - name: Reject the seeded retired link
+        id: negative
+        continue-on-error: true
+        uses: devantler-tech/.github/actions/validate-retired-repo-links@bd0035dd8f41fcf1459b878882b8897443f8dc59 # v4.9.4
+        with:
+          enabled: "true"
+          working-directory: ${{ steps.fixture.outputs.directory }}
+      - name: Reject missing consumer configuration
+        id: missing-config
+        continue-on-error: true
+        uses: devantler-tech/.github/actions/validate-retired-repo-links@bd0035dd8f41fcf1459b878882b8897443f8dc59 # v4.9.4
+        with:
+          enabled: "true"
+          working-directory: ${{ steps.fixture.outputs.directory }}
+          config-file: .github/missing-retired-repo-links.json
+      - name: Require both negative controls to fail without success output
+        if: always()
+        env:
+          LINK_OUTCOME: ${{ steps.negative.outcome }}
+          LINK_VALIDATED: ${{ steps.negative.outputs.validated }}
+          CONFIG_OUTCOME: ${{ steps.missing-config.outcome }}
+          CONFIG_VALIDATED: ${{ steps.missing-config.outputs.validated }}
+        run: |
+          test "$LINK_OUTCOME" = failure
+          test -z "$LINK_VALIDATED"
+          test "$CONFIG_OUTCOME" = failure
+          test -z "$CONFIG_VALIDATED"
+      - name: Checkout the exact validator source for diagnostic verification
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: devantler-tech/.github
+          ref: bd0035dd8f41fcf1459b878882b8897443f8dc59 # v4.9.4
+          path: .catalogue-fixture
+          sparse-checkout: actions/validate-retired-repo-links
+          persist-credentials: false
+      - name: Verify consumer wiring and exact rejection diagnostics
+        shell: bash
+        env:
+          GOWORK: "off"
+          GOFLAGS: ""
+          GOTOOLCHAIN: local
+        run: |
+          set -euo pipefail
+          go -C .catalogue-fixture/actions/validate-retired-repo-links build -mod=readonly -trimpath -o "$RUNNER_TEMP/retired-link-validator" .
+          bash scripts/retired-repo-links.test.sh "$RUNNER_TEMP/retired-link-validator"
+
   validate:
     name: Validate skills
     runs-on: ubuntu-latest
@@ -134,6 +213,9 @@ jobs:
 
       - name: 🐚 ShellCheck scripts
         run: shellcheck scripts/*.sh product-engineering/scripts/*.sh agent-improvement/scripts/*.sh
+
+      - name: 🧪 Verify the documentation guard remains required
+        run: bash scripts/retired-repo-links.test.sh
 
       - name: 🧪 Verify exact shell census repository and commit identities
         run: bash product-engineering/scripts/inspect-shell-identity.test.sh
@@ -253,7 +335,7 @@ jobs:
   ci-required-checks:
     name: CI - Required Checks
     if: always()
-    needs: [validate, discover-skills, validate-spec, lint-scripts]
+    needs: [validate, discover-skills, validate-spec, lint-scripts, validate-retired-links]
     runs-on: ubuntu-latest
     permissions: {}
     steps:
@@ -265,3 +347,4 @@ jobs:
             ${{ needs.discover-skills.result }}
             ${{ needs.validate-spec.result }}
             ${{ needs.lint-scripts.result }}
+            ${{ needs.validate-retired-links.result }}
