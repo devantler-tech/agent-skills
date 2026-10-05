@@ -223,6 +223,9 @@ jobs:
       - name: 🧪 Verify unique committed census paths
         run: bash product-engineering/scripts/inspect-shell-ambiguity.test.sh
 
+      - name: 🧪 Verify canonical committed tree components
+        run: bash product-engineering/scripts/inspect-shell-tree-integrity.test.sh
+
       - name: 🔗 Smoke-test the README index parser
         # Proves the load-bearing lockstep between the curated README index and
         # every consumer install path: a non-empty parse, the parsed count equal

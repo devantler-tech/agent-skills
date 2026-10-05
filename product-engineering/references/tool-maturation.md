@@ -45,7 +45,9 @@ working tree is dirty, without checking out or executing its files. Its conserva
 `tracked-shell-paths-v1` includes every tracked regular `*.sh` path except `*.test.sh`; it does not
 apply a size threshold or decide which files are non-trivial. Each path carries its committed blob
 identifier and executable bit. Before selecting files, it compares the complete tree listing with
-an independent raw diff from Git's empty tree to the named commit. Missing complete records,
+an independent raw diff from Git's empty tree to the named commit. Each reachable tree object's
+original bytes must also pass Git's canonical component validation and retain their committed
+identity; agreement between flattened paths alone cannot establish a valid tree. Missing complete records,
 disagreement between those views, tree/object read failures, selected symlinks and paths that cannot
 be represented faithfully in UTF-8 JSON produce exit `2` (`UNKNOWN`) with no success payload.
 
