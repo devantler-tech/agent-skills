@@ -70,6 +70,12 @@ check 'unknown actionability cannot be read as false' '.selections[0].candidates
   '.selections[0].state == "UNKNOWN" and .selections[0].candidatesComplete == true'
 check 'unknown end state cannot be read as started' '.selections[0].candidates[0].startedByEnd=null' \
   '.selections[0].state == "UNKNOWN"'
+check 'unknown selected flags cannot erase a known alternative age' \
+  '.selections[0].candidates[1] |= (.actionable=null | .startedByEnd=null)' \
+  '.selections[0].state == "MEASURED" and .selections[0].oldestUnstarted.ageSeconds == 100'
+check 'unknown selected flags cannot erase complete absence of alternatives' \
+  '.selections[0].candidates |= map(select(.id != "old")) | .selections[0].candidates[0] |= (.actionable=null | .startedByEnd=null)' \
+  '.selections[0].state == "NONE" and .selections[0].oldestUnstarted == null'
 check 'work started later in the same run was not left unstarted' '.selections[0].candidates[0].startedByEnd=true' \
   '.selections[0].state == "NONE" and .selections[0].oldestUnstarted == null'
 check 'substantive selections are not easy-choice samples' '.selections[0].selectedClass="substantive"' \
