@@ -64,7 +64,9 @@ AGENTS="github-copilot claude-code cursor" ./scripts/install.sh   # any gh skill
 The script validates the complete README catalogue before printing a preview or starting an
 installation. Every table row must have an install command matching its skill name and source
 link. A malformed or contradictory row exits 1 without installing anything or printing a partial
-preview. Prose commands, fenced examples, HTML comments and raw HTML blocks are excluded.
+preview. Table rows may omit either outer pipe. Rendered peer and parent headings end
+the Skills section; deeper category headings remain inside it. Prose commands, fenced examples,
+HTML comments and raw HTML blocks are excluded.
 A backtick fence opener whose info string contains a backtick is treated as ordinary Markdown.
 Installation, the offline index check,
 and upstream target checking share this interpretation; the offline check also verifies maintained
@@ -105,8 +107,9 @@ repeated file declarations instead of selecting one interpretation.
 It resolves each repository/ref once and checks all sibling files at that immutable revision;
 a moving branch cannot supply a successful catalogue from files that never coexisted.
 
-The offline index guard compares two independent inventories of local skill files, including
-hidden directories. A partial listing cannot establish that every maintained skill is indexed.
+The offline index guard compares two independent inventories in the exact physical checkout,
+including hidden directories and checkout names ending in newlines. A partial listing cannot
+establish that every maintained skill is indexed.
 
 Positional agent names override `AGENTS`. An unset or empty `AGENTS` uses the two default agents;
 otherwise, spaces, tabs, and newlines separate names without expanding wildcard characters into

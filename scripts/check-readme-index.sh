@@ -29,9 +29,10 @@
 # Usage: ./scripts/check-readme-index.sh   (run from anywhere; resolves the repo root)
 set -euo pipefail
 
-script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-repo_root=$(cd "$script_dir/.." && pwd)
-cd "$repo_root"
+script_dir=$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
+# Enter the physical checkout directly: command substitution strips trailing
+# newlines and could otherwise select a different, clean sibling directory.
+cd -- "$script_dir/.."
 
 # 1. Non-empty parse.
 entries=$("$script_dir/install.sh" --list)
