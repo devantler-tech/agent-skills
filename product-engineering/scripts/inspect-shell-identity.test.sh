@@ -63,5 +63,12 @@ sha=$(git -C "$work/sha256" rev-parse HEAD)
 bash "$helper" --inspect --repo-dir "$work/sha256" --revision "$sha" > "$work/out"
 jq -e --arg revision "$sha" '.status=="OBSERVED" and .revision==$revision' "$work/out" >/dev/null
 refuse "$work/sha256" "${sha:0:40}" 'SHA256 prefix must never become exact evidence'
+for bytes in $'\364\220\200\200' $'\370\210\200\200\200' $'\374\204\200\200\200\200'; do
+  path="task-$bytes.sh"
+  blob=$(printf 'exit 99\n' | git -C "$plain" hash-object -w --stdin)
+  tree=$(printf '100644 blob %s\t%s\0' "$blob" "$path" | git -C "$plain" mktree -z)
+  full=$(printf 'range-fixture\n' | git -C "$plain" commit-tree "$tree")
+  refuse "$plain" "$full" 'out-of-range committed path cannot be repaired into a census'
+done
 [[ $failed == 0 ]] || exit 1
 printf 'PASS: exact repository roots, installed parser paths and full commit IDs\n'

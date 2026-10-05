@@ -132,7 +132,10 @@ while IFS= read -r -d '' entry; do
   fi
   [[ -z ${extra:-} && $type == blob && $mode =~ ^100(644|755)$ &&
     $blob =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]] || unknown 'selected path is not a supported regular blob'
-  printf '%s' "$path" | iconv -f UTF-8 -t UTF-8 >/dev/null 2>&1 || unknown 'selected path is not valid UTF-8'
+  roundtrip=$(printf '%s' "$path" | iconv -f UTF-8 -t UTF-16BE |
+    iconv -f UTF-16BE -t UTF-8 && printf '.') 2>/dev/null || unknown 'selected path is not valid UTF-8'
+  roundtrip=${roundtrip%.}
+  [[ $roundtrip == "$path" ]] || unknown 'selected path is not valid UTF-8'
   read_git cat-file -e "$blob^{blob}" 2>/dev/null || unknown 'selected blob is unavailable'
   if [[ $candidate_kind == go-entrypoint ]]; then
     source_size=$(read_git cat-file -s "$blob" 2>/dev/null) || unknown 'selected Go source size is unavailable'

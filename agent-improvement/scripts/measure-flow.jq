@@ -26,7 +26,10 @@ def raw_document:
 
 # Read completed runs with measure-flow.sh, which validates retained bytes before this filter.
 # This computes descriptive metrics; evidence authenticity and policy stay with the consumer.
-def text: type == "string" and test("\\S");
+def text:
+  type == "string"
+  and test("\\A[^\\s\\p{Z}\\p{C}]+( [^\\s\\p{Z}\\p{C}]+)*\\z")
+  and (test("\\p{Default_Ignorable_Code_Point}") | not);
 def decimal_integer:
   tostring as $raw
   | ($raw | ltrimstr("-")) as $unsigned
@@ -74,7 +77,10 @@ def valid:
       and (.createdAt | timestamp) and .createdAt <= $selection.at
       and has("actionable") and (.actionable | nullable_boolean)
       and has("startedByEnd") and (.startedByEnd | nullable_boolean)))
-    and (if .candidatesComplete then any(.candidates[]; .id == $selection.selectedId) else true end)));
+    and (if .candidatesComplete then any(.candidates[]; .id == $selection.selectedId) else true end)))
+  and ([.selections[].candidates[]] | group_by(.id) | all(.[];
+    (map(.createdAt) | unique | length) == 1
+    and (map(.startedByEnd) | map(select(. != null)) | unique | length) <= 1));
 
 def artifact_mix:
   . as $input | (.artifacts | unique_by(.id)) as $artifacts
