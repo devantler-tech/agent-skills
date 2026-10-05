@@ -43,7 +43,7 @@ export GIT_NO_LAZY_FETCH=1
 unset GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR GIT_INDEX_FILE GIT_OBJECT_DIRECTORY \
   GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_NAMESPACE
 # Explicit no-fetch capability is required; unsupported Git refuses before reads.
-read_git() { git --no-lazy-fetch --no-replace-objects --no-optional-locks -C "$repo" "$@"; }
+read_git() { git -c core.fsmonitor=false --no-lazy-fetch --no-replace-objects --no-optional-locks -C "$repo" "$@"; }
 top=$(read_git rev-parse --show-toplevel 2>/dev/null && printf '.') || unknown 'not a worktree repository'
 top=${top%$'\n.'}
 top=$(cd "$top" && pwd -P && printf '.') || unknown 'repository root is unavailable'

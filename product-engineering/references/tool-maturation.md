@@ -50,6 +50,8 @@ original bytes must also pass Git's canonical component validation and retain th
 identity; agreement between flattened paths alone cannot establish a valid tree. Missing complete records,
 disagreement between those views, tree/object read failures, selected symlinks and paths that cannot
 be represented faithfully in UTF-8 JSON produce exit `2` (`UNKNOWN`) with no success payload.
+Git observations also suppress configured filesystem-monitor callbacks without changing repository
+configuration, so a native tree read cannot silently execute a caller-provided hook.
 
 To include Go entrypoint evidence, add `--include-go` to the same invocation. This opt-in needs
 Go 1.22 or later and compiles only the installed `scripts/go-entrypoint.go` parser, with modules,
