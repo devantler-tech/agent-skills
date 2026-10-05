@@ -85,7 +85,10 @@ function html_start(s, lower, tags, attr, open_tag) {
       lower !~ /^<(pre|script|style|textarea)([ \t\/>]|$)/) return "blank"
   return ""
 }
-function clear_paragraph() { paragraph=0; table=0; pipe_columns=0; reference_paragraph=0 }
+function clear_paragraph() {
+  paragraph=0; paragraph_text=""; table=0; catalogue_table=0
+  pipe_columns=0; pipe_catalogue=0; reference_paragraph=0
+}
 function column_width(s, i, width) {
   width=0
   for (i=1; i<=length(s); i++)
@@ -95,6 +98,25 @@ function column_width(s, i, width) {
 function indent_width(s, i) {
   for (i=1; i<=length(s); i++) if (substr(s,i,1) !~ /[ \t]/) break
   return column_width(substr(s,1,i-1))
+}
+# Recognize visible ATX headings and Setext underlines after a real paragraph.
+# The enclosing block and list checks decide whether this is a document heading.
+function rendered_heading(s, previous, text, stripped, width) {
+  heading_text=""
+  if (indent_width(s) > 3) return 0
+  stripped=s; sub(/^ */, "", stripped)
+  if (match(stripped,/^#{1,6}([ \t]|$)/)) {
+    width=0; while (substr(stripped,width+1,1) == "#") width++
+    heading_text=substr(stripped,width+1)
+    sub(/[ \t]+#+[ \t]*$/, "", heading_text)
+    heading_text=trim(heading_text)
+    return width
+  }
+  if (previous && text != "" && stripped ~ /^(=+|-+)[ \t]*$/) {
+    heading_text=text
+    return substr(stripped,1,1) == "=" ? 1 : 2
+  }
+  return 0
 }
 function pipe_header_columns(s, i, last, n) {
   if (indent_width(s) > 3) return 0
@@ -252,7 +274,7 @@ function reference_line(s, result, tail, prefix) {
     if (!table && reference_line($0)) {
       # Definitions are removed from a paragraph when it closes; until then,
       # a custom HTML tag cannot interrupt the surrounding paragraph.
-      paragraph=1; reference_paragraph=1; table=0; pipe_columns=0; next
+      paragraph=1; paragraph_text=""; reference_paragraph=1; table=0; pipe_columns=0; next
     }
     reference_paragraph=0
     # GitHub ends a list container before a deindented standalone HTML block.
@@ -312,6 +334,18 @@ function reference_line(s, result, tail, prefix) {
     }
     $0=visible
   }
+  heading=rendered_heading($0,paragraph,paragraph_text)
+  if (heading) {
+    if (!list_indent || indent_width($0) < list_indent) {
+      list_indent=0; list_blank=0
+      if (heading <= 2) {
+        in_skills=(heading == 2 && heading_text == "Skills")
+        if (in_skills && seen_section++) refuse("multiple Skills sections")
+      }
+    }
+    clear_paragraph(); next
+  }
+  previous_text=paragraph_text; previous_paragraph=paragraph
   list_item=match($0,/^ ? ? ?([-+*]|[0-9]{1,9}[.)])[ \t]+[^ \t]/)
   if (list_item && (thematic_line($0) || (paragraph && paragraph_line($0,1)))) list_item=0
   if (list_item) list_indent=column_width(substr($0,1,RLENGTH-1))
@@ -320,27 +354,32 @@ function reference_line(s, result, tail, prefix) {
     list_indent=column_width(empty_marker)+1
   }
   if (table && paragraph_line($0, 0)) paragraph=0
-  else if (pipe_columns && table_separator_columns($0) == pipe_columns) { table=1; paragraph=0 }
-  else { table=0; paragraph=paragraph_line($0, paragraph) }
+  else if (pipe_columns && table_separator_columns($0) == pipe_columns) {
+    table=1; catalogue_table=pipe_catalogue; paragraph=0
+  }
+  else { table=0; catalogue_table=0; paragraph=paragraph_line($0, paragraph) }
   if (paragraph_before_comments && nonblank_before_comments && $0 ~ /^[ \t]*$/) paragraph=1
+  if (!table && paragraph) {
+    paragraph_text=(previous_paragraph ? previous_text : "")
+    if (trim($0) != "") paragraph_text=paragraph_text (paragraph_text != "" ? " " : "") trim($0)
+  } else paragraph_text=""
   pipe_columns=(!table && paragraph ? pipe_header_columns($0) : 0)
+  pipe_catalogue=(!table && pipe_columns == 3)
   if (list_indent && !list_item && !paragraph && $0 !~ /^[ \t]*$/ &&
       indent_width($0) < list_indent) list_indent=0
 }
-/^## Skills[ \t]*$/ {
-  if (seen_section++) refuse("multiple Skills sections")
-  in_skills=1; next
-}
-/^## / { in_skills=0 }
 !in_skills { next }
 !table { next }
-!/^ ? ? ?\|/ { next }
+# Other rendered tables retain block context but do not advertise skills.
+!catalogue_table { next }
+!/\|/ { next }
 {
-  n=split($0, cell, "|")
-  if (n != 5 || trim(cell[1]) != "" || trim(cell[5]) != "") {
+  row=trim($0); sub(/^\|/, "", row); sub(/\|$/, "", row)
+  n=split(row, cell, "|")
+  if (n != 3) {
     refuse("expected three table cells"); next
   }
-  name=plain(trim(cell[2])); upstream=trim(cell[3]); command=plain(trim(cell[4]))
+  name=plain(trim(cell[1])); upstream=trim(cell[2]); command=plain(trim(cell[3]))
   if (name == "Skill" && upstream == "Upstream" && command == "Install") next
   if (name ~ /^:?-+:?$/ && upstream ~ /^:?-+:?$/ && command ~ /^:?-+:?$/) next
   if (!identifier(name)) { refuse("invalid skill name"); next }
