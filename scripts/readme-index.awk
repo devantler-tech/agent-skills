@@ -99,13 +99,27 @@ function indent_width(s, i) {
   for (i=1; i<=length(s); i++) if (substr(s,i,1) !~ /[ \t]/) break
   return column_width(substr(s,1,i-1))
 }
-function remove_indent(s, columns, i, width, extra) {
-  width=0; i=1
-  while (width < columns && substr(s,i,1) ~ /[ \t]/) {
+function remove_indent(s, columns, offset, i, width, extra) {
+  width=offset; i=1
+  while (substr(s,i,1) ~ /[ \t]/) {
     width += (substr(s,i,1) == "\t" ? 4-width%4 : 1); i++
   }
-  extra=""; while (width-- > columns) extra=extra " "
+  extra=""; while (width-- > columns+offset) extra=extra " "
   return extra substr(s,i)
+}
+# GFM marker padding of one to four columns is a separator. Greater padding
+# consumes only one column, leaving an indented block as actual item content.
+function marker_content(s, prefix, marker, padding) {
+  marker_indent=0
+  if (!match(s,/^ ? ? ?([-+*]|[0-9]{1,9}[.)])([ \t]+|$)/)) return s
+  prefix=substr(s,1,RLENGTH); marker=prefix; sub(/[ \t]+$/, "", marker)
+  padding=column_width(prefix)-column_width(marker)
+  if (padding >= 1 && padding <= 4) {
+    marker_indent=column_width(prefix)
+    return substr(s,length(prefix)+1)
+  }
+  marker_indent=column_width(marker)+1
+  return remove_indent(substr(s,length(marker)+1),1,column_width(marker))
 }
 # Recognize visible ATX headings and Setext underlines after a real paragraph.
 # The enclosing block and list checks decide whether this is a document heading.
@@ -170,8 +184,11 @@ function paragraph_line(s, previous) {
 # A quoted heading, fence or raw block cannot own such a continuation.
 function content_paragraph(s, previous, saved_paragraph, block, prefix, saved_title, saved_end, reference) {
   # Container markers expose the content that can actually own lazy text.
-  while (match(s,/^ ? ? ?(>[ \t]?|([-+*]|[0-9]{1,9}[.)])[ \t]+)/)) {
-    s=substr(s,RLENGTH+1); previous=0
+  while (1) {
+    if (match(s,/^ ? ? ?>[ \t]?/)) s=substr(s,RLENGTH+1)
+    else if (s ~ /^ ? ? ?([-+*]|[0-9]{1,9}[.)])([ \t]+|$)/) s=marker_content(s)
+    else break
+    previous=0
   }
   saved_paragraph=paragraph; paragraph=previous
   block=html_start(s); paragraph=saved_paragraph
@@ -383,11 +400,8 @@ function reference_line(s, result, tail, prefix) {
   previous_text=paragraph_text; previous_paragraph=paragraph
   list_item=match($0,/^ ? ? ?([-+*]|[0-9]{1,9}[.)])[ \t]+[^ \t]/)
   if (list_item && (thematic_line($0) || (paragraph && paragraph_line($0,1)))) list_item=0
-  if (list_item) list_indent=column_width(substr($0,1,RLENGTH-1))
-  else if (!paragraph && match($0,/^ ? ? ?([-+*]|[0-9]{1,9}[.)])[ \t]*$/)) {
-    list_item=1; empty_marker=$0; sub(/[ \t]+$/, "", empty_marker)
-    list_indent=column_width(empty_marker)+1
-  }
+  if (!list_item && !paragraph && $0 ~ /^ ? ? ?([-+*]|[0-9]{1,9}[.)])[ \t]*$/) list_item=1
+  if (list_item) { item_content=marker_content($0); list_indent=marker_indent }
   if (table && paragraph_line($0, 0)) paragraph=0
   else if (pipe_columns && table_separator_columns($0) == pipe_columns) {
     table=1; catalogue_table=pipe_catalogue; paragraph=0
@@ -402,7 +416,6 @@ function reference_line(s, result, tail, prefix) {
   if (quoted >= 0) quote_paragraph=quoted
   else if (!paragraph) quote_paragraph=0
   if (list_item) {
-    item_content=$0; sub(/^ ? ? ?([-+*]|[0-9]{1,9}[.)])[ \t]*/, "", item_content)
     list_paragraph=content_paragraph(item_content,0)
   } else if (list_indent) {
     if (indent_width($0) >= list_indent)
