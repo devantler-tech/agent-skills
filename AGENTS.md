@@ -171,7 +171,8 @@ actionlint
 The required gate is the aggregated **`CI - Required Checks`** job (validate + discover-skills +
 validate-spec + lint-scripts + validate-retired-links). The documentation guard scans only
 `README.md` and `AGENTS.md` using `.github/retired-repo-links.json`; its native job requires a
-complete clean scan and rejects a seeded retired link and missing configuration. The shared
+complete clean scan and rejects an isolated seeded retired link and missing configuration
+against the clean consumer root. Both failures must leave validation output empty. The shared
 action remains default-off; this consumer explicitly opts in. `actionlint` and `check-upstream-skills.sh` are **not** part of the required gate:
 `actionlint` is a local-only convenience, and the upstream-resolution check runs as the standalone
 scheduled **`🔗 Upstream skill targets`** workflow (weekly + on index-touch PRs) so a third-party
