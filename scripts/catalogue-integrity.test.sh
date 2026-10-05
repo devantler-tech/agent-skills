@@ -48,7 +48,7 @@ for shape in both none left right; do
 done
 # Actual peer and parent headings end the index; deeper and non-heading examples
 # do not. These are shipped parser consumers rather than a duplicate recognizer.
-for heading in ordinary one-space two-space three-space tabbed parent setext setext-parent closing-hashes child no-space indented-code list-child fenced list-lazy quote-lazy quote-heading quote-explicit quote-list quote-blank quote-reference list-heading list-empty code-outside code-continuation paragraph-four quote-code; do
+for heading in ordinary one-space two-space three-space tabbed parent setext setext-parent closing-hashes child no-space indented-code list-child fenced list-lazy quote-lazy quote-heading quote-explicit quote-list quote-blank quote-reference list-heading list-empty code-outside code-continuation paragraph-four quote-code quote-tab nested-tab quote-tab-code nested-tab-code quote-space nested-space; do
   fixture "scope-$heading"
   row '' alpha devantler-tech/agent-skills alpha >> "$root/README.md"
   printf '\n' >> "$root/README.md"
@@ -83,6 +83,12 @@ for heading in ordinary one-space two-space three-space tabbed parent setext set
     code-continuation) printf -- '-     code\n  More\n---\n'; expected=2 ;;
     paragraph-four) printf -- '-    Note\ncontinued\n---\n'; expected=2 ;;
     quote-code) printf '> -     code\nOther\n---\n' ;;
+    quote-tab) printf '> -\t  Note\ncontinued\n---\n'; expected=2 ;;
+    nested-tab) printf -- '- -\t  Note\ncontinued\n---\n'; expected=2 ;;
+    quote-tab-code) printf '> -\t    code\nOther\n---\n' ;;
+    nested-tab-code) printf -- '- -\t    code\nOther\n---\n' ;;
+    quote-space) printf '> -   Note\ncontinued\n---\n'; expected=2 ;;
+    nested-space) printf -- '- -   Note\ncontinued\n---\n'; expected=2 ;;
   esac
   printf '\n| Skill | Upstream | Install |\n|---|---|---|\n'
   row '' beta devantler-tech/agent-skills beta

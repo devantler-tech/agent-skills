@@ -95,6 +95,19 @@ function column_width(s, i, width) {
     width += (substr(s,i,1) == "\t" ? 4-width%4 : 1)
   return width
 }
+# Expand only copied classification text at its original column. Removing
+# container markers first would change the width of tabs inside nested items.
+function expand_tabs(s, i, width, ch, out, padding) {
+  width=0; out=""
+  for (i=1; i<=length(s); i++) {
+    ch=substr(s,i,1)
+    if (ch == "\t") {
+      padding=4-width%4
+      while (padding--) { out=out " "; width++ }
+    } else { out=out ch; width++ }
+  }
+  return out
+}
 function indent_width(s, i) {
   for (i=1; i<=length(s); i++) if (substr(s,i,1) !~ /[ \t]/) break
   return column_width(substr(s,1,i-1))
@@ -202,6 +215,7 @@ function content_paragraph(s, previous, saved_paragraph, block, prefix, saved_ti
   return paragraph_line(s,previous)
 }
 function quoted_paragraph(s, quoted) {
+  s=expand_tabs(s)
   quoted=0
   while (match(s,/^ ? ? ?>[ \t]?/)) { quoted=1; s=substr(s,RLENGTH+1) }
   if (!quoted) return -1
@@ -401,7 +415,7 @@ function reference_line(s, result, tail, prefix) {
   list_item=match($0,/^ ? ? ?([-+*]|[0-9]{1,9}[.)])[ \t]+[^ \t]/)
   if (list_item && (thematic_line($0) || (paragraph && paragraph_line($0,1)))) list_item=0
   if (!list_item && !paragraph && $0 ~ /^ ? ? ?([-+*]|[0-9]{1,9}[.)])[ \t]*$/) list_item=1
-  if (list_item) { item_content=marker_content($0); list_indent=marker_indent }
+  if (list_item) { item_content=marker_content(expand_tabs($0)); list_indent=marker_indent }
   if (table && paragraph_line($0, 0)) paragraph=0
   else if (pipe_columns && table_separator_columns($0) == pipe_columns) {
     table=1; catalogue_table=pipe_catalogue; paragraph=0
@@ -419,7 +433,7 @@ function reference_line(s, result, tail, prefix) {
     list_paragraph=content_paragraph(item_content,0)
   } else if (list_indent) {
     if (indent_width($0) >= list_indent)
-      list_paragraph=content_paragraph(remove_indent($0,list_indent),list_paragraph)
+      list_paragraph=content_paragraph(remove_indent(expand_tabs($0),list_indent),list_paragraph)
     else list_paragraph=(paragraph || quote_paragraph)
   }
   pipe_columns=(!table && paragraph ? pipe_header_columns($0) : 0)
