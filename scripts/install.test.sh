@@ -390,6 +390,8 @@ for tag in pre script style textarea; do
 | \`alpha\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/alpha) | \`gh skill install fixture/one alpha\` |
 
 <$tag>
+| Skill | Upstream | Install |
+| --- | --- | --- |
 | \`hidden\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/hidden) | \`gh skill install fixture/one hidden\` |
 </$tag>
 
@@ -412,6 +414,8 @@ for delimiters in declaration processing cdata block custom; do
 | \`alpha\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/alpha) | \`gh skill install fixture/one alpha\` |
 
 $open
+| Skill | Upstream | Install |
+| --- | --- | --- |
 | \`hidden\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/hidden) | \`gh skill install fixture/one hidden\` |
 $close
 
@@ -432,6 +436,8 @@ for comment_kind in single multi; do
 
 $comment
 <example-widget>
+| Skill | Upstream | Install |
+| --- | --- | --- |
 | \`hidden\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/hidden) | \`gh skill install fixture/one hidden\` |
 </example-widget>
 
@@ -451,6 +457,8 @@ for tag in pre script style textarea; do
 | \`alpha\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/alpha) | \`gh skill install fixture/one alpha\` |
 
 <$tag>
+| Skill | Upstream | Install |
+| --- | --- | --- |
 | \`hidden\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/hidden) | \`gh skill install fixture/one hidden\` |
 </$closing>
 | Skill | Upstream | Install |
@@ -473,6 +481,8 @@ make_root "$tmp/lower-declaration" <<'EOF'
 | `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/alpha) | `gh skill install fixture/one alpha` |
 
 <!doctype html
+| Skill | Upstream | Install |
+| --- | --- | --- |
 | `hidden` | [`fixture/one`](https://github.com/fixture/one/tree/main/hidden) | `gh skill install fixture/one hidden` |
 >
 | Skill | Upstream | Install |
@@ -487,6 +497,8 @@ for separator in '---' '***' '___' '- - -' '* * *' '_ _ _' '###' '###### Heading
 
 $separator
 <example-widget>
+| Skill | Upstream | Install |
+| --- | --- | --- |
 | \`hidden\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/hidden) | \`gh skill install fixture/one hidden\` |
 </example-widget>
 
@@ -533,6 +545,8 @@ for title in '"title"' "'title'" '(title)'; do
   $title
 
 <example-widget>
+| Skill | Upstream | Install |
+| --- | --- | --- |
 | \`hidden\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/hidden) | \`gh skill install fixture/one hidden\` |
 </example-widget>
 
@@ -546,6 +560,8 @@ make_root "$tmp/invalid-fence-comment" <<'EOF'
 | `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/alpha) | `gh skill install fixture/one alpha` |
 
 ```bad`info <!--
+| Skill | Upstream | Install |
+| --- | --- | --- |
 | `hidden` | [`fixture/one`](https://github.com/fixture/one/tree/main/hidden) | `gh skill install fixture/one hidden` |
 -->
 
@@ -581,6 +597,8 @@ for reference in '[example]:
 $reference
 
 <example-widget>
+| Skill | Upstream | Install |
+| --- | --- | --- |
 | \`hidden\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/hidden) | \`gh skill install fixture/one hidden\` |
 </example-widget>
 
@@ -602,6 +620,8 @@ for title in '"first
   $title
 
 <example-widget>
+| Skill | Upstream | Install |
+| --- | --- | --- |
 | \`hidden\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/hidden) | \`gh skill install fixture/one hidden\` |
 </example-widget>
 
@@ -617,6 +637,8 @@ make_root "$tmp/list-html-boundary" <<'EOF'
 - explanatory item
   continued item text
 <example-widget>
+| Skill | Upstream | Install |
+| --- | --- | --- |
 | `hidden` | [`fixture/one`](https://github.com/fixture/one/tree/main/hidden) | `gh skill install fixture/one hidden` |
 </example-widget>
 
@@ -656,6 +678,8 @@ make_root "$tmp/list-indented-paragraph" <<'EOF'
 
   continued item paragraph
 <example-widget>
+| Skill | Upstream | Install |
+| --- | --- | --- |
 | `hidden` | [`fixture/one`](https://github.com/fixture/one/tree/main/hidden) | `gh skill install fixture/one hidden` |
 </example-widget>
 
@@ -672,6 +696,8 @@ make_root "$tmp/list-tab-paragraph" <<'EOF'
 	continued item paragraph
 lazy continued item text
 <example-widget>
+| Skill | Upstream | Install |
+| --- | --- | --- |
 | `hidden` | [`fixture/one`](https://github.com/fixture/one/tree/main/hidden) | `gh skill install fixture/one hidden` |
 </example-widget>
 
@@ -701,6 +727,8 @@ for definition in '[foo\]bar]: /url' '[foo\[bar]: /url' '[foo]: /foo(bar(baz))' 
 $definition
 
 <example-widget>
+| Skill | Upstream | Install |
+| --- | --- | --- |
 | \`hidden\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/hidden) | \`gh skill install fixture/one hidden\` |
 </example-widget>
 
@@ -725,6 +753,8 @@ expect_list 'pipe-prefixed prose cannot hide a visible catalogue heading' "$tmp/
 make_root "$tmp/table-html-boundary" <<'EOF'
 | `alpha` | [`fixture/one`](https://github.com/fixture/one/tree/main/alpha) | `gh skill install fixture/one alpha` |
 <example-widget>
+| Skill | Upstream | Install |
+| --- | --- | --- |
 | `hidden` | [`fixture/one`](https://github.com/fixture/one/tree/main/hidden) | `gh skill install fixture/one hidden` |
 </example-widget>
 
@@ -772,6 +802,8 @@ for indentation in $' \t' $'  \t' $'   \t'; do
 
 ${indentation}indented code
 <example-widget>
+| Skill | Upstream | Install |
+| --- | --- | --- |
 | \`hidden\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/hidden) | \`gh skill install fixture/one hidden\` |
 </example-widget>
 
@@ -835,6 +867,8 @@ left | right
 --- | ---
 $body
 <example-widget>
+| Skill | Upstream | Install |
+| --- | --- | --- |
 | \`hidden\` | [\`fixture/one\`](https://github.com/fixture/one/tree/main/hidden) | \`gh skill install fixture/one hidden\` |
 </example-widget>
 
@@ -872,6 +906,8 @@ make_root "$tmp/consecutive-reference-titles" <<'EOF'
 
 [first]: /url
 [second]: /url "first
+| Skill | Upstream | Install |
+| --- | --- | --- |
 | `hidden` | [`fixture/one`](https://github.com/fixture/one/tree/main/hidden) | `gh skill install fixture/one hidden` |
 last"
 
@@ -913,6 +949,8 @@ make_root "$tmp/zero-padded-interrupting-marker" <<'EOF'
 An actual paragraph
 01. explanatory text
 <example-widget>
+| Skill | Upstream | Install |
+| --- | --- | --- |
 | `hidden` | [`fixture/one`](https://github.com/fixture/one/tree/main/hidden) | `gh skill install fixture/one hidden` |
 </example-widget>
 
@@ -959,6 +997,8 @@ make_root "$tmp/invalid-fence-in-title" <<'EOF'
 
 [example]: /url "first
 ```bad`info
+| Skill | Upstream | Install |
+| --- | --- | --- |
 | `hidden` | [`fixture/one`](https://github.com/fixture/one/tree/main/hidden) | `gh skill install fixture/one hidden` |
 last"
 
@@ -1035,6 +1075,8 @@ make_root "$tmp/tab-separated-thematic-break" <<'EOF'
 An actual paragraph
 *	*	*
 <example-widget>
+| Skill | Upstream | Install |
+| --- | --- | --- |
 | `hidden` | [`fixture/one`](https://github.com/fixture/one/tree/main/hidden) | `gh skill install fixture/one hidden` |
 </example-widget>
 
