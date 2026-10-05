@@ -43,7 +43,7 @@ export GIT_NO_LAZY_FETCH=1
 unset GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR GIT_INDEX_FILE GIT_OBJECT_DIRECTORY \
   GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_NAMESPACE
 # Explicit no-fetch capability is required; unsupported Git refuses before reads.
-read_git() { git --no-lazy-fetch --no-replace-objects --no-optional-locks -C "$repo" "$@"; }
+read_git() { git -c core.fsmonitor=false --no-lazy-fetch --no-replace-objects --no-optional-locks -C "$repo" "$@"; }
 top=$(read_git rev-parse --show-toplevel 2>/dev/null && printf '.') || unknown 'not a worktree repository'
 top=${top%$'\n.'}
 top=$(cd "$top" && pwd -P && printf '.') || unknown 'repository root is unavailable'
@@ -69,6 +69,9 @@ read_git diff-tree -r -t --raw -z --no-abbrev --no-commit-id --no-renames \
 encode_record() { printf '%s %s\t%s\0' "$1" "$2" "$3" | base64 | tr -d '\r\n' || return; printf '\n'; }
 : > "$tmp/tree-records"
 : > "$tmp/tree-paths"
+root_tree=$(read_git rev-parse --verify "$revision^{tree}" 2>/dev/null) || unknown 'root tree identity is unavailable'
+[[ $root_tree =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]] || unknown 'root tree identity is invalid'
+printf '%s\n' "$root_tree" > "$tmp/tree-objects"
 entry=
 while IFS= read -r -d '' entry; do
   [[ $entry == *$'\t'* ]] || unknown 'malformed tree entry'
@@ -80,10 +83,20 @@ while IFS= read -r -d '' entry; do
     040000:tree|100644:blob|100755:blob|120000:blob|160000:commit) : ;;
     *) unknown 'unsupported tree metadata' ;;
   esac
+  [[ $type != tree ]] || printf '%s\n' "$blob" >> "$tmp/tree-objects"
   encode_record "$mode" "$blob" "$path" >> "$tmp/tree-records" || unknown 'tree record could not be encoded'
   encode_record '' '' "$path" >> "$tmp/tree-paths" || unknown 'tree path could not be encoded'
 done < "$tmp/tree"
 [[ -z $entry ]] || unknown 'committed tree has an unterminated record'
+# Flattened listings cannot distinguish nested paths from malformed tree components.
+# Git parses each original tree without writing objects; bind the complete raw read
+# back to its immutable identity before accepting any inventory.
+LC_ALL=C sort -u "$tmp/tree-objects" > "$tmp/unique-tree-objects" || unknown 'tree objects could not be compared'
+while IFS= read -r tree_object; do
+  read_git cat-file tree "$tree_object" > "$tmp/raw-tree" 2>/dev/null || unknown 'original tree object could not be read'
+  observed_tree=$(read_git hash-object -t tree --stdin < "$tmp/raw-tree" 2>/dev/null) || unknown 'original tree components are not canonical'
+  [[ $observed_tree == "$tree_object" ]] || unknown 'original tree bytes do not match the committed identity'
+done < "$tmp/unique-tree-objects"
 : > "$tmp/diff-records"
 header=
 while IFS= read -r -d '' header; do
