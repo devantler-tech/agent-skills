@@ -56,17 +56,21 @@ install_case malformed-source main '{"sha":' reject
 # Observe the original bytes before Bash can discard NULs or jq can repair UTF-8.
 # A malformed or failed response must not reach even the private native installer.
 for interpreter in /bin/bash bash; do
-  for kind in valid newline replacement nul-key nul-sha nul-tail invalid-utf8 partial-failure; do
+  for kind in valid newline replacement astral nul-key nul-sha nul-tail invalid-utf8 above-unicode obsolete-five obsolete-six partial-failure; do
     root="$work/raw-${interpreter##*/}-$kind"; fixture "$root" main
     status=0; expected=reject
     case "$kind" in
       valid) printf '{"sha":"%s"}' "$one" > "$root/response"; expected=pass ;;
       newline) printf '{"sha":"%s"}\n\n' "$one" > "$root/response"; expected=pass ;;
       replacement) printf '{"sha":"%s","message":"\357\277\275"}' "$one" > "$root/response"; expected=pass ;;
+      astral) printf '{"sha":"%s","message":"\360\237\230\200"}' "$one" > "$root/response"; expected=pass ;;
       nul-key) printf '{"sh\000a":"%s"}' "$one" > "$root/response" ;;
       nul-sha) printf '{"sha":"%s\000"}' "$one" > "$root/response" ;;
       nul-tail) printf '{"sha":"%s"}\000' "$one" > "$root/response" ;;
       invalid-utf8) printf '{"sha":"%s","message":"\377"}' "$one" > "$root/response" ;;
+      above-unicode) printf '{"sha":"%s","message":"\364\220\200\200"}' "$one" > "$root/response" ;;
+      obsolete-five) printf '{"sha":"%s","message":"\370\210\200\200\200"}' "$one" > "$root/response" ;;
+      obsolete-six) printf '{"sha":"%s","message":"\374\204\200\200\200\200"}' "$one" > "$root/response" ;;
       partial-failure) printf '{"sha":"%s"}' "$one" > "$root/response"; status=1 ;;
     esac
     : > "$root/stages"; : > "$root/installs"; rc=0

@@ -142,7 +142,8 @@ response="$stage_root/commit.json"
 unambiguous_object() {
   LC_ALL=C tr -d '\000' < "$1" > "$stage_root/no-nul" &&
     cmp -s "$1" "$stage_root/no-nul" &&
-    iconv -f UTF-8 -t UTF-8 < "$1" > "$stage_root/utf8" &&
+    iconv -f UTF-8 -t UTF-16BE < "$1" > "$stage_root/utf16" &&
+    iconv -f UTF-16BE -t UTF-8 < "$stage_root/utf16" > "$stage_root/utf8" &&
     cmp -s "$1" "$stage_root/utf8" &&
     jq -es 'length==1 and (.[0]|type=="object")' "$1" >/dev/null &&
     jq --stream -es '
