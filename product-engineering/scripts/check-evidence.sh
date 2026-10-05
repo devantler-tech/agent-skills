@@ -12,7 +12,11 @@ work=$(mktemp -d) || refuse 'temporary input snapshot unavailable'
 trap 'rm -rf "$work"' EXIT
 # Evaluate exactly the privately retained bytes that passed strict decoding.
 cat -- "$input" > "$work/input" || refuse 'input snapshot could not be read'
-iconv -f UTF-8 -t UTF-8 "$work/input" >/dev/null 2>&1 || refuse 'input is not valid UTF-8'
+# Compare a bounded Unicode round trip: some iconv versions repair invalid
+# characters yet return success. Evaluate the original snapshot only.
+iconv -f UTF-8 -t UTF-16BE "$work/input" |
+  iconv -f UTF-16BE -t UTF-8 > "$work/validated" 2>/dev/null || refuse 'input is not valid UTF-8'
+cmp -s "$work/input" "$work/validated" || refuse 'input is not valid UTF-8'
 # Parameter expansion preserves trailing newlines in the installed parent.
 case ${BASH_SOURCE[0]} in
   */*) script_parent=${BASH_SOURCE[0]%/*} ;;

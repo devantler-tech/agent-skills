@@ -11,14 +11,29 @@ for tool in proof brief flow; do
     brief) wrapper="$root/product-engineering/scripts/accountability-brief.sh"; example="$root/product-engineering/references/accountability-product.json"; args=(--mode check) ;;
     flow) wrapper="$root/agent-improvement/scripts/measure-flow.sh"; example="$root/agent-improvement/references/flow-example.json"; args=() ;;
   esac
-  for scenario in healthy invalid-byte replacement-character international valid-surrogate-pair literal-surrogate unpaired-low-surrogate unpaired-high-surrogate malformed duplicate multiple; do
+  for scenario in healthy valid-maximum invalid-byte out-of-range overlong encoded-surrogate five-byte six-byte replacement-character international valid-surrogate-pair literal-surrogate unpaired-low-surrogate unpaired-high-surrogate malformed duplicate multiple; do
     jq -c . "$example" > "$work/input.json"
     case $scenario in
-      invalid-byte|replacement-character|international|valid-surrogate-pair|literal-surrogate|unpaired-low-surrogate|unpaired-high-surrogate)
+      valid-maximum|invalid-byte|out-of-range|overlong|encoded-surrogate|five-byte|six-byte|replacement-character|international|valid-surrogate-pair|literal-surrogate|unpaired-low-surrogate|unpaired-high-surrogate)
         case $tool in proof) field='.evidence[1].uri' ;; brief) field='.evidence[0].source' ;; flow) field='.run.evidence' ;; esac
         case $scenario in invalid-byte) suffix=PLACEHOLDER ;; replacement-character) suffix=$'\357\277\275' ;; international) suffix='測定-é' ;; *) suffix=PLACEHOLDER ;; esac
         jq --arg suffix "$suffix" "$field += \$suffix" "$example" > "$work/input.json"
+        if [[ $scenario == valid-maximum ]]; then
+          if [[ $tool == brief ]]; then
+            jq '.decision.summary += "PLACEHOLDER"' "$example" > "$work/input.json"
+          else jq '.retainedUnicode = "PLACEHOLDER"' "$example" > "$work/input.json"; fi
+        fi
         case $scenario in
+          valid-maximum|out-of-range|overlong|encoded-surrogate|five-byte|six-byte)
+            case $scenario in
+              valid-maximum) bytes=$'\364\217\277\277' ;;
+              out-of-range) bytes=$'\364\220\200\200' ;;
+              overlong) bytes=$'\360\200\200\200' ;;
+              encoded-surrogate) bytes=$'\355\240\200' ;;
+              five-byte) bytes=$'\370\210\200\200\200' ;;
+              six-byte) bytes=$'\374\204\200\200\200\200' ;;
+            esac
+            LC_ALL=C sed "s/PLACEHOLDER/$bytes/" "$work/input.json" > "$work/new"; mv "$work/new" "$work/input.json" ;;
           invalid-byte) LC_ALL=C sed $'s/PLACEHOLDER/\377/' "$work/input.json" > "$work/new"; mv "$work/new" "$work/input.json" ;;
           valid-surrogate-pair) sed 's/PLACEHOLDER/\\ud83d\\ude00/' "$work/input.json" > "$work/new"; mv "$work/new" "$work/input.json" ;;
           literal-surrogate) sed 's/PLACEHOLDER/\\\\udc00/' "$work/input.json" > "$work/new"; mv "$work/new" "$work/input.json" ;;
@@ -34,7 +49,7 @@ for tool in proof brief flow; do
     rc=0
     bash "$wrapper" "${args[@]}" "$work/input.json" > "$work/out" 2> "$work/err" || rc=$?
     case $scenario in
-      healthy|replacement-character|international|valid-surrogate-pair|literal-surrogate)
+      healthy|valid-maximum|replacement-character|international|valid-surrogate-pair|literal-surrogate)
         if [[ $rc == 0 && -s $work/out ]]; then passed=$((passed+1)); else printf 'FAIL %s %s exit=%s\n' "$tool" "$scenario" "$rc"; failed=$((failed+1)); fi ;;
       *)
         if [[ $rc == 2 && ! -s $work/out && -s $work/err ]]; then passed=$((passed+1)); else printf 'FAIL %s %s exit=%s\n' "$tool" "$scenario" "$rc"; failed=$((failed+1)); fi
