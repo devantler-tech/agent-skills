@@ -4,6 +4,10 @@ here=${SOURCE_SCRIPTS:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 fail=0
+# Create an isolated catalogue and native-CLI fixture for a source response.
+# Arguments: $1 is the fixture directory; $2 is the advertised source ref.
+# Writes copied installer resources and a CLI stub that records private staging
+# separately from final user-scope installation; it performs no real installs.
 fixture() {
   local root=$1 ref=$2
   mkdir -p "$root/scripts" "$root/bin" "$root/alpha"
@@ -33,6 +37,9 @@ printf 'installed\n' >> "$INSTALL_TRACE"
 STUB
   chmod +x "$root/bin/gh"
 }
+# Run one source-identity case and report whether its final write was admitted.
+# Arguments: case name, source ref, response JSON, and expected pass/reject result.
+# Prints one result and increments fail on a mismatch; fixtures stay under work.
 install_case() {
   local name=$1 ref=$2 response=$3 expect=$4 root="$work/$1" rc=0
   fixture "$root" "$ref"

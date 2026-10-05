@@ -139,6 +139,10 @@ response="$stage_root/commit.json"
 # Validate one raw UTF-8 JSON file as a single object without repeated paths.
 # Return success without output only for an unambiguous object; invalid or
 # concatenated responses return nonzero before they can establish provenance.
+# Arguments: $1 is the retained API response file; its original bytes are read.
+# Returns: 0 for valid original UTF-8 JSON with unique paths, nonzero otherwise.
+# Side effects: write private encoding scratch files under stage_root, without
+# changing the supplied response or staging any skill copies.
 unambiguous_object() {
   LC_ALL=C tr -d '\000' < "$1" > "$stage_root/no-nul" &&
     cmp -s "$1" "$stage_root/no-nul" &&
