@@ -13,7 +13,7 @@
 #   ./scripts/install.sh --list                # print the parsed index and exit (no gh needed)
 #   ./scripts/install.sh --help                # show usage without reading the index
 #
-# Requires jq and gh >= 2.90.0 (with `gh skill`). See `gh skill install --help`.
+# Requires jq, iconv and gh >= 2.90.0 (with `gh skill`). See `gh skill install --help`.
 # (`--list` only parses the README, so it needs neither gh nor network access.)
 set -euo pipefail
 
@@ -34,7 +34,7 @@ Unset or empty AGENTS defaults to: github-copilot claude-code.
 --help, -h  Show this help without reading the index or calling gh.
 Help and listing are standalone modes; do not combine them with agent arguments.
 
-Installation requires jq and gh >= 2.90.0 with gh skill support. Every catalogue
+Installation requires jq, iconv and gh >= 2.90.0 with gh skill support. Every catalogue
 source is resolved to an immutable commit before any skill is installed.
 Agent names are passed
 to gh skill install; run gh skill install --help for supported agents.
@@ -123,16 +123,33 @@ if ! gh skill --help >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! command -v jq >/dev/null 2>&1; then
-  echo "error: installation requires jq to verify source commits." >&2
-  exit 1
-fi
+for tool in jq iconv; do
+  if ! command -v "$tool" >/dev/null 2>&1; then
+    echo "error: installation requires $tool to verify source commits." >&2
+    exit 1
+  fi
+done
 
-# Validate one supplied JSON string as a single object without repeated paths.
+# Keep the original API bytes private until their encoding and identity have
+# been verified. Bash strings discard NULs and jq can repair malformed UTF-8.
+stage_root=$(mktemp -d "${TMPDIR:-/tmp}/skill-install-preflight.XXXXXX")
+trap 'rm -rf "$stage_root"' EXIT
+response="$stage_root/commit.json"
+
+# Validate one raw UTF-8 JSON file as a single object without repeated paths.
 # Return success without output only for an unambiguous object; invalid or
 # concatenated responses return nonzero before they can establish provenance.
+# Arguments: $1 is the retained API response file; its original bytes are read.
+# Returns: 0 for valid original UTF-8 JSON with unique paths, nonzero otherwise.
+# Side effects: write private encoding scratch files under stage_root, without
+# changing the supplied response or staging any skill copies.
 unambiguous_object() {
-  jq -es 'length==1 and (.[0]|type=="object")' >/dev/null <<< "$1" &&
+  LC_ALL=C tr -d '\000' < "$1" > "$stage_root/no-nul" &&
+    cmp -s "$1" "$stage_root/no-nul" &&
+    iconv -f UTF-8 -t UTF-16BE < "$1" > "$stage_root/utf16" &&
+    iconv -f UTF-16BE -t UTF-8 < "$stage_root/utf16" > "$stage_root/utf8" &&
+    cmp -s "$1" "$stage_root/utf8" &&
+    jq -es 'length==1 and (.[0]|type=="object")' "$1" >/dev/null &&
     jq --stream -es '
       reduce .[] as $event ({complete:{}, valid:true};
         if ($event|length)==2 then
@@ -141,7 +158,7 @@ unambiguous_object() {
             $complete[($path[0:.]|tojson)]==true)|not)) |
           .complete[($path|tojson)] = true
         else .complete[($event[0][0:-1]|tojson)] = true end) | .valid
-    ' >/dev/null <<< "$1"
+    ' "$1" >/dev/null
 }
 pins=()
 sources=()
@@ -154,7 +171,7 @@ for entry in "${entries[@]}"; do
     if [ "${sources[$i]}" = "$source" ]; then pin=${source_pins[$i]}; break; fi
   done
   if [ -n "$pin" ]; then pins+=("$pin"); continue; fi
-  if ! response=$(gh api --hostname github.com "repos/$repo/commits/$ref"); then
+  if ! gh api --hostname github.com "repos/$repo/commits/$ref" > "$response"; then
     echo "error: could not resolve $repo at $ref; no skills installed." >&2
     exit 1
   fi
@@ -162,7 +179,7 @@ for entry in "${entries[@]}"; do
       if length == 1 and (.[0] | type == "object") and
          (.[0].sha | type == "string" and test("\\A[0-9a-f]{40}\\z"))
       then .[0].sha else error("expected one full commit SHA") end
-    ' <<<"$response"); then
+    ' "$response"); then
     echo "error: invalid source commit for $repo at $ref; no skills installed." >&2
     exit 1
   fi
@@ -178,8 +195,6 @@ done
 # Observe the native CLI's actual destination identity in an isolated directory
 # per source. A successful source resolution alone says nothing about the name
 # in SKILL.md, which the CLI uses when --force places files in the user's home.
-stage_root=$(mktemp -d "${TMPDIR:-/tmp}/skill-install-preflight.XXXXXX")
-trap 'rm -rf "$stage_root"' EXIT
 shopt -s nullglob dotglob
 for i in "${!entries[@]}"; do
   read -r repo _ref path skill <<<"${entries[$i]}"

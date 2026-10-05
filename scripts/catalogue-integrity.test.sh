@@ -27,6 +27,109 @@ for indent in '' ' ' '  ' '   '; do
   rc=0; bash "$root/scripts/install.sh" --list > "$root/out" 2>&1 || rc=$?
   label="visible table indent ${#indent} includes both rows"; check test "$rc:$(wc -l < "$root/out" | tr -d ' ')" = 0:2
 done
+# GFM outer table pipes are independently optional on headers and body rows.
+for shape in both none left right; do
+  fixture "outer-$shape"
+  row '' alpha devantler-tech/agent-skills alpha >> "$root/README.md"
+  case $shape in both) leading='| '; trailing=' |' ;; none) leading=''; trailing='' ;;
+    left) leading='| '; trailing='' ;; right) leading=''; trailing=' |' ;; esac
+  printf '%sbeta | [devantler-tech/agent-skills](https://github.com/devantler-tech/agent-skills/tree/main/beta) | gh skill install devantler-tech/agent-skills beta%s\n' \
+    "$leading" "$trailing" >> "$root/README.md"
+  rc=0; bash "$root/scripts/install.sh" --list > "$root/out" 2> "$root/err" || rc=$?
+  label="$shape outer pipes preserve both catalogue rows"; check test "$rc:$(wc -l < "$root/out" | tr -d ' ')" = 0:2
+  rc=0; bash "$root/scripts/check-readme-index.sh" > "$root/guard" 2>&1 || rc=$?
+  label="$shape outer pipes cover both maintained skills"; check test "$rc" -eq 0
+  # A complete table with that same edge shape must also establish its framing.
+  sed 's/^| *//; s/ *|$//' "$root/README.md" > "$root/no-edges"
+  awk -v left="$leading" -v right="$trailing" '{if (index($0,"|")) print left $0 right; else print}' \
+    "$root/no-edges" > "$root/README.md"
+  rc=0; bash "$root/scripts/install.sh" --list > "$root/out" 2> "$root/err" || rc=$?
+  label="$shape header and separator pipes remain a table"; check test "$rc:$(wc -l < "$root/out" | tr -d ' ')" = 0:2
+done
+# Actual peer and parent headings end the index; deeper and non-heading examples
+# do not. These are shipped parser consumers rather than a duplicate recognizer.
+for heading in ordinary one-space two-space three-space tabbed parent setext setext-parent closing-hashes child no-space indented-code list-child fenced list-lazy quote-lazy quote-heading quote-explicit quote-list quote-blank quote-reference list-heading list-empty code-outside code-continuation paragraph-four quote-code quote-tab nested-tab quote-tab-code nested-tab-code quote-space nested-space; do
+  fixture "scope-$heading"
+  row '' alpha devantler-tech/agent-skills alpha >> "$root/README.md"
+  printf '\n' >> "$root/README.md"
+  expected=1
+  # shellcheck disable=SC2016 # Literal fenced Markdown is fixture data.
+  {
+  case $heading in
+    ordinary) printf '## Other\n' ;;
+    one-space) printf ' ## Other\n' ;;
+    two-space) printf '  ## Other\n' ;;
+    three-space) printf '   ## Other\n' ;;
+    tabbed) printf '##\tOther\n' ;;
+    parent) printf '# Other\n' ;;
+    setext) printf 'Other\n-----\n' ;;
+    setext-parent) printf 'Other\n=====\n' ;;
+    closing-hashes) printf '## Other ##\n' ;;
+    child) printf '### Category\n'; expected=2 ;;
+    no-space) printf '##Other\n'; expected=2 ;;
+    indented-code) printf '    ## Other\n'; expected=2 ;;
+    list-child) printf -- '- Example\n  ## Other\n'; expected=2 ;;
+    fenced) printf '```markdown\n## Other\n```\n'; expected=2 ;;
+    list-lazy) printf -- '- Note\n  continued\n---\n'; expected=2 ;;
+    quote-lazy) printf '> Note\ncontinued\n---\n'; expected=2 ;;
+    quote-heading) printf '> ## Quoted heading\nOther\n---\n' ;;
+    quote-explicit) printf '> Note\n> continued\n---\n'; expected=2 ;;
+    quote-list) printf '> - Note\ncontinued\n---\n'; expected=2 ;;
+    quote-blank) printf '> Note\n\nOther\n---\n' ;;
+    quote-reference) printf '> [example]: /url\nOther\n---\n' ;;
+    list-heading) printf -- '- ## Quoted heading\nOther\n---\n' ;;
+    list-empty) printf -- '-\nOther\n---\n' ;;
+    code-outside) printf -- '-     code\nOther\n---\n' ;;
+    code-continuation) printf -- '-     code\n  More\n---\n'; expected=2 ;;
+    paragraph-four) printf -- '-    Note\ncontinued\n---\n'; expected=2 ;;
+    quote-code) printf '> -     code\nOther\n---\n' ;;
+    quote-tab) printf '> -\t  Note\ncontinued\n---\n'; expected=2 ;;
+    nested-tab) printf -- '- -\t  Note\ncontinued\n---\n'; expected=2 ;;
+    quote-tab-code) printf '> -\t    code\nOther\n---\n' ;;
+    nested-tab-code) printf -- '- -\t    code\nOther\n---\n' ;;
+    quote-space) printf '> -   Note\ncontinued\n---\n'; expected=2 ;;
+    nested-space) printf -- '- -   Note\ncontinued\n---\n'; expected=2 ;;
+  esac
+  printf '\n| Skill | Upstream | Install |\n|---|---|---|\n'
+  row '' beta devantler-tech/agent-skills beta
+  } >> "$root/README.md"
+  rc=0; bash "$root/scripts/install.sh" --list > "$root/out" 2> "$root/err" || rc=$?
+  label="$heading retains the rendered Skills scope"; check test "$rc:$(wc -l < "$root/out" | tr -d ' ')" = "0:$expected"
+done
+for heading in indented tabbed closing-hashes setext; do
+  fixture "skills-heading-$heading"
+  case $heading in indented) printf '   ## Skills\n' ;; tabbed) printf '##\tSkills\n' ;;
+    closing-hashes) printf '## Skills ##\n' ;; setext) printf 'Skills\n------\n' ;; esac > "$root/README.md"
+  printf '\n| Skill | Upstream | Install |\n|---|---|---|\n' >> "$root/README.md"
+  row '' alpha devantler-tech/agent-skills alpha >> "$root/README.md"
+  rc=0; bash "$root/scripts/install.sh" --list > "$root/out" 2> "$root/err" || rc=$?
+  label="$heading Skills heading begins the catalogue"; check test "$rc:$(cat "$root/out")" = '0:devantler-tech/agent-skills alpha'
+done
+# A clean sibling must never substitute for the physical checkout being checked.
+fixture malformed-optional-row
+{
+  row '' alpha devantler-tech/agent-skills alpha
+  printf 'beta | [devantler-tech/agent-skills](https://github.com/devantler-tech/agent-skills/tree/main/beta) | gh skill install devantler-tech/agent-skills other\n'
+} >> "$root/README.md"
+rc=0; bash "$root/scripts/install.sh" --list > "$root/out" 2> "$root/err" || rc=$?
+label='an unpiped contradictory row refuses the complete preview'; check test "$rc" -ne 0
+label='an unpiped contradictory row emits no partial entries'; check test ! -s "$root/out"
+fixture repeated-rendered-section
+{
+  row '' alpha devantler-tech/agent-skills alpha
+  printf '\nSkills\n------\n\n| Skill | Upstream | Install |\n|---|---|---|\n'
+  row '' beta devantler-tech/agent-skills beta
+} >> "$root/README.md"
+rc=0; bash "$root/scripts/install.sh" --list > "$root/out" 2> "$root/err" || rc=$?
+label='a second rendered Skills section refuses the complete preview'; check test "$rc" -ne 0
+label='repeated rendered sections emit no partial entries'; check test ! -s "$root/out"
+for suffix in '' $'\n' $'\n\n'; do
+  fixture "physical$suffix"
+  row '' alpha devantler-tech/agent-skills alpha >> "$root/README.md"
+  if [[ -z $suffix ]]; then rm -rf "$root/beta"; continue; fi
+  rc=0; bash "$root/scripts/check-readme-index.sh" > "$root/out" 2>&1 || rc=$?
+  label="physical checkout with ${#suffix} trailing newlines rejects its orphan"; check test "$rc" -ne 0
+done
 for framing in prose missing-header mismatched-delimiter; do
   fixture "framing-$framing"
   case $framing in
