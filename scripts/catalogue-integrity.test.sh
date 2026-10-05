@@ -88,15 +88,19 @@ for heading in indented tabbed closing-hashes setext; do
 done
 # A clean sibling must never substitute for the physical checkout being checked.
 fixture malformed-optional-row
-row '' alpha devantler-tech/agent-skills alpha >> "$root/README.md"
-printf 'beta | [devantler-tech/agent-skills](https://github.com/devantler-tech/agent-skills/tree/main/beta) | gh skill install devantler-tech/agent-skills other\n' >> "$root/README.md"
+{
+  row '' alpha devantler-tech/agent-skills alpha
+  printf 'beta | [devantler-tech/agent-skills](https://github.com/devantler-tech/agent-skills/tree/main/beta) | gh skill install devantler-tech/agent-skills other\n'
+} >> "$root/README.md"
 rc=0; bash "$root/scripts/install.sh" --list > "$root/out" 2> "$root/err" || rc=$?
 label='an unpiped contradictory row refuses the complete preview'; check test "$rc" -ne 0
 label='an unpiped contradictory row emits no partial entries'; check test ! -s "$root/out"
 fixture repeated-rendered-section
-row '' alpha devantler-tech/agent-skills alpha >> "$root/README.md"
-printf '\nSkills\n------\n\n| Skill | Upstream | Install |\n|---|---|---|\n' >> "$root/README.md"
-row '' beta devantler-tech/agent-skills beta >> "$root/README.md"
+{
+  row '' alpha devantler-tech/agent-skills alpha
+  printf '\nSkills\n------\n\n| Skill | Upstream | Install |\n|---|---|---|\n'
+  row '' beta devantler-tech/agent-skills beta
+} >> "$root/README.md"
 rc=0; bash "$root/scripts/install.sh" --list > "$root/out" 2> "$root/err" || rc=$?
 label='a second rendered Skills section refuses the complete preview'; check test "$rc" -ne 0
 label='repeated rendered sections emit no partial entries'; check test ! -s "$root/out"
