@@ -45,9 +45,13 @@ working tree is dirty, without checking out or executing its files. Its conserva
 `tracked-shell-paths-v1` includes every tracked regular `*.sh` path except `*.test.sh`; it does not
 apply a size threshold or decide which files are non-trivial. Each path carries its committed blob
 identifier and executable bit. Before selecting files, it compares the complete tree listing with
-an independent raw diff from Git's empty tree to the named commit. Missing complete records,
+an independent raw diff from Git's empty tree to the named commit. Each reachable tree object's
+original bytes must also pass Git's canonical component validation and retain their committed
+identity; agreement between flattened paths alone cannot establish a valid tree. Missing complete records,
 disagreement between those views, tree/object read failures, selected symlinks and paths that cannot
 be represented faithfully in UTF-8 JSON produce exit `2` (`UNKNOWN`) with no success payload.
+Git observations also suppress configured filesystem-monitor callbacks without changing repository
+configuration, so a native tree read cannot silently execute a caller-provided hook.
 
 To include Go entrypoint evidence, add `--include-go` to the same invocation. This opt-in needs
 Go 1.22 or later and compiles only the installed `scripts/go-entrypoint.go` parser, with modules,
