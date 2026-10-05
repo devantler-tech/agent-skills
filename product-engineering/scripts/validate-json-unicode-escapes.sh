@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Refuse lone UTF-16 surrogate escapes before a JSON decoder can replace them.
+# Refuse literal NUL and lone surrogate escapes before shell/JSON decoding.
 validate_json_unicode_escapes() {
   local input=$1 data char escape hex low i=0 length in_string=0 backslash=$'\\'
   local LC_ALL=C
@@ -58,5 +58,19 @@ validate_json_unicode_escapes() {
   done
 }
 
-[[ $# == 1 && -f $1 && -r $1 ]] || exit 2
-validate_json_unicode_escapes "$1"
+[[ $# == 1 ]] || exit 2
+input=$1
+[[ $input == /* ]] || input="./$input"
+[[ -f $input && -r $input ]] || exit 2
+umask 077
+work=$(mktemp -d) || exit 2
+trap 'rm -rf "$work"' EXIT
+# Retain one complete named-file observation before Bash can strip literal NUL.
+cat -- "$input" > "$work/input" || exit 2
+LC_ALL=C tr -d '\000' < "$work/input" > "$work/without-nul" || exit 2
+cmp -s "$work/input" "$work/without-nul" || {
+  printf 'input contains a literal NUL byte or could not be fully read\n' >&2
+  exit 2
+}
+# The comparison copy never becomes evidence; inspect the original snapshot.
+validate_json_unicode_escapes "$work/input"
