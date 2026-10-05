@@ -4,6 +4,8 @@ set -euo pipefail
 refuse() { printf '%s\n' "$*" >&2; exit 2; }
 [[ $# == 1 ]] || refuse 'usage: measure-flow.sh INPUT.json'
 input=$1
+# Keep every relative operand a named file, including the literal filename '-'.
+[[ $input == /* ]] || input="./$input"
 [[ -f $input && -r $input ]] || refuse 'input must be a readable regular file'
 command -v jq >/dev/null || refuse 'missing dependency: jq'
 command -v iconv >/dev/null || refuse 'missing dependency: iconv'

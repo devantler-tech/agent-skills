@@ -4,6 +4,8 @@ set -euo pipefail
 refuse() { printf '%s\n' "$*" >&2; exit 2; }
 [[ $# == 3 && $1 == --now && -n $2 ]] || refuse 'usage: check-evidence.sh --now UTC_TIMESTAMP INPUT.json'
 now=$2 input=$3
+# Keep every relative operand a named file, including the literal filename '-'.
+[[ $input == /* ]] || input="./$input"
 [[ -f $input && -r $input ]] || refuse 'input must be a readable regular file'
 command -v jq >/dev/null || refuse 'missing dependency: jq'
 command -v iconv >/dev/null || refuse 'missing dependency: iconv'
