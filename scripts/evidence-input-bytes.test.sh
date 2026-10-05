@@ -106,6 +106,13 @@ done
 
 # Independently installed directories retain their complete path, including final newlines.
 mkdir -p "$work/installed" "$work/installed"$'\n' "$work/bin"
+mkdir "$work/nul-read-bin"
+cat > "$work/nul-read-bin/tr" <<'STUB'
+#!/usr/bin/env bash
+if [[ $NUL_READ_KIND == complete ]]; then cat; else printf '{"prefix":true}'; fi
+exit 1
+STUB
+chmod +x "$work/nul-read-bin/tr"
 # The stub must expand its own argument when invoked.
 # shellcheck disable=SC2016
 printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$1"\nexit 71\n' > "$work/bin/dirname"
@@ -140,6 +147,35 @@ for tool in proof brief-check brief-render flow; do
     PATH="$work/read-failure-bin:$PATH" READ_FAILURE_KIND="$kind" bash "$work/installed"$'\n'/"$name.sh" "${args[@]}" "$work/copied-input.json" > "$work/out" 2> "$work/err" || rc=$?
     if [[ $rc == 2 && ! -s $work/out && -s $work/err ]]; then passed=$((passed+1)); else printf 'FAIL copied %s scanner-read-%s exit=%s\n' "$tool" "$kind" "$rc"; failed=$((failed+1)); fi
   done
+  # Literal NUL must not end decoding before the rest of the selected file.
+  for scenario in trailing malformed-suffix second-document prefix in-string; do
+    cat "$example" > "$work/nul-input.json"
+    case $scenario in
+      trailing) printf '\0' >> "$work/nul-input.json" ;;
+      malformed-suffix) printf '\0{"broken":' >> "$work/nul-input.json" ;;
+      second-document) printf '\0' >> "$work/nul-input.json"; cat "$example" >> "$work/nul-input.json" ;;
+      prefix) { printf '\0'; cat "$example"; } > "$work/nul-input.json" ;;
+      in-string) printf '{"value":"before\0after"}' > "$work/nul-input.json" ;;
+    esac
+    rc=0
+    bash "$work/installed"$'\n'/"$name.sh" "${args[@]}" "$work/nul-input.json" > "$work/out" 2> "$work/err" || rc=$?
+    if [[ $rc == 2 && ! -s $work/out && -s $work/err ]]; then passed=$((passed+1)); else printf 'FAIL copied %s literal-NUL-%s exit=%s\n' "$tool" "$scenario" "$rc"; failed=$((failed+1)); fi
+  done
+  # Preserve each schema's existing treatment of valid escaped Unicode/text.
+  case $tool in
+    proof) mutation='.outcome = "retained\u0000text"' ;;
+    brief-check|brief-render) mutation='.model.explanation += "\\u0000"' ;;
+    flow) mutation='.run.evidence += "\\u0000"' ;;
+  esac
+  jq "$mutation" "$example" > "$work/escaped-input.json"
+  rc=0
+  bash "$work/installed"$'\n'/"$name.sh" "${args[@]}" "$work/escaped-input.json" > "$work/out" 2> "$work/err" || rc=$?
+  if [[ $rc == 0 && -s $work/out ]]; then passed=$((passed+1)); else printf 'FAIL copied %s escaped Unicode control exit=%s\n' "$tool" "$rc"; failed=$((failed+1)); fi
+  for kind in complete partial; do
+    rc=0
+    PATH="$work/nul-read-bin:$PATH" NUL_READ_KIND="$kind" bash "$work/installed"$'\n'/"$name.sh" "${args[@]}" "$example" > "$work/out" 2> "$work/err" || rc=$?
+    if [[ $rc == 2 && ! -s $work/out && -s $work/err ]]; then passed=$((passed+1)); else printf 'FAIL copied %s failed NUL-boundary read-%s exit=%s\n' "$tool" "$kind" "$rc"; failed=$((failed+1)); fi
+  done
   # A filename is always a file producer, even when cat would interpret it as stdin.
   mkdir -p "$work/named-input"
   printf '{"broken":' > "$work/malformed-input.json"
@@ -170,6 +206,24 @@ for tool in proof brief-check brief-render flow; do
       fi
     done
   done
+done
+# The standalone scanner must examine a retained named file before Bash capture.
+mkdir "$work/direct-scanner"
+for origin in product-engineering agent-improvement; do
+  scanner="$root/$origin/scripts/validate-json-unicode-escapes.sh"
+  printf '{"value":"\\ud800\0\\udc00"}' > "$work/direct-scanner/nul.json"
+  rc=0
+  bash "$scanner" "$work/direct-scanner/nul.json" > "$work/out" 2> "$work/err" || rc=$?
+  if [[ $rc != 0 && ! -s $work/out ]]; then passed=$((passed+1)); else printf 'FAIL standalone %s NUL-spliced surrogate pair exit=%s\n' "$origin" "$rc"; failed=$((failed+1)); fi
+  printf '{"value":"\\ud800"}' > "$work/direct-scanner/-"
+  printf '{"value":"healthy"}' > "$work/direct-scanner/healthy.json"
+  rc=0
+  (cd "$work/direct-scanner" && bash "$scanner" - < healthy.json) > "$work/out" 2> "$work/err" || rc=$?
+  if [[ $rc != 0 && ! -s $work/out ]]; then passed=$((passed+1)); else printf 'FAIL standalone %s malformed named dash exit=%s\n' "$origin" "$rc"; failed=$((failed+1)); fi
+  cp "$work/direct-scanner/healthy.json" "$work/direct-scanner/-"
+  rc=0
+  (cd "$work/direct-scanner" && bash "$scanner" - < nul.json) > "$work/out" 2> "$work/err" || rc=$?
+  if [[ $rc == 0 && ! -s $work/out ]]; then passed=$((passed+1)); else printf 'FAIL standalone %s healthy named dash exit=%s\n' "$origin" "$rc"; failed=$((failed+1)); fi
 done
 cmp "$root/product-engineering/scripts/validate-json-unicode-escapes.sh" "$root/agent-improvement/scripts/validate-json-unicode-escapes.sh" || failed=$((failed+1))
 # Rendering also uses the actual installed byte boundary before the jq renderer.
