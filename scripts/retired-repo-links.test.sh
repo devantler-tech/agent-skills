@@ -44,7 +44,11 @@ guard() {
       ($ci.jobs["ci-required-checks"].needs | index("validate-retired-links")) == null or
       ($ci.jobs["ci-required-checks"].steps | any(runnable and
         .uses == "devantler-tech/.github/actions/aggregate-job-checks@8927f40e06cf2446dfee4e3dfa10172758b72fb0" and
-        (.with["job-results"] // "" | contains("needs.validate-retired-links.result")))) != true
+        .with == {"job-results": (
+          "${{ needs.validate.result }} ${{ needs.discover-skills.result }} " +
+          "${{ needs.validate-spec.result }} ${{ needs.lint-scripts.result }} " +
+          "${{ needs.validate-retired-links.result }}"
+        )})) != true
     then error("consumer scan must gate required CI")
     else true end' "$1" >/dev/null
 }
@@ -74,6 +78,7 @@ missing aggregate condition	del(.ci.jobs["ci-required-checks"].if)	gate required
 skipped aggregate step	.ci.jobs["ci-required-checks"].steps[0].if="false"	gate required CI
 ignored aggregate failure	.ci.jobs["ci-required-checks"].steps[0]["continue-on-error"]=true	gate required CI
 aggregate action bypass	.ci.jobs["ci-required-checks"].steps[0].uses="actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"	gate required CI
+masked guard result	.ci.jobs["ci-required-checks"].steps[0].with["job-results"] |= sub("needs[.]validate-retired-links[.]result";"needs.validate-retired-links.result && 'success'")	gate required CI
 lost aggregation	.ci.jobs["ci-required-checks"].needs |= map(select(. != "validate-retired-links"))	gate required CI
 lost result	.ci.jobs["ci-required-checks"].steps |= map(if .with["job-results"] then .with["job-results"] |= gsub("needs.validate-retired-links.result";"needs.other.result") else . end)	gate required CI
 CASES
