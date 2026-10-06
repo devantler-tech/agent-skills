@@ -23,11 +23,13 @@ Expand a category and copy a skill’s install command. The source column names 
 |-------|----------|---------|
 | `gitops-cluster-debug` | [`fluxcd/agent-skills`](https://github.com/fluxcd/agent-skills/tree/main/skills/gitops-cluster-debug) | `gh skill install fluxcd/agent-skills gitops-cluster-debug` |
 | `gitops-knowledge` | [`fluxcd/agent-skills`](https://github.com/fluxcd/agent-skills/tree/main/skills/gitops-knowledge) | `gh skill install fluxcd/agent-skills gitops-knowledge` |
-| `gitops-repo-audit` | [`fluxcd/agent-skills`](https://github.com/fluxcd/agent-skills/tree/main/skills/gitops-repo-audit) | `gh skill install fluxcd/agent-skills gitops-repo-audit` |
+| `gitops-repo-audit` | [`fluxcd/agent-skills`](https://github.com/fluxcd/agent-skills/tree/0d1fa6c46e553d2f264dfcc8c8630c628195f6e4/skills/gitops-repo-audit) | `gh skill install fluxcd/agent-skills gitops-repo-audit --pin 0d1fa6c46e553d2f264dfcc8c8630c628195f6e4` |
 | `gitops-tenant-onboarding` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/main/gitops-tenant-onboarding) | `gh skill install devantler-tech/agent-skills gitops-tenant-onboarding` |
 | `siderolabs` | [`siderolabs/docs`](https://github.com/siderolabs/docs/tree/main/skills/siderolabs) | `gh skill install siderolabs/docs siderolabs` |
 
 </details>
+
+The GitOps repository audit requires [flux-schema 0.15 or newer](https://github.com/fluxcd/flux-schema/releases/tag/v0.15.0). Its install command pins the corrected upstream validator; keep `--pin` when copying the command so an older tagged skill release is not selected.
 
 <details>
 <summary>GitHub</summary>

@@ -32,7 +32,9 @@ function options_ok(arg, words, ref, i, flag, value, equal, seen) {
     if (flag == "--pin" && value != ref) return 0
     if (flag == "--dir" && value !~ /^[A-Za-z0-9_.~\/+][A-Za-z0-9_.~\/+\-]*$/) return 0
   }
-  return 1
+  # A literal source commit and an unpinned command resolve differently: gh
+  # prefers the latest release unless the advertised command carries --pin.
+  return !(length(ref) == 40 && ref ~ /^[0-9a-fA-F]+$/ && !("--pin" in seen))
 }
 function refuse(reason) { print "error: README index line " NR ": " reason > "/dev/stderr"; bad=1 }
 function path_ok(s, a, n, i) {
