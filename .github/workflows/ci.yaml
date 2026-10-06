@@ -334,6 +334,9 @@ jobs:
       - name: 🧪 Verify release publisher argument boundaries
         run: bash ./scripts/publish-arguments.test.sh
 
+      - name: 🧪 Verify original publication response bytes
+        run: bash ./scripts/publication-bytes.test.sh
+
       - name: 🧪 Verify human accountability brief checks and rendering
         run: bash ./scripts/product-engineering-accountability.test.sh
 

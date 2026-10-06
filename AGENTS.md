@@ -218,6 +218,10 @@ Inherited Git repository selectors are cleared before checkout verification. Com
 and index inventories must agree with an independent immutable tree observation, including files
 whose names contain whitespace or newlines. Repeated remote identity declaration paths are refused;
 an ambiguous tag, commit or release response never establishes successful publication.
+Publication requires `iconv` and retains the original forge response bytes in private temporary
+files. Invalid UTF-8 and raw NULs are refused before HTTP-body extraction or JSON decoding; legal
+Unicode and escaped JSON controls remain valid. Run `bash scripts/publication-bytes.test.sh` for
+completed-rerun and fresh-publication observation cases without remote writes.
 
 ## Maintenance (autonomous AI assistant)
 

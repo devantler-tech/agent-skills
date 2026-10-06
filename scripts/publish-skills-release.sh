@@ -106,10 +106,24 @@ export GH_HOST=github.com
 # once for API paths; release commands and JSON comparisons keep the literal tag.
 tag_path=$(jq -rn --arg tag "$tag" '$tag | @uri') || exit 1
 
+# Keep complete forge observations private until their original bytes are valid.
+# Shell strings discard NULs; JSON decoders may repair invalid UTF-8.
+command -v iconv >/dev/null || { printf 'publish-skills-release: iconv is required.\n' >&2; exit 1; }
+observation_dir=$(mktemp -d "${TMPDIR:-/tmp}/skill-publication.XXXXXX") || exit 1
+trap 'rm -rf "$observation_dir"' EXIT
+original_utf8() {
+  LC_ALL=C tr -d '\000' < "$1" > "$observation_dir/no-nul" &&
+    cmp -s "$1" "$observation_dir/no-nul" &&
+    iconv -f UTF-8 -t UTF-16BE < "$1" > "$observation_dir/utf16" &&
+    iconv -f UTF-16BE -t UTF-8 < "$observation_dir/utf16" > "$observation_dir/utf8" &&
+    cmp -s "$1" "$observation_dir/utf8"
+}
+
 # Ordinary JSON decoding collapses repeated identity fields and containers.
 # Completed streaming paths retain that ambiguity; observations are one object.
 unambiguous_object() {
-  jq -es 'length==1 and (.[0]|type=="object")' >/dev/null <<< "$1" &&
+  original_utf8 "$1" &&
+    jq -es 'length==1 and (.[0]|type=="object")' "$1" >/dev/null &&
     jq --stream -es '
       reduce .[] as $event ({complete:{}, valid:true};
         if ($event|length)==2 then
@@ -118,19 +132,19 @@ unambiguous_object() {
             $complete[($path[0:.]|tojson)]==true)|not)) |
           .complete[($path|tojson)] = true
         else .complete[($event[0][0:-1]|tojson)] = true end) | .valid
-    ' >/dev/null <<< "$1"
+    ' "$1" >/dev/null
 }
 
 # Verify the requested remote tag resolves to the expected commit. The commits
 # endpoint handles annotated tags; qualifying tags/ prevents branch collisions.
 verify_tag_commit() {
-  local tag_commit response
-  response=$(gh api "repos/${repo}/commits/tags/${tag_path}") || {
+  local tag_commit response="$observation_dir/tag-commit.json"
+  gh api "repos/${repo}/commits/tags/${tag_path}" > "$response" || {
     printf 'publish-skills-release: could not resolve tag %s to a commit; publication is unverified.\n' "$tag" >&2
     return 1
   }
   unambiguous_object "$response" || return 1
-  tag_commit=$(jq -er '.sha | select(type=="string")' <<< "$response") || return 1
+  tag_commit=$(jq -er '.sha | select(type=="string" and test("\\A[0-9a-f]{40}\\z"))' "$response") || return 1
   if ! [[ "$tag_commit" =~ ^[0-9a-f]{40}$ ]] || [ "$tag_commit" != "$expected_commit" ]; then
     printf 'publish-skills-release: tag %s does not resolve to the expected release commit; publication is unverified.\n' "$tag" >&2
     return 1
@@ -140,17 +154,22 @@ verify_tag_commit() {
 # One HTTP observation binds status to this exact tag endpoint. Error prose
 # cannot establish absence: another status may legitimately mention "Not Found".
 tag_ref_status=0
-tag_response=$(gh api "repos/$repo/git/ref/tags/$tag_path" --include 2>/dev/null) || tag_ref_status=$?
-http_status=$(printf '%s\n' "$tag_response" | awk 'NR==1 && /^HTTP\/[0-9.]+ [0-9][0-9][0-9] / {print $2}') || exit 1
-tag_body=$(printf '%s\n' "$tag_response" | awk 'body {print; next} {sub(/\r$/, "")} /^$/ {body=1}') || exit 1
+tag_response="$observation_dir/tag-response"
+tag_body="$observation_dir/tag-body.json"
+gh api "repos/$repo/git/ref/tags/$tag_path" --include > "$tag_response" 2>/dev/null || tag_ref_status=$?
+original_utf8 "$tag_response" || {
+  printf 'publish-skills-release: tag response has invalid original bytes; refusing publication.\n' >&2; exit 1
+}
+http_status=$(awk 'NR==1 && /^HTTP\/[0-9.]+ [0-9][0-9][0-9] / {print $2}' "$tag_response") || exit 1
+awk 'body {print; next} {sub(/\r$/, "")} /^$/ {body=1}' "$tag_response" > "$tag_body" || exit 1
 if [ "$http_status" = 200 ] && [ "$tag_ref_status" -eq 0 ] && unambiguous_object "$tag_body" &&
-   printf '%s' "$tag_body" | jq -es --arg ref "refs/tags/$tag" '
+   jq -es --arg ref "refs/tags/$tag" '
      length==1 and (.[0] | type=="object" and .ref==$ref and
        (.object.type=="commit" or .object.type=="tag") and
-       (.object.sha|type=="string" and test("\\A[0-9a-f]{40}\\z")))' >/dev/null; then
+       (.object.sha|type=="string" and test("\\A[0-9a-f]{40}\\z")))' "$tag_body" >/dev/null; then
   tag_exists=yes
 elif [ "$http_status" = 404 ] && [ "$tag_ref_status" -eq 1 ] && unambiguous_object "$tag_body" &&
-     printf '%s' "$tag_body" | jq -es 'length==1 and (.[0]|type=="object" and .message=="Not Found")' >/dev/null; then
+     jq -es 'length==1 and (.[0]|type=="object" and .message=="Not Found")' "$tag_body" >/dev/null; then
   tag_exists=no
 else
   printf 'publish-skills-release: tag existence observation is incomplete; refusing publication.\n' >&2
@@ -197,8 +216,7 @@ verify_checkout() {
   # These index flags hide modified or absent tracked files from status. Reject
   # them rather than validating disk bytes that differ from the release commit.
   # NUL-delimited records preserve filenames containing whitespace or newlines.
-  checkout_observation=$(mktemp -d) || exit 1
-  trap 'rm -rf "$checkout_observation"' EXIT
+  checkout_observation=$(mktemp -d "$observation_dir/checkout.XXXXXX") || exit 1
   git --no-replace-objects ls-files -v -z > "$checkout_observation/index" || exit 1
   : > "$checkout_observation/index-paths"
   entry=''
@@ -291,7 +309,6 @@ verify_checkout() {
       exit 1
   fi
   rm -rf "$checkout_observation"
-  trap - EXIT
 
 }
 
@@ -321,15 +338,15 @@ verify_tag_commit
 
 # The tag exists. Only a real, non-draft release for it proves the publish
 # finished; a tag without one is a half-finished publish that needs a human.
-release_json=$(gh release view "$tag" --repo "$repo" --json tagName,isDraft 2>&1) || {
+release_json="$observation_dir/release.json"
+gh release view "$tag" --repo "$repo" --json tagName,isDraft > "$release_json" || {
   printf 'publish-skills-release: tag %s exists on %s but its release could not be read, so the publish state is unknown; refusing to publish or skip.\n' \
     "$tag" "$repo" >&2
-  printf '%s\n' "$release_json" >&2
   exit 1
 }
 
-if ! unambiguous_object "$release_json" || ! printf '%s' "$release_json" | jq -es --arg tag "$tag" \
-  'length == 1 and (.[0] | type == "object" and .tagName == $tag and .isDraft == false)' >/dev/null; then
+if ! unambiguous_object "$release_json" || ! jq -es --arg tag "$tag" \
+  'length == 1 and (.[0] | type == "object" and .tagName == $tag and .isDraft == false)' "$release_json" >/dev/null; then
   printf 'publish-skills-release: tag %s exists on %s but a matching non-draft release was not established; publication is unverified.\n' \
     "$tag" "$repo" >&2
   exit 1
