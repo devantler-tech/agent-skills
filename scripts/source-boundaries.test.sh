@@ -9,11 +9,12 @@ fail=0
 # Writes copied installer resources and a CLI stub that records private staging
 # separately from final user-scope installation; it performs no real installs.
 fixture() {
-  local root=$1 ref=$2
+  local root=$1 ref=$2 pin_option=''
+  [[ ! "$ref" =~ ^[0-9a-fA-F]{40}$ ]] || pin_option=" --pin $ref"
   mkdir -p "$root/scripts" "$root/bin" "$root/alpha"
   cp "$here"/*.sh "$here/readme-index.awk" "$root/scripts/"
   # shellcheck disable=SC2016 # The catalogue contains literal Markdown command examples.
-  printf '## Skills\n\n| Skill | Upstream | Install |\n|---|---|---|\n| `alpha` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/%s/alpha) | `gh skill install devantler-tech/agent-skills alpha` |\n' "$ref" > "$root/README.md"
+  printf '## Skills\n\n| Skill | Upstream | Install |\n|---|---|---|\n| `alpha` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/%s/alpha) | `gh skill install devantler-tech/agent-skills alpha%s` |\n' "$ref" "$pin_option" > "$root/README.md"
   printf 'fixture\n' > "$root/alpha/SKILL.md"
   cat > "$root/bin/gh" <<'STUB'
 #!/usr/bin/env bash
