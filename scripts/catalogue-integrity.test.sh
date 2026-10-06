@@ -274,5 +274,32 @@ PATH="$root/bin:$PATH" CALLS="$root/calls" UPSTREAM_RETRY_SLEEP=true bash "$root
 label='a moving ref cannot combine files from incompatible revisions'; check test "$rc" -ne 0
 label='one source ref is resolved once per observation'; check test "$(grep -c '/commits/main' "$root/calls" || true)" = 1
 label='all target reads use the same immutable revision'; check test "$(grep -c '/contents/.*?ref=1111111111111111111111111111111111111111' "$root/calls" || true)" = 2
+# A source link naming an immutable commit must pin the copyable command too.
+# Without the pin, native gh skill prefers the latest release instead of that
+# reviewed source. Check both consumers of the shared catalogue interpretation.
+for mode in pinned missing mismatched; do
+  fixture "commit-command-$mode"
+  pin=1111111111111111111111111111111111111111
+  option=" --pin $pin"
+  case "$mode" in
+    missing) option='' ;;
+    mismatched) option=' --pin 2222222222222222222222222222222222222222' ;;
+  esac
+  printf '| alpha | [fixture/source](https://github.com/fixture/source/tree/%s/skills/alpha) | gh skill install fixture/source alpha%s |\n' \
+    "$pin" "$option" >> "$root/README.md"
+  for consumer in install targets; do
+    case "$consumer" in
+      install) command=(bash "$root/scripts/install.sh" --list) ;;
+      targets) command=(bash "$root/scripts/readme-index.sh" --targets) ;;
+    esac
+    rc=0; "${command[@]}" > "$root/out" 2> "$root/err" || rc=$?
+    if [[ "$mode" == pinned ]]; then
+      label="$consumer preserves a commit-pinned catalogue command"; check test "$rc" -eq 0
+    else
+      label="$consumer refuses a $mode commit pin"; check test "$rc" -ne 0
+      label="$consumer emits no entries for a $mode commit pin"; check test ! -s "$root/out"
+    fi
+  done
+done
 printf 'catalogue integrity: %s failures\n' "$fail"
 test "$fail" -eq 0
