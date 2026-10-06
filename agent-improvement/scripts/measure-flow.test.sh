@@ -83,4 +83,39 @@ done <<'CASES'
 .selections[1].candidatesComplete = false	[.selections[].state] == ["MEASURED","UNKNOWN"] and .selections[0].oldestUnstarted.ageSeconds == 100 and .selections[1].oldestUnstarted == null
 CASES
 
-printf 'measure-flow entrypoint: PASS (identity matrix and candidate coherence)\n'
+# A completed-run start proves a candidate is no longer an unstarted alternative,
+# even when its actionability at selection time was not observed. Compare every
+# actionability/start combination against both a measured and an empty cohort.
+for remaining in true false; do
+  for actionable in true false null; do
+    for started in true false null; do
+      jq --argjson remaining "$remaining" --argjson actionable "$actionable" \
+        --argjson started "$started" '
+        .selections[0].candidates |=
+          (map(select($remaining or .id != "old-task")) +
+           [{id:"other-task", createdAt:100, actionable:$actionable,
+             startedByEnd:$started, evidence:"synthetic/other-task"}])
+      ' "$example" > "$work/input.json"
+      bash "$script_dir/measure-flow.sh" "$work/input.json" > "$work/out"
+      expected=NONE
+      if [[ $started != true && ( $actionable == null || ( $actionable == true && $started == null ) ) ]]; then
+        expected=UNKNOWN
+      elif [[ $remaining == true || ( $actionable == true && $started == false ) ]]; then
+        expected=MEASURED
+      fi
+      jq -e --arg expected "$expected" --argjson remaining "$remaining" '
+        .selections[0] | .state == $expected and
+        (if $expected == "MEASURED" then
+           .oldestUnstarted.id == (if $remaining then "old-task" else "other-task" end)
+           and .oldestUnstarted.ageSeconds == (if $remaining then 100 else 10 end)
+         else .oldestUnstarted == null end)
+      ' "$work/out" >/dev/null || {
+        printf 'wrong alternative state: remaining=%s actionable=%s started=%s\n' \
+          "$remaining" "$actionable" "$started" >&2
+        exit 1
+      }
+    done
+  done
+done
+
+printf 'measure-flow entrypoint: PASS (identity, coherence and alternative eligibility matrices)\n'
