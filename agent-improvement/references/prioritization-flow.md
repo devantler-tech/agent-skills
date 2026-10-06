@@ -110,8 +110,9 @@ Each selection reports one of:
 - `MEASURED`: easier work was selected, coverage is complete, and `oldestUnstarted` carries its ID,
   source pointer and age in seconds. Equal creation times use ascending ID as a stable tie-break.
 - `NONE`: the same complete evidence contains no actionable alternative left unstarted.
-- `UNKNOWN`: selection class, candidate coverage, actionability, or an actionable candidate's end
-  state is unknown. No oldest age is emitted.
+- `UNKNOWN`: selection class or candidate coverage is unknown, or a still-possible unstarted
+  alternative has unknown actionability or start state. No oldest age is emitted. A candidate
+  known to have started by run end is excluded even when its actionability was not observed.
 - `NOT-APPLICABLE`: this selected work is substantive; it is outside the easier-choice age sample.
 
 `MEASURED` is an observation, not a failure. The helper deliberately does not infer severity,
@@ -131,7 +132,8 @@ deployment's scorecard.
 At second 110 a completed run selects an easy task. An alternative created at second 10 was
 actionable and remained unstarted at run end. A still older issue was blocked. The measured oldest
 alternative has age **100 seconds**. If the alternative actually started later in the run, the result
-is NONE; if its start state or any candidate's actionability is unknown, it is UNKNOWN.
+is NONE. Unknown actionability or start state makes the result UNKNOWN only when that candidate
+could still be an actionable alternative left unstarted.
 
 One easy and one substantive artifact give an easy share of **1/2**. A repeated observation of the
 easy artifact adds one revisit, not another artifact. Adding one unclassified artifact keeps counts
