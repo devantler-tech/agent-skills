@@ -3,6 +3,8 @@
 function trim(s) { sub(/^[ \t]+/, "", s); sub(/[ \t]+$/, "", s); return s }
 function plain(s) { if (s ~ /^`.*`$/) return substr(s, 2, length(s)-2); return s }
 function identifier(s) { return s ~ /^[A-Za-z0-9][A-Za-z0-9_.-]*$/ }
+# Skill names become directory identities on every supported filesystem.
+function skill_name(s) { return length(s) <= 64 && s ~ /^[a-z0-9]+(-[a-z0-9]+)*$/ }
 # Check separate owner/repository components; leading repository punctuation is
 # legal, but the literal dot traversal components never identify a repository.
 function repository(s, a) {
@@ -455,7 +457,7 @@ function reference_line(s, result, tail, prefix) {
   name=plain(trim(cell[1])); upstream=trim(cell[2]); command=plain(trim(cell[3]))
   if (name == "Skill" && upstream == "Upstream" && command == "Install") next
   if (name ~ /^:?-+:?$/ && upstream ~ /^:?-+:?$/ && command ~ /^:?-+:?$/) next
-  if (!identifier(name)) { refuse("invalid skill name"); next }
+  if (!skill_name(name)) { refuse("invalid skill name"); next }
   if (upstream !~ /^\[[^]]+\]\(https:\/\/github\.com\/[^)]+\)$/) {
     refuse("expected a github.com Upstream tree link"); next
   }
