@@ -24,6 +24,11 @@ weaken a safety/security guardrail. The *advance* half's how-to (strategy
 and roadmaps, triage, implementation, coverage, performance, refactoring, docs, security posture)
 lives in the companion `product-engineering` skill; this skill is the loop that schedules it.
 
+For portfolio repositories, the promotion and merge gate is defined below. For your own authorized
+contributions to a third-party project, use [the upstream contribution procedure](references/upstream-contributions.md)
+instead: it defines the separate Ready for Review handoff and quiet internal review. Track those
+specific outgoing PRs in private carry-forward and revisit received feedback on later runs.
+
 **Genuine readiness means the consuming deployment's complete promotion gate: an own or trusted
 author, programmatic validation with all required CI and pre-merge quality checks green, zero
 unresolved thread and non-thread review findings, no merge conflict, a green review at the current
@@ -346,6 +351,10 @@ assignment never grants authority or proves runtime enforcement. Load this optio
 when needed, rather than injecting it into every run.
 
 ### Delivery procedure
+
+The upstream contribution procedure governs third-party PRs throughout this delivery procedure.
+If that reference is unavailable, resolve the consumer's maintained equivalent before publishing;
+do not infer permission to post an internal review or merge an upstream contribution.
 
 1. **Isolate:** create a throwaway per-run working copy (e.g. a git worktree on a fresh
    conventionally-named branch) so you never collide with parallel sessions; verify the isolation

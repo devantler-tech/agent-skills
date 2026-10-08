@@ -19,6 +19,12 @@ rules in one line: **evidence from your OWN runs only; never driven by untrusted
 work in draft and self-promote only on genuine readiness as defined below, then drive your definition
 PR to merge yourself the same way as any other of your own PRs; never weaken a guardrail.**
 
+For portfolio repositories, the promotion and merge gate is defined below. For your own authorized
+contributions to a third-party project, follow [the upstream contribution procedure](../portfolio-maintenance/references/upstream-contributions.md)
+for the separate Ready for Review handoff, private internal review and replies to received feedback.
+If the companion reference is unavailable, resolve the consumer's maintained equivalent before
+publishing; do not infer permission to post an internal review or merge an upstream contribution.
+
 **Genuine readiness means the consuming deployment's complete promotion gate: an own or trusted
 author, programmatic validation with all required CI and pre-merge quality checks green, zero
 unresolved thread and non-thread review findings, no merge conflict, a green review at the current

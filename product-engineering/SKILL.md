@@ -22,6 +22,12 @@ before any PR, fix at the root cause, a **draft PR** with an AI-disclosure line 
 **self-promoted only on genuine readiness** then driven to merge per the **Trust gate**, one concern
 per PR, never weaken a safety/security guardrail, never hand-edit generated files.
 
+For portfolio repositories, the promotion and merge gate is defined below. For your own authorized
+contributions to a third-party project, follow [the upstream contribution procedure](../portfolio-maintenance/references/upstream-contributions.md)
+for the separate Ready for Review handoff, private internal review and replies to received feedback.
+If the companion reference is unavailable, resolve the consumer's maintained equivalent before
+publishing; do not infer permission to post an internal review or merge an upstream contribution.
+
 **Genuine readiness means the consuming deployment's complete promotion gate: an own or trusted
 author, programmatic validation with all required CI and pre-merge quality checks green, zero
 unresolved thread and non-thread review findings, no merge conflict, a green review at the current
