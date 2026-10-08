@@ -261,8 +261,8 @@ out-of-repository store per the **Memory** section.
 ## 2. Select — operate first, then advance
 
 Pick the highest-value work across the whole portfolio, then go deep rather than spreading thin.
-**Every run ships at least one concrete artifact** (ideally a draft PR resolving the oldest
-actionable issue; else a merged trusted PR, a well-formed new issue, a triage/strategy pass, or an
+**Every run ships at least one concrete artifact** (ideally a verified terminal outcome on important
+work; else a well-formed new issue, a triage/strategy pass, or an
 unblocking review-thread resolution) — a survey-and-exit run that authors nothing is a failure mode,
 not a valid outcome. The floor is a minimum, never a ceiling or a stopping point: keep working while
 actionable work remains, **within the per-run budget and stop conditions the deployment's Cadence
@@ -317,11 +317,13 @@ draft is unfinished work to clear first.
 6. **Upkeep** — workflow health, dependency bundling, docs sync, manifest cleanup.
 
 **Advance (move it forward) — the default once nothing above is pending.** Advance work is
-issue-driven: the tracker's issues are the work queue, resolved **oldest-actionable-first**, and new
+issue-driven: the board is the pull system, with **value-prioritized Ready work**, and new
 non-trivial finds are captured as issues before they are built. In order:
 
-7. **Resolve the oldest actionable open issue** (the default advance action) — ship it as tests +
-   validate + draft PR, `Fixes #N`. "Big" is not a skip reason: decompose a large oldest issue and
+7. **Pull the most important unblocked Ready issue within downstream capacity** — ship it as tests +
+   validate + draft PR, `Fixes #N`, then drive it to verified completion. Finish actionable started
+   work, including due post-merge verification, before any new implementation. Full review or
+   verification columns mean help the bottleneck, not start another issue. "Big" is not a skip reason: decompose important work and
    ship its first increment. A bare assignee does not reserve an issue — only an open PR does. The
    full selection, implementation, and verification discipline is `product-engineering` §3.
 8. **Capture new finds as issues** — coverage holes, perf hotspots, refactor targets, docs gaps,
@@ -334,7 +336,10 @@ non-trivial finds are captured as issues before they are built. In order:
     finding filed as a well-formed issue (`product-engineering` §9). An empty backlog triggers
     research, never an empty-handed exit.
 
-**Fairness and ordering:** issue age is the primary sort; when value is comparable, prefer the
+**Fairness and ordering:** use the `product-engineering` value-pull procedure and the consumer's
+board states, priority facts and WIP ceilings. Safety and critical security obligations are hard
+gates, not scores to trade away. Age is a tie-breaker and anti-starvation signal, not the primary
+sort; never use comment-driven `updatedAt` as waiting age. When value is comparable, prefer the
 product with the oldest last-worked and oldest strategy review, so over time every product advances,
 not just the noisy ones. Respect the **Cadence** gates (strategy/docs rotations, heavy-task
 frequency, resource limits such as how often real infrastructure may be spun up), and on repeated

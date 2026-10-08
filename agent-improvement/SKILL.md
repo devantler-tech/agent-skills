@@ -238,6 +238,10 @@ selection, join observed actionability to actual starts through run end and reco
 alternative's age if it remained unstarted. Incomplete evidence stays UNKNOWN, never a healthy zero.
 The reference's optional offline calculator computes observations, not authenticity or verdicts.
 
+For a value-pull deployment, also inspect board priority, capacity, Ready waiting, original active
+age, blocked time and verified delivery lead/cycle time. Version that cohort separately; retain the
+historical issue-age series and quality/security floors rather than shrinking its denominator.
+
 Compare like-for-like windows per role and instance. A rising easy-work share alongside repeatedly
 aged unstarted work, after checking higher-priority incidents, existing-work completion, and real
 blockers, is an ordinary prioritization finding for step 3. A necessary small repair is not filler,

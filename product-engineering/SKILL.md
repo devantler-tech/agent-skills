@@ -3,7 +3,7 @@ name: product-engineering
 description: >-
   The ADVANCE playbook for an autonomous AI engineer — how to move a product
   forward once it is healthy: product strategy and roadmap stewardship, issue
-  triage and decomposition, oldest-actionable-first implementation, test
+  triage and decomposition, value-prioritized Kanban pull, test
   coverage, benchmarking and performance, refactoring, tool maturation,
   shared-library decisions and code quality,
   documentation sync, and security posture — all shipped as evidence-backed
@@ -69,7 +69,7 @@ Issues are the unit of advance work — this is where new work enters the queue.
 
 - **Capture before you build.** Any new, non-trivial find — a bug, gap, coverage hole, refactor
   target, perf hotspot, docs drift, enhancement — is **filed as a well-formed issue first**, joining
-  the oldest-first backlog, instead of jumping the queue as an ad-hoc PR. Trivial, obvious fixes
+  refinement and prioritization, instead of jumping the queue as an ad-hoc PR. Trivial, obvious fixes
   (a typo, a dead link, a one-liner) are the carve-out — a small direct PR is fine. Live breakage is
   a hotfix: fix it now, file a tracking issue only if it aids follow-up.
 - **Triage incoming:** label, prioritise into the roadmap, dedupe, close stale/duplicate/out-of-scope
@@ -78,7 +78,7 @@ Issues are the unit of advance work — this is where new work enters the queue.
 - **A good issue** is self-contained: problem/why, proposed direction, acceptance criteria, rough
   size. One concern per issue; written so a future run (or a contributor) could pick it up cold.
 
-## 3. Plan & implement — oldest-actionable-first
+## 3. Plan & implement — value-prioritized pull
 
 When a user requests a human accountability brief, or the consumer selects one for an unfamiliar
 decision, use [the brief format and semantic review rubric](references/accountability-brief.md).
@@ -86,13 +86,15 @@ Prepare it alongside the proposal: explain the outcome, evidence limits, failure
 recovery, and human-owned decisions. Its optional offline checker validates structure only; human
 comprehension and the existing adoption, authorization, and promotion gates remain separate.
 
-1. **Pick the oldest *actionable* open issue — "big" is not a reason to skip it.** Skip an older
-   issue only when you can point to one of: (a) it already has an open PR; (b) it is blocked on a
-   named, live-verified external dependency you can cite; (c) it is too under-specified to begin.
-   Size, difficulty, or a label are **not** skip reasons: when the oldest issue is large,
-   **decompose it into a small, well-specified first child and ship that increment** (`Fixes
-   #child`, link the parent) so the big thing advances across runs instead of being perpetually
-   deferred whole. A "needs a maintainer decision" feeling is also not a skip reason — investigate
+1. **Finish before pulling the most important Ready issue.** Follow the consumer's incident and
+   finish-before-start gates, then read [the value-pull procedure](references/value-pull.md).
+   A board's Backlog is refinement/replenishment and its Icebox is deferred options, not an
+   implementation queue. Pull only refined, unblocked Ready work when downstream capacity exists.
+   Compare evidenced product outcomes, urgency/cost of waiting, risk reduction, dependencies unlocked
+   and end-to-end effort; age breaks comparable ties and prompts anti-starvation review, never
+   automatically overrides importance. A large important issue is not displaced simply because
+   another is easier: **decompose it into a small, independently valuable first child and ship that
+   increment** (`Fixes #child`, link the parent). A "needs a maintainer decision" feeling is also not a skip reason — investigate
    deeply, make the call yourself, and **express the decision as a draft PR** (that is exactly where
    the maintainer redirects what they disapprove of); if you genuinely cannot proceed, raise it
    *actively* per the **Maintainer channels** section, never as a passive "awaiting maintainer"

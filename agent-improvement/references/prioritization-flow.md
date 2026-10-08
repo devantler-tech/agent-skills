@@ -48,6 +48,17 @@ through the normal diagnose, reversible intervention and later verification loop
 
 ## Optional offline calculator
 
+For a value-pull deployment, retain the issue-age/easy-work series above with its original rubric
+and candidate universe. Do not redefine historical actionability to mean only Ready and call the
+smaller denominator an improvement. Record `value-pull-v1` separately, join selections to board
+priority, Ready entry, original first-start, due verification, blocked intervals and all active-stage
+WIP/limits, and inspect the reasons for preemption or waiting. Add request-to-verified-delivery lead
+time, first-start-to-verified-delivery cycle time, active age, blocked time and verified terminal
+throughput by comparable priority/work class. Missing transitions remain UNKNOWN; parking, bot
+comments and re-entry never reset clocks. The existing calculator remains schema version 1 and does
+not compute those additional observations. A selection-policy merge alone proves no flow gain.
+
+
 [`measure-flow.jq`](../scripts/measure-flow.jq) computes one completed run's descriptive measurements.
 It has no network access, writes no state and makes no policy or regression verdict. Run it explicitly
 on a consumer-normalized evidence file; no scheduled execution or collection is enabled by it:
