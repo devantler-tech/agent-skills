@@ -429,6 +429,13 @@ telemetry-backed or direct-maintainer-directed action path instead of inventing 
 
 Fix the top item — occasionally a small batch **within one area**. One concern per artifact.
 
+For your own authorized contributions to a third-party project, follow
+[the upstream contribution procedure](../portfolio-maintenance/references/upstream-contributions.md):
+perform internal review privately, explicitly mark a validated contribution Ready for Review,
+and answer received feedback in the contributor's voice in plain English. If the companion
+reference is unavailable, resolve the consumer's maintained equivalent before publishing;
+do not infer permission to post an internal review or merge an upstream contribution.
+
 Route each change to its surface: version-controlled definition (contract, agent definitions, skills)
 ships as a **pull request**; a non-version-controlled surface (a bootstrap entry, a permission or
 approval configuration) is edited in place **after backing it up** to a timestamped copy naming the
