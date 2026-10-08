@@ -254,6 +254,9 @@ jobs:
       - name: 🧪 Verify prioritization and flow measurements
         run: bash ./scripts/agent-improvement-flow.test.sh
 
+      - name: 🧪 Verify value-prioritized Kanban pull
+        run: bash ./product-engineering/scripts/select-work.test.sh
+
       - name: 🧪 Verify installed flow entrypoint and alternative eligibility
         run: bash ./agent-improvement/scripts/measure-flow.test.sh
 
