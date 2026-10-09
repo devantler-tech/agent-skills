@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "outcome": "SYNTHETIC KATA: finish an eligible observer readback at least five active minutes faster while measuring every fixture outcome and preserving evidence integrity",
+  "baseline": {"id": "duplicate-reads", "revision": "kata-v1"},
+  "candidate": {"id": "batched-independent-reads", "revision": "kata-v2"},
+  "alternatives": [
+    {"id": "duplicate-reads", "reason": "Keep the proven method until the bounded target is demonstrated"},
+    {"id": "skip-measurement", "reason": "Rejected before trial: fewer measurements would violate the protected floor"}
+  ],
+  "plan": {
+    "record": "fixture://kata/preregistered-target-and-obstacle",
+    "registeredAt": "2026-09-01T10:00:00Z",
+    "startedAt": "2026-09-02T10:00:00Z",
+    "minRepeats": 2,
+    "measures": [
+      {"id": "readback-time", "unit": "active minutes per completed eligible readback", "direction": "lower", "objective": true, "minImprovement": 5, "maxRegression": 0, "protected": true, "floor": 60, "method": "Paired readbacks over fixed fixtures, counting failed attempts and retries", "environment": "Same tool identity and finite source snapshots; elapsed lead and cycle time are separate measures in real trials", "uncertaintyMethod": "Invented illustrative conservative ranges, not population evidence"},
+      {"id": "measured-outcomes", "unit": "verified measurements per 100 declared fixture cases", "direction": "higher", "objective": false, "minImprovement": 0, "maxRegression": 0, "protected": true, "floor": 100, "method": "Complete finite fixture census including failures", "environment": "Same 100 cases in baseline and candidate; not a population reliability estimate", "uncertaintyMethod": "Exact finite census counts"},
+      {"id": "integrity-violations", "unit": "observed evidence integrity violations in the finite fixture census", "direction": "lower", "objective": false, "minImprovement": 0, "maxRegression": 0, "protected": true, "floor": 0, "method": "Check every attempted action and measurement against unchanged boundaries", "environment": "Complete fixture traces and denied-action controls; zero is not universal safety proof", "uncertaintyMethod": "Exact finite census counts"}
+    ]
+  },
+  "assumptions": [{"statement": "The finite readback fixtures and untouched holdout match the bounded task class", "state": "supported", "evidenceId": "holdout"}],
+  "falsification": {"approach": "independent", "evaluator": "Independent reviewer of the observer change at its exact candidate revision", "evidenceId": "review", "attempt": "Try stale attribution, missing measurements, incomplete coverage and integrity violations in held-out cases"},
+  "rollout": {
+    "stages": ["Review the inactive observer change", "Authorized bounded trial with the baseline retained", "Adopt only the measured fixture task class after eligible outcomes and independent review"],
+    "stopConditions": ["Any protected floor regression", "Unknown attribution, expired evidence or unsupported workload assumption"]
+  },
+  "rollback": {"targetRevision": "kata-v1", "procedure": "fixture://kata/restore-baseline-and-verify", "evidenceId": "rollback", "trigger": "Stop expansion and execute only preauthorized restoration on a protected regression"},
+  "observation": {"owner": "Declared kata measurement owner", "evidenceId": "live", "window": {"startedAt": "2026-09-04T10:00:00Z", "endedAt": "2026-09-05T10:00:00Z"}, "nextCheck": "2026-09-26T00:00:00Z"},
+  "evidence": [
+    {"id": "run-a", "kind": "measurement", "provenance": "observed", "revision": "kata-v2", "baselineRevision": "kata-v1", "uri": "fixture://kata/run-a", "observedAt": "2026-09-04T11:00:00Z", "expiresAt": "2026-09-30T00:00:00Z", "result": "pass"},
+    {"id": "run-b", "kind": "measurement", "provenance": "observed", "revision": "kata-v2", "baselineRevision": "kata-v1", "uri": "fixture://kata/run-b", "observedAt": "2026-09-05T09:00:00Z", "expiresAt": "2026-09-30T00:00:00Z", "result": "pass"},
+    {"id": "static", "kind": "static", "provenance": "observed", "revision": "kata-v2", "uri": "fixture://kata/static", "observedAt": "2026-09-03T10:00:00Z", "expiresAt": "2026-09-30T00:00:00Z", "result": "pass"},
+    {"id": "behavior", "kind": "behavior", "provenance": "observed", "revision": "kata-v2", "uri": "fixture://kata/behavior", "observedAt": "2026-09-03T10:00:00Z", "expiresAt": "2026-09-30T00:00:00Z", "result": "pass"},
+    {"id": "deployment", "kind": "deployment", "provenance": "observed", "revision": "kata-v2", "uri": "fixture://kata/deployment", "observedAt": "2026-09-04T10:00:00Z", "expiresAt": "2026-09-30T00:00:00Z", "result": "pass"},
+    {"id": "live", "kind": "live", "deploymentEvidenceId": "deployment", "provenance": "observed", "revision": "kata-v2", "uri": "fixture://kata/live", "observedAt": "2026-09-05T10:00:00Z", "expiresAt": "2026-09-30T00:00:00Z", "result": "pass"},
+    {"id": "review", "kind": "review", "provenance": "observed", "revision": "kata-v2", "uri": "fixture://kata/independent-exact-revision-review", "observedAt": "2026-09-05T10:00:00Z", "expiresAt": "2026-09-30T00:00:00Z", "result": "pass"},
+    {"id": "holdout", "kind": "holdout", "provenance": "observed", "revision": "kata-v2", "uri": "fixture://kata/untuned-holdout", "observedAt": "2026-09-05T10:00:00Z", "expiresAt": "2026-09-30T00:00:00Z", "result": "pass", "usedForTuning": false},
+    {"id": "rollback", "kind": "rollback", "deploymentEvidenceId": "deployment", "provenance": "observed", "revision": "kata-v2", "uri": "fixture://kata/restoration-drill", "observedAt": "2026-09-05T10:00:00Z", "expiresAt": "2026-09-30T00:00:00Z", "result": "pass"}
+  ],
+  "observations": [
+    {"id": "repeat-a", "evidenceId": "run-a", "values": [
+      {"measure": "readback-time", "baseline": {"lower": 40, "upper": 42}, "candidate": {"lower": 30, "upper": 32}},
+      {"measure": "measured-outcomes", "baseline": {"lower": 100, "upper": 100}, "candidate": {"lower": 100, "upper": 100}},
+      {"measure": "integrity-violations", "baseline": {"lower": 0, "upper": 0}, "candidate": {"lower": 0, "upper": 0}}
+    ]},
+    {"id": "repeat-b", "evidenceId": "run-b", "values": [
+      {"measure": "readback-time", "baseline": {"lower": 41, "upper": 43}, "candidate": {"lower": 31, "upper": 33}},
+      {"measure": "measured-outcomes", "baseline": {"lower": 100, "upper": 100}, "candidate": {"lower": 100, "upper": 100}},
+      {"measure": "integrity-violations", "baseline": {"lower": 0, "upper": 0}, "candidate": {"lower": 0, "upper": 0}}
+    ]}
+  ]
+}
