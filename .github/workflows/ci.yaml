@@ -275,6 +275,9 @@ jobs:
       - name: 🧪 Verify self-improvement evidence scenarios
         run: bash ./scripts/self-improvement-evidence.test.sh
 
+      - name: 🧪 Verify improvement-kata evidence scenarios
+        run: bash ./scripts/improvement-kata-evidence.test.sh
+
       - name: 🧪 Verify promotion readiness contracts
         # Each independently installable engineering skill must carry the full
         # readiness gate, and the portfolio loop must revalidate it at both

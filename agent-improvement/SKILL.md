@@ -328,6 +328,13 @@ For each candidate, ask in order:
   could still have done the wrong thing while following the new text, the fix is too weak.
 - **What does it cost elsewhere?** A change trading safety for speed is rejected, not balanced.
 
+**Improvement katas (opt-in).** When the consumer declares **Improvement katas**, or the maintainer
+explicitly requests one, read [the improvement-kata procedure](references/improvement-kata.md).
+Use it to connect the measured condition and next obstacle to a bounded experiment, and to finish
+due outcome measurements before starting overlapping changes. It organizes this loop; it does not
+replace its authority, hypothesis-eligibility, independent-review or companion-floor gates. Without
+that opt-in, retain the ordinary loop. Routine repairs need no full replacement trial.
+
 ---
 
 ## 3a. Research fallback — no idle no-op

@@ -159,6 +159,8 @@ bash ./product-engineering/scripts/inspect-shell-ambiguity.test.sh # rejects rep
 shellcheck product-engineering/scripts/*.sh
 bash ./scripts/self-improvement-evidence.test.sh # runs the procedure example through the canonical
                                                 # companion evaluator, including negative outcomes
+bash ./scripts/improvement-kata-evidence.test.sh # runs the synthetic kata through the raw-byte
+                                                 # companion entrypoint, including holds and regressions
 
 # 4. (local only) Lint changed workflows.
 actionlint
