@@ -27,8 +27,8 @@
   "rollback": {"targetRevision": "kata-v1", "procedure": "fixture://kata/restore-baseline-and-verify", "evidenceId": "rollback", "trigger": "Stop expansion and execute only preauthorized restoration on a protected regression"},
   "observation": {"owner": "Declared kata measurement owner", "evidenceId": "live", "window": {"startedAt": "2026-09-04T10:00:00Z", "endedAt": "2026-09-05T10:00:00Z"}, "nextCheck": "2026-09-26T00:00:00Z"},
   "evidence": [
-    {"id": "run-a", "kind": "measurement", "provenance": "observed", "revision": "kata-v2", "baselineRevision": "kata-v1", "uri": "fixture://kata/run-a", "observedAt": "2026-09-03T10:00:00Z", "expiresAt": "2026-09-30T00:00:00Z", "result": "pass"},
-    {"id": "run-b", "kind": "measurement", "provenance": "observed", "revision": "kata-v2", "baselineRevision": "kata-v1", "uri": "fixture://kata/run-b", "observedAt": "2026-09-04T10:00:00Z", "expiresAt": "2026-09-30T00:00:00Z", "result": "pass"},
+    {"id": "run-a", "kind": "measurement", "provenance": "observed", "revision": "kata-v2", "baselineRevision": "kata-v1", "uri": "fixture://kata/run-a", "observedAt": "2026-09-04T11:00:00Z", "expiresAt": "2026-09-30T00:00:00Z", "result": "pass"},
+    {"id": "run-b", "kind": "measurement", "provenance": "observed", "revision": "kata-v2", "baselineRevision": "kata-v1", "uri": "fixture://kata/run-b", "observedAt": "2026-09-05T09:00:00Z", "expiresAt": "2026-09-30T00:00:00Z", "result": "pass"},
     {"id": "static", "kind": "static", "provenance": "observed", "revision": "kata-v2", "uri": "fixture://kata/static", "observedAt": "2026-09-03T10:00:00Z", "expiresAt": "2026-09-30T00:00:00Z", "result": "pass"},
     {"id": "behavior", "kind": "behavior", "provenance": "observed", "revision": "kata-v2", "uri": "fixture://kata/behavior", "observedAt": "2026-09-03T10:00:00Z", "expiresAt": "2026-09-30T00:00:00Z", "result": "pass"},
     {"id": "deployment", "kind": "deployment", "provenance": "observed", "revision": "kata-v2", "uri": "fixture://kata/deployment", "observedAt": "2026-09-04T10:00:00Z", "expiresAt": "2026-09-30T00:00:00Z", "result": "pass"},
