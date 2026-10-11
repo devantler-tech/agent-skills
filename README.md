@@ -93,6 +93,8 @@ The GitOps repository audit requires [flux-schema 0.15 or newer](https://github.
 | `refactor` | [`github/awesome-copilot`](https://github.com/github/awesome-copilot/tree/main/skills/refactor) | `gh skill install github/awesome-copilot refactor` |
 | `test-driven-development` | [`obra/superpowers`](https://github.com/obra/superpowers/tree/main/skills/test-driven-development) | `gh skill install obra/superpowers test-driven-development` |
 | `ways-of-working` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/main/ways-of-working) | `gh skill install devantler-tech/agent-skills ways-of-working` |
+| `write-readme` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/main/write-readme) | `gh skill install devantler-tech/agent-skills write-readme` |
+| `write-contributing` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/main/write-contributing) | `gh skill install devantler-tech/agent-skills write-contributing` |
 
 </details>
 
