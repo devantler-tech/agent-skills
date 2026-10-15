@@ -149,6 +149,8 @@ bash ./scripts/product-engineering-evidence.test.sh # exercises the optional evi
 ./scripts/portfolio-maintenance-driving-contract.test.sh # pins that driving a maintainer-login PR
                                                          # follows the Trust gate's declared fact,
                                                          # defaulting to hands-off
+./scripts/upstream-release-review-contract.test.sh # pins the release-range review before a
+                                                   # dependency update is promoted or merged
 bash ./scripts/product-engineering-accountability.test.sh # checks and renders optional human briefs:
                                                          # evidence labels, ownership, recovery and escaping
 bash ./scripts/evidence-reference-visibility.test.sh # preserves visibly exact evidence source identities

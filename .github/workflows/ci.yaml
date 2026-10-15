@@ -298,6 +298,11 @@ jobs:
         # every deployment, and never a grant an undeclared deployment receives silently.
         run: ./scripts/portfolio-maintenance-driving-contract.test.sh
 
+      - name: 🧪 Verify upstream release review contract
+        # Every dependency update is read as a release range before it is promoted or merged:
+        # workarounds it makes removable, features to adopt and breaking changes to adapt to.
+        run: ./scripts/upstream-release-review-contract.test.sh
+
       - name: 🧪 Self-test the installer
         # Pins install.sh's own contracts the index guard doesn't assert: --list
         # (and -l) print sorted, de-duplicated `<repo> <skill>` parsed only from
