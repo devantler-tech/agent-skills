@@ -46,7 +46,8 @@ directory need not acquire a badge collection.
 
 Give a supported install or access route and one small, useful example. Keep prerequisites, starting
 directory, placeholders and expected result clear. Include stop or cleanup instructions when the
-example creates resources. Explain meaningful side effects before the relevant command; never make
+example creates resources, scoped to those resources; never recommend workspace-, cluster- or
+account-wide destructive cleanup. Explain meaningful side effects before the relevant command; never make
 deployment, spending, publishing, migration or private infrastructure an unannounced first step.
 Use synthetic data and disposable local resources. Never expose secrets, personal data, private
 topology or production credentials. Keep privileged operator procedures and their authorization
@@ -74,7 +75,9 @@ authorized. Check links, anchors, commands and current external artifacts. Do no
 missing steps. Separate source-supported capability from published or deployed availability.
 Correct observed failures without weakening repository checks.
 
-Use an independent reader when available; otherwise cold-read it yourself and label that limitation.
-Record what ran and what remains unverified in the review or delivery report. Keep author-only test
+When available, have an independent reader attempt the documented task from the same clean starting
+conditions without extra setup hints, and report obstacles or missing knowledge. Otherwise cold-read
+it yourself and label that limitation. Correct observed omissions. Record what ran and what remains
+unverified in the review or delivery report. Keep author-only test
 transcripts, evidence caveats and readiness bookkeeping out of the README unless they help its reader
 make a real decision. Never claim that a self-review or a green badge proves newcomer comprehension.
