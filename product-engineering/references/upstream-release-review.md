@@ -40,18 +40,18 @@ loss with its disposition, as for an upgrade.
 
 ## Depth is proportional to the move
 
-Depth follows the releases the move crosses, not how the pin is written. A digest that crosses a
+Depth sets which sources you read, never which changes you act on: classify every change those sources announce against the product. Depth follows the releases the move crosses, not how the pin is written. A digest that crosses a
 minor or major release gets the minor-or-major depth. When the releases a digest crosses cannot be
-identified, record the review as unverifiable instead of treating it as a patch.
+identified, record the review as unverifiable instead of treating it as a patch. A version scheme without patch lines, such as calendar versions, dated API versions or release channels, gets the minor-or-major depth unless the publisher documents which of its releases are compatible fixes.
 
 - **A move within one patch line** (a patch release, or a digest that stays on it): read its release
-  notes for fixes to defects the product works around, security fixes and stated regressions.
+  notes.
 - **A minor or major move:** read the release notes, changelog and migration or upgrade guide for
   **every version in the range**, not only the newest. A breaking change announced two versions
   back still applies to a jump across it. Read the sources the publisher provides. A source it
   does not publish is recorded as "not published", which is no gap in the review, so release
   notes alone can complete it.
-- **No published notes:** compare the tags (`compare/<old>...<new>`) and read the commit subjects.
+- **No published notes:** compare the tags in the direction of the move and read the commit subjects: `compare/<old>...<new>` for an upgrade, and `compare/<new>...<old>` for a downgrade, which lists what the product loses.
   Record that the review fell back to that, rather than reporting "nothing relevant".
 - **No notes and no tags**, such as a registry digest or a hosted API: read the change record the
   publisher does keep. That can be the source revision an image declares in its labels or OCI
