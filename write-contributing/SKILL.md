@@ -58,6 +58,11 @@ can discover it, or provide a short discoverable pointer to an existing canonica
 create competing copies. Resolve the forge's recognized paths rather than assuming an arbitrary
 nested file is discoverable.
 
+Write short, direct instructions in the contributor's language. Explain what each step achieves;
+keep familiar tool names, but leave implementation details out unless needed to do the task.
+Preserve useful existing organization instead of expanding every guide into the same template.
+Keep author-only verification reports in the review, not in the contributor's instructions.
+
 Make the first contribution path self-contained. Link to detailed check matrices, architecture,
 release and operational instructions instead of pasting them all into onboarding. Avoid requiring
 a first-time contributor to parse an agent-specific handbook just to find their first check.
