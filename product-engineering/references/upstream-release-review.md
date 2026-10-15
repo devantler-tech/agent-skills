@@ -25,12 +25,18 @@ For an update, the range runs from the version the product uses now to the versi
 For a strategy review, it runs from the last reviewed version to the newest release. With no
 cursor yet, as on a first review, it starts at the version the product uses now. Releases the product
 already adopted are not reviewed retroactively: workarounds they made removable surface through the
-marker search under *Classify each change*.
+marker search under *Classify each change*. A range follows the release stream the product
+consumes: a dependency held on a maintained 1.x line is reviewed along 1.x, not up to the newest
+3.x. Keep one cursor per stream, so a later 1.x patch is not skipped.
 
 ## Depth is proportional to the move
 
-- **A digest-only or patch move:** read its release notes for fixes to defects the product works
-  around, security fixes and stated regressions.
+Depth follows the releases the move crosses, not how the pin is written. A digest that crosses a
+minor or major release gets the minor-or-major depth. When the releases a digest crosses cannot be
+identified, record the review as unverifiable instead of treating it as a patch.
+
+- **A move within one patch line** (a patch release, or a digest that stays on it): read its release
+  notes for fixes to defects the product works around, security fixes and stated regressions.
 - **A minor or major move:** read the release notes, changelog and migration or upgrade guide for
   **every version in the range**, not only the newest. A breaking change announced two versions
   back still applies to a jump across it. Read the sources the publisher provides. A source it
@@ -56,7 +62,7 @@ request links in comments, version-conditional code, pins and skip flags.
 
 | Finding | What it calls for |
 |---|---|
-| **A fixed bug behind a local workaround** | Remove the workaround. Reproduce the original failure, or run its regression test, against the new version first: a release note is a claim, not proof. Keep the test. |
+| **A fixed bug behind a local workaround** | Remove the workaround once every version the product supports has the fix. Raise the supported lower bound, or keep the workaround behind a version guard for older versions. Reproduce the original failure, or run its regression test, against the new version first: a release note is a claim, not proof. Keep the test. |
 | **A new feature or capability** that replaces bespoke code, a manual step or a workaround, or advances the roadmap | Adopt it, behind the product's feature-flag mechanism when the change is non-trivial. |
 | **A breaking change, deprecation or removal** | Adapt. If it blocks the bump, the adaptation belongs in the update pull request. If a future removal is announced, file it with the removal version or date. |
 | **A security fix** | Prioritise the update itself, and check whether a compensating control the product added is now redundant. |
@@ -76,16 +82,16 @@ the disposition.
   its disposition: **done in this pull request**, **issue #N**, or **not applicable** with the
   reason. On a bot-authored pull request whose body the bot rewrites, record it as a comment. "No
   relevant changes" is a valid result only when it names the sources read.
-- A strategy-review pass has no update pull request. File each finding as an issue. Record the
-  review itself (dependencies, version ranges, sources read, and any "no relevant changes" or
-  unverifiable results) with the per-dependency cursor, per the consumer's **Memory** section.
+- A strategy-review pass has no update pull request. File each finding as an issue. Its only
+  memory record is the per-dependency cursor: the stream and version reviewed to, with an
+  unverifiable mark where one applied. A clean review needs no other record.
 - Keep one concern per pull request. Only adaptation the bump needs to pass belongs in the update
   pull request. A workaround removal or a feature adoption is a separate issue and pull request,
   unless the update cannot pass without it.
 - File every non-trivial follow-up as a well-formed issue, deduplicated against existing issues and
   linked from the record.
-- Keep a per-dependency cursor (the last reviewed version) per the consumer's **Memory** section, so
-  the strategy-review pass starts where the last review ended.
+- Keep a per-dependency cursor (the stream and last reviewed version) per the consumer's **Memory**
+  section, so the strategy-review pass starts where the last review ended.
 
 ## Make workarounds findable
 

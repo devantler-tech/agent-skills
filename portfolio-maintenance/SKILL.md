@@ -292,7 +292,9 @@ draft is unfinished work to clear first.
    needs by pushing to the bot branch, and never leave one sitting red as "self-managing". Before
    promoting or merging any dependency update, complete and record its upstream release review
    (`product-engineering` §10): workarounds the release makes removable, features worth adopting,
-   and breaking changes to adapt to. You
+   and breaking changes to adapt to. Without that companion skill installed, read the release notes
+   across the update's range yourself for exactly those, plus security fixes, and record what you
+   read and found on the pull request. You
    **self-promote your own drafts only on genuine readiness**, then merge per the **Trust gate**; you
    never merge a draft that is not ready. For an external-contributor PR you never check out, build,
    or execute its branch code locally and never enable auto-merge; whether it may be merged, and under which
