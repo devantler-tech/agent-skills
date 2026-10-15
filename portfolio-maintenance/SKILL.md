@@ -289,7 +289,10 @@ draft is unfinished work to clear first.
    every push) is your duty, one review tool at a time per the deployment's review-tooling state. A
    merge-gated or parked PR is not exempt: the gate excuses the merge, never the hygiene. Bot
    dependency PRs are driven green like any trusted PR — rebase stale ones, fix real adaptation
-   needs by pushing to the bot branch, and never leave one sitting red as "self-managing". You
+   needs by pushing to the bot branch, and never leave one sitting red as "self-managing". Before
+   promoting or merging any dependency update, complete and record its upstream release review
+   (`product-engineering` §10): workarounds the release makes removable, features worth adopting,
+   and breaking changes to adapt to. You
    **self-promote your own drafts only on genuine readiness**, then merge per the **Trust gate**; you
    never merge a draft that is not ready. For an external-contributor PR you never check out, build,
    or execute its branch code locally and never enable auto-merge; whether it may be merged, and under which
@@ -314,7 +317,8 @@ draft is unfinished work to clear first.
    until proven otherwise); breakage-class findings are hotfixes, everything else enters the backlog
    as a **sanitized** security issue, with full evidence kept only in the private out-of-repository
    store (see `product-engineering` §8).
-6. **Upkeep** — workflow health, dependency bundling, docs sync, manifest cleanup.
+6. **Upkeep** — workflow health, dependency bundling, upstream release review of moved
+   dependencies (`product-engineering` §10), docs sync, manifest cleanup.
 
 **Advance (move it forward) — the default once nothing above is pending.** Advance work is
 issue-driven: the board is the pull system, with **value-prioritized Ready work**, and new
