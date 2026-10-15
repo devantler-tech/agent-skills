@@ -48,6 +48,9 @@ Give a supported install or access route and one small, useful example. Keep pre
 directory, placeholders and expected result clear. Include stop or cleanup instructions when the
 example creates resources. Explain meaningful side effects before the relevant command; never make
 deployment, spending, publishing, migration or private infrastructure an unannounced first step.
+Use synthetic data and disposable local resources. Never expose secrets, personal data, private
+topology or production credentials. Keep privileged operator procedures and their authorization
+requirements separate from the newcomer path.
 
 Choose the path for this reader: an application's users may need a URL, a library needs a small usage
 example, and a template needs its “create a project” path. Infrastructure may need a safe offline or
