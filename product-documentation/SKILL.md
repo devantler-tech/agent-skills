@@ -1,6 +1,6 @@
 ---
 name: product-documentation
-description: Build or maintain user documentation sites for software products, including tutorials, task guides, API reference and publication checks. Use for a product documentation website or its information architecture; ordinary README edits and engineering proposals have separate workflows.
+description: Build or maintain user documentation sites for software products, including tutorials, task guides, API reference and publication checks. Use for a product documentation website or its information architecture. Do not use for ordinary README edits, engineering proposals or engineering specifications.
 license: Apache-2.0
 ---
 
