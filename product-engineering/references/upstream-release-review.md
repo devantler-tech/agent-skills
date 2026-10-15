@@ -29,6 +29,12 @@ marker search under *Classify each change*. A range follows the release stream t
 consumes: a dependency held on a maintained 1.x line is reviewed along 1.x, not up to the newest
 3.x. Keep one cursor per stream, so a later 1.x patch is not skipped.
 
+A downgrade or rollback runs the range backwards: review what the product loses between the target
+and the version it leaves. A fix the product loses brings back the defect, so restore its
+workaround or hold the downgrade. A capability it loses needs its adoption reversed. A security fix
+it loses needs a named reason and a compensating control, or the downgrade is held. Record each
+loss with its disposition, as for an upgrade.
+
 ## Depth is proportional to the move
 
 Depth follows the releases the move crosses, not how the pin is written. A digest that crosses a
@@ -85,6 +91,8 @@ the disposition.
 - A strategy-review pass has no update pull request. File each finding as an issue. Its only
   memory record is the per-dependency cursor: the stream and version reviewed to, with an
   unverifiable mark where one applied. A clean review needs no other record.
+- An unverifiable range never advances the cursor. Keep the cursor at the last verified version
+  and record the unverified range beside it, so the next pass retries it before it moves on.
 - Keep one concern per pull request. Only adaptation the bump needs to pass belongs in the update
   pull request. A workaround removal or a feature adoption is a separate issue and pull request,
   unless the update cannot pass without it.
