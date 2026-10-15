@@ -227,6 +227,15 @@ Docs are part of the product.
 - **Improve (on the docs Cadence).** Pick an under-served area and make it genuinely better: fix
   inaccuracies and stale examples, fill missing how-tos, tighten onboarding flow, repair dead links.
   Verify examples actually run. `docs:`-only PRs are real advance work, not filler.
+- **Write for the reader.** In introductions and onboarding, explain what the current product does,
+  what the reader gets and what to do next. Keep useful tool names and link to deeper explanations.
+  Architecture and reference guides retain details needed to understand, diagnose or change the
+  system. Use short paragraphs, concise lists and tables where they make the page easier to scan.
+- **Improve READMEs without flattening them.** Preserve useful positioning, visuals, feature
+  summaries and support links. Keep relevant, truthful badges together near the top; they can be a
+  compact scorecard linked to their real results. Keep the first useful step short, link deeper
+  procedures, and keep author-only validation reports out of the front page. Use available README
+  and contribution-writing skills for those documents; do not impose one template on every repo.
 - **Describe the as-is, never the journey.** Documentation, code comments, and resource descriptions
   state the current behaviour, architecture, constraints, and rationale directly. Do not narrate how
   they arrived there through prior states, migrations, before/after comparisons, or origin stories.
