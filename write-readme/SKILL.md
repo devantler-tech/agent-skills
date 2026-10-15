@@ -46,8 +46,9 @@ directory need not acquire a badge collection.
 
 Give a supported install or access route and one small, useful example. Keep prerequisites, starting
 directory, placeholders and expected result clear. Include stop or cleanup instructions when the
-example creates resources, scoped to those resources; never recommend workspace-, cluster- or
-account-wide destructive cleanup. Explain meaningful side effects before the relevant command; never make
+example creates resources. Cleanup must target only resources created by that example and leave
+existing work intact; never use broad destructive commands. Explain meaningful side effects before
+the relevant command; never make
 deployment, spending, publishing, migration or private infrastructure an unannounced first step.
 Use synthetic data and disposable local resources. Never expose secrets, personal data, private
 topology or production credentials. Keep privileged operator procedures and their authorization
