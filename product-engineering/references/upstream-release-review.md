@@ -27,7 +27,10 @@ cursor yet, as on a first review, it starts at the version the product uses now.
 already adopted are not reviewed retroactively: workarounds they made removable surface through the
 marker search under *Classify each change*. A range follows the release stream the product
 consumes: a dependency held on a maintained 1.x line is reviewed along 1.x, not up to the newest
-3.x. Keep one cursor per stream, so a later 1.x patch is not skipped.
+3.x. Keep one cursor per stream, so a later 1.x patch is not skipped. A strategy review also
+checks for successor streams the product does not consume yet: read their release notes and
+migration guides for new capabilities, the migration they will require, and an announced end of
+life for the stream the product stays on, and keep a cursor for each.
 
 A downgrade or rollback runs the range backwards: review what the product loses between the target
 and the version it leaves. A fix the product loses brings back the defect, so restore its
