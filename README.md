@@ -90,6 +90,7 @@ The GitOps repository audit requires [flux-schema 0.15 or newer](https://github.
 |-------|----------|---------|
 | `agent-instructions` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/main/agent-instructions) | `gh skill install devantler-tech/agent-skills agent-instructions` |
 | `conventional-release` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/main/conventional-release) | `gh skill install devantler-tech/agent-skills conventional-release` |
+| `product-documentation` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/main/product-documentation) | `gh skill install devantler-tech/agent-skills product-documentation` |
 | `refactor` | [`github/awesome-copilot`](https://github.com/github/awesome-copilot/tree/main/skills/refactor) | `gh skill install github/awesome-copilot refactor` |
 | `test-driven-development` | [`obra/superpowers`](https://github.com/obra/superpowers/tree/main/skills/test-driven-development) | `gh skill install obra/superpowers test-driven-development` |
 | `ways-of-working` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/main/ways-of-working) | `gh skill install devantler-tech/agent-skills ways-of-working` |
