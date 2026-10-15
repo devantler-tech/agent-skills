@@ -292,7 +292,7 @@ and migration guide for a minor or major move. Then act on what applies to the p
 - **a breaking change, deprecation or removal** — adapt, in the update pull request when the bump
   needs it, otherwise as an issue with the removal version or date;
 - **anything else that changes our side** — a security fix, a changed default, a new minimum
-  version, end of life, a licence change, upstream archival, or a regression that should hold the
+  version, end of life, upstream archival, or a licence change or regression that should hold the
   update.
 
 Record the versions covered, the sources read and each finding's disposition on the update pull

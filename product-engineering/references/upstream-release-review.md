@@ -19,13 +19,23 @@ Run the review:
    since the last reviewed version. This includes dependencies that are pinned, frozen or held
    back, which no updater pull request will surface.
 
+## The range
+
+For an update, the range runs from the version the product uses now to the version it moves to.
+For a strategy review, it runs from the last reviewed version to the newest release. With no
+cursor yet, as on a first review, it starts at the version the product uses now. Releases the product
+already adopted are not reviewed retroactively: workarounds they made removable surface through the
+marker search under *Classify each change*.
+
 ## Depth is proportional to the move
 
 - **A digest-only or patch move:** read its release notes for fixes to defects the product works
   around, security fixes and stated regressions.
 - **A minor or major move:** read the release notes, changelog and migration or upgrade guide for
   **every version in the range**, not only the newest. A breaking change announced two versions
-  back still applies to a jump across it.
+  back still applies to a jump across it. Read the sources the publisher provides. A source it
+  does not publish is recorded as "not published", which is no gap in the review, so release
+  notes alone can complete it.
 - **No published notes:** compare the tags (`compare/<old>...<new>`) and read the commit subjects.
   Record that the review fell back to that, rather than reporting "nothing relevant".
 - **No notes and no tags**, such as a registry digest or a hosted API: read the change record the
@@ -52,7 +62,8 @@ request links in comments, version-conditional code, pins and skip flags.
 | **A security fix** | Prioritise the update itself, and check whether a compensating control the product added is now redundant. |
 | **A changed default** | Check whether the product relied on the old default, and whether explicit configuration that restated the new default can go. |
 | **A new minimum version** of a runtime, platform or peer dependency | Check every environment the product runs and builds in. |
-| **End of life, an end-of-support date, a licence change, or upstream archival** | File the migration or replacement as an issue, with the deadline. |
+| **A licence change** | Compare the new licence with what the product may accept, per the consumer's policy. If the new version's licence is not acceptable, hold the update with a named blocker and file the replacement as an issue. Never merge a version under a licence the product cannot accept. |
+| **End of life, an end-of-support date, or upstream archival** | File the migration or replacement as an issue, with the deadline. |
 | **A known regression in the new version** that affects the product | Hold the update with a named blocker that links the upstream report, instead of merging it. |
 | **A performance improvement** that makes a local tuning knob, cache or override unnecessary | Measure, then remove the override only with before-and-after evidence. |
 
