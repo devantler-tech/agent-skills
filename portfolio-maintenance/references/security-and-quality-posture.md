@@ -84,8 +84,11 @@ rules. Prioritize evidenced critical obligations next; refine other security and
 through normal value pull using impact, deadlines, risk reduction, dependencies unlocked and
 effort. Fix the root cause before considering a narrow, justified and reviewable exception.
 Keep noncritical quality findings in the same queue rather than starving them behind a permanent
-security label. File deduplicated, sanitized work before implementation; private source details
-and weakness inventories never cross into public artifacts.
+security label. For routine work, file a deduplicated, sanitized issue before implementation.
+Confirmed active exposure and broken mandatory coverage follow the consumer's immediate incident/
+hotfix procedure; never delay containment or credential revocation to file an issue. Record the
+sanitized work as that procedure permits. Private source details and weakness inventories never
+cross into public artifacts.
 
 After a fix, bind fresh native analysis and finding state to the delivered commit. Source merge,
 deployment, scanner reanalysis and finding resolution are separate observations. Do not close the
