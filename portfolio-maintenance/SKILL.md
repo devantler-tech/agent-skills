@@ -329,6 +329,11 @@ draft is unfinished work to clear first.
    until proven otherwise); breakage-class findings are hotfixes, everything else enters the backlog
    as a **sanitized** security issue, with full evidence kept only in the private out-of-repository
    store (see `product-engineering` §8).
+   For hosted security and code-quality products, follow
+   [security and quality posture](references/security-and-quality-posture.md): sweep every
+   configured finding family, verify liveness, and compare declared adoption with entitlement,
+   configuration, current analysis and effective enforcement. Keep paid activation behind the
+   consumer's verified cost boundary; unknown observations never mean clean.
 6. **Upkeep** — workflow health, dependency bundling, upstream release review of moved
    dependencies (`product-engineering` §10), docs sync, manifest cleanup.
 
