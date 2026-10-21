@@ -62,7 +62,7 @@ jobs:
     name: Publish
     needs: version
     if: needs.version.outputs.tag != ''
-    uses: ./.github/workflows/cd.yaml
+    uses: ./.github/workflows/publish-skills.yaml
     permissions:
       contents: write
     with:

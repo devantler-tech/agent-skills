@@ -18,13 +18,14 @@ Copilot, and by Cursor, Codex, and Claude (via `CLAUDE.md` → `@AGENTS.md`).
 └── workflows/
     ├── ci.yaml                     # Validate skills (gh skill publish --dry-run) + agentskills.io spec validation + lint-scripts
     ├── release.yaml                # Calculate next version on push to main; trigger CD when a release is warranted
-    ├── cd.yaml                     # gh skill publish the in-house skills against the new tag
+    ├── cd.yaml                     # Manual release/recovery entrypoint
+    ├── publish-skills.yaml         # Reusable publisher called by release.yaml and cd.yaml
     └── check-upstream-skills.yaml  # 🔗 Upstream skill targets — weekly + on index-touch PRs; warns on outage, fails on real drift
 scripts/
 ├── install.sh                  # Install every README-listed skill for one or more agents (user scope)
 ├── check-readme-index.sh       # lint-scripts gate: README ## Skills index ↔ on-disk skills + cross-column consistency
 ├── check-upstream-skills.sh    # 🔗 workflow: resolve each upstream index row against its source repo
-├── publish-skills-release.sh   # cd.yaml publish step: publish the tag, or report it already published
+├── publish-skills-release.sh   # Reused publication step: publish the tag, or report it already published
 └── *.test.sh                   # Hermetic self-test beside each script above (all in the lint-scripts gate)
 agent-instructions/             # In-house skill (each dir holds a conformant SKILL.md)
 conventional-release/           # In-house skill
@@ -189,7 +190,10 @@ verification fails separately. Invalid payloads never count as healthy or transi
 `gh`, so it pins the guard's parsing/discrimination logic with no network.) Never weaken a check to
 pass — fix the root cause.
 
-The CD workflow runs `scripts/publish-skills-release.sh` with the workflow commit as the expected tag
+The automatic release and manual CD entrypoints call `publish-skills.yaml`; it alone owns the
+publication concurrency group, so a waiting caller cannot deadlock its callee. Run
+`bash scripts/publication-workflows.test.sh` for routing, tag/commit binding and queue controls.
+The publisher runs `scripts/publish-skills-release.sh` with the workflow commit as the expected tag
 target. Explicit selectors may be supplied once each; environment defaults may be overridden once.
 Help must be used alone. Repository selectors must be one github.com owner/repository pair;
 ambiguous arguments and path or URL syntax are usage errors before any GitHub request.
