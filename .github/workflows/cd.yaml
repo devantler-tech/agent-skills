@@ -1,12 +1,6 @@
 name: 🚀 CD
 
 on:
-  workflow_call:
-    inputs:
-      tag:
-        description: Version tag for the release (semver, e.g. v1.0.0)
-        required: true
-        type: string
   workflow_dispatch:
     inputs:
       tag:
@@ -14,75 +8,13 @@ on:
         required: true
         type: string
 
-concurrency:
-  group: publish-skills
-  cancel-in-progress: false
-  queue: max
-
 permissions: {}
 
 jobs:
   release:
     name: Publish skills release
-    runs-on: ubuntu-latest
+    uses: $/.github/workflows/publish-skills.yaml
     permissions:
-      contents: write
-    steps:
-      - name: 📄 Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-
-      - name: 🔧 Ensure gh >= 2.90.0
-        env:
-          GH_MIN_VERSION: 2.90.0
-        run: |
-          if gh skill --help >/dev/null 2>&1; then
-            echo "Installed gh ($(gh --version | awk '/gh version/{print $3}')) already supports 'gh skill'."
-            exit 0
-          fi
-          tmp=$(mktemp -d)
-          curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_MIN_VERSION}/gh_${GH_MIN_VERSION}_linux_amd64.tar.gz" \
-            | tar -xzC "$tmp"
-          install_dir="${RUNNER_TEMP:-/tmp}/bin"
-          mkdir -p "$install_dir"
-          install "$tmp/gh_${GH_MIN_VERSION}_linux_amd64/bin/gh" "$install_dir/gh"
-          echo "$install_dir" >> "$GITHUB_PATH"
-          export PATH="$install_dir:$PATH"
-          hash -r
-          gh --version
-
-      - name: 📦 Publish skills release
-        # Bind a clean checkout, validate skills, create the release at github.sha, and verify
-        # the remote result. Completed reruns skip creation after the same verification.
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ inputs.tag }}
-          EXPECTED_COMMIT: ${{ github.sha }}
-        run: ./scripts/publish-skills-release.sh --tag "$TAG" --expected-commit "$EXPECTED_COMMIT"
-
-      - name: 🏷️ Verify the agent-skills discovery topic
-        # Release creation does not add the `agent-skills` topic, so a release alone leaves
-        # the repository invisible to `gh skill search` topic discovery. This step cannot apply
-        # the topic either: replacing repository topics needs the Administration permission,
-        # which GITHUB_TOKEN never carries. Topics are owned declaratively in
-        # devantler-tech/.github (temporarily unmanaged there pending a provider fix), so this
-        # step verifies after publishing and fails loudly, naming the one command that
-        # resolves it, instead of letting the gap pass silently release after release.
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REQUIRED_TOPIC: agent-skills
-        run: |
-          if ! names=$(gh api "repos/${GITHUB_REPOSITORY}/topics" --jq '.names | join(" ")'); then
-            echo "::error title=Discovery topic unverified::The release is published, but the repository topics could not be read, so discovery could not be verified. Re-run this job once the API is reachable."
-            exit 1
-          fi
-          case " $names " in
-            *" $REQUIRED_TOPIC "*)
-              echo "Repository carries the '$REQUIRED_TOPIC' topic; skill discovery is intact."
-              ;;
-            *)
-              echo "::error title=Missing discovery topic::The release is published, but the repository does not carry the '$REQUIRED_TOPIC' topic, so 'gh skill search' cannot surface it. Apply it once with a repository-admin token: gh repo edit ${GITHUB_REPOSITORY} --add-topic ${REQUIRED_TOPIC}"
-              exit 1
-              ;;
-          esac
+      contents: write # The callee reserves the tag and publishes the release.
+    with:
+      tag: ${{ inputs.tag }}
