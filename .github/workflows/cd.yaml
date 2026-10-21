@@ -13,7 +13,7 @@ permissions: {}
 jobs:
   release:
     name: Publish skills release
-    uses: ./.github/workflows/publish-skills.yaml
+    uses: $/.github/workflows/publish-skills.yaml
     permissions:
       contents: write # The callee reserves the tag and publishes the release.
     with:

@@ -17,11 +17,11 @@ check() {
     .manual.on.workflow_dispatch.inputs.tag.required == true and
     .manual.on.workflow_dispatch.inputs.tag.type == "string" and
     .manual.permissions == {} and
-    .manual.jobs.release.uses == "./.github/workflows/publish-skills.yaml" and
+    .manual.jobs.release.uses == "$/.github/workflows/publish-skills.yaml" and
     .manual.jobs.release.with.tag == "${{ inputs.tag }}" and
     .manual.jobs.release.permissions == {contents:"write"} and
     .manual.concurrency == null and
-    .automatic.jobs.publish.uses == "./.github/workflows/publish-skills.yaml" and
+    .automatic.jobs.publish.uses == "$/.github/workflows/publish-skills.yaml" and
     .automatic.jobs.publish.with.tag == "${{ needs.version.outputs.tag }}" and
     .automatic.jobs.publish.permissions == {contents:"write"} and
     .automatic.concurrency.group != "publish-skills" and
