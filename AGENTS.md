@@ -71,7 +71,7 @@ copy; only add a directory here for genuinely **in-house** skills.
    `persist-credentials: false` on `actions/checkout` unless a job must push.
 5. **Conventional-commit messages** (`feat:`/`fix:`/`chore:`/`ci:`/`docs:`/`refactor:`) — on every push
    to `main`, `release.yaml` runs [`mathieudutour/github-tag-action`](https://github.com/mathieudutour/github-tag-action)
-   to calculate the next version tag from the commit types, then hands off to `cd.yaml` to publish it,
+   to calculate the next version tag from the commit types, then calls `publish-skills.yaml` to publish it,
    so the commit type determines the next version. A `docs:`/`refactor:`-only push yields no version
    bump (`default_bump: none`), a deliberate green "no release" skip (see `release.yaml`).
 6. **README and its consumers stay in lockstep.** Any change to the index updates the README tables;
