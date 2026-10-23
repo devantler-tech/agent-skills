@@ -121,7 +121,7 @@ Split manageable step-level units into local GitHub Actions under `.github/actio
 
 ### Releases
 
-Repositories using the shared release job call [`devantler-tech/.github/.github/workflows/create-release.yaml`](https://github.com/devantler-tech/.github/blob/main/.github/workflows/create-release.yaml). It runs [semantic-release](https://semantic-release.gitbook.io/) on `push` to `main`, calculates the next semver from [conventional commit](https://www.conventionalcommits.org/) history, and creates the tag + GitHub release — which in turn triggers the CD pipeline above. Preserve a repository-owned release implementation when its requirements differ; a release entrypoint does not by itself justify a new reusable workflow.
+Repositories using the shared release job invoke [`devantler-tech/.github/.github/workflows/create-release.yaml`](https://github.com/devantler-tech/.github/blob/main/.github/workflows/create-release.yaml) from a repository-owned caller that handles `push` to `main`. The shared workflow runs [semantic-release](https://semantic-release.gitbook.io/), calculates the next semver from [conventional commit](https://www.conventionalcommits.org/) history, and creates the tag and GitHub release, which can trigger the repository's CD pipeline. Preserve a repository-owned release implementation when its requirements differ; a release entrypoint does not by itself justify a new reusable workflow.
 
 For application publishing, always use upstream releasers — e.g. [GoReleaser](https://goreleaser.com/) for Go or [dotnet-releaser](https://github.com/xoofx/dotnet-releaser) for .NET — rather than hand-rolling publish scripts.
 
