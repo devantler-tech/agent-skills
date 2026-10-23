@@ -46,9 +46,9 @@ parse them directly, so they never drift from the index:
   upstream ref to an immutable commit before installing for the named agents at user scope.
   Installation requires `jq` and `iconv`; the public `--list` mode remains offline.
 - The composite actions
-  [`setup-agent-skills`](https://github.com/devantler-tech/actions/tree/main/setup-agent-skills) /
-  [`update-agent-skills`](https://github.com/devantler-tech/actions/tree/main/update-agent-skills)
-  (and the [`update-agent-skills.yaml`](https://github.com/devantler-tech/actions/blob/main/.github/workflows/update-agent-skills.yaml)
+  [`setup-agent-skills`](https://github.com/devantler-tech/.github/tree/main/actions/setup-agent-skills) /
+  [`update-agent-skills`](https://github.com/devantler-tech/.github/tree/main/actions/update-agent-skills)
+  (and the [`update-agent-skills.yaml`](https://github.com/devantler-tech/.github/blob/main/.github/workflows/update-agent-skills.yaml)
   reusable workflow) adopt and refresh these skills in consumer repos.
 
 Because every row either hosts an in-house skill or installs **directly from its original upstream**,
