@@ -91,7 +91,13 @@ Use **GitHub Flow**:
 
 ## CI/CD Pipeline
 
-Each repository has two core workflow files — `ci.yaml` and `cd.yaml` — plus a thin `release.yaml` that calls a reusable workflow (see [Releases](#releases)). Reusable logic is extracted into local GitHub Actions under `.github/actions/`:
+Keep ordinary workflow entrypoints in the repository that owns their outcome, normally `ci.yaml`, `cd.yaml` and, where needed, `release.yaml`. Choose ownership by the actual production callers:
+
+- **Organization-required workflows:** cross-product PR checks such as shared scanning and linting. A guard used by one product belongs in that product, enforced through its repository ruleset and native required checks.
+- **Reusable workflows:** job-level logic called by at least two genuine production jobs. Two real entrypoints in one repository can qualify; matrix cells, test fixtures and invented callers do not establish reuse.
+- **Ordinary workflows:** callsites for reusable jobs, or implementations used in one place. Keep a single-use implementation in its calling repository rather than exporting it from a shared automation repository.
+
+Split manageable step-level units into local GitHub Actions under `.github/actions/` when useful:
 
 - **Composite actions** — for simple, self-contained steps.
 - **TypeScript actions** — for anything complex, because they are locally testable and avoid hard-to-read bash embedded in YAML.
@@ -115,7 +121,7 @@ Each repository has two core workflow files — `ci.yaml` and `cd.yaml` — plus
 
 ### Releases
 
-Releases are automated via the [`devantler-tech/actions/.github/workflows/create-release.yaml`](https://github.com/devantler-tech/actions/blob/main/.github/workflows/create-release.yaml) reusable workflow. It runs [semantic-release](https://semantic-release.gitbook.io/) on `push` to `main`, calculates the next semver from [conventional commit](https://www.conventionalcommits.org/) history, and creates the tag + GitHub release — which in turn triggers the CD pipeline above.
+Repositories using the shared release job call [`devantler-tech/.github/.github/workflows/create-release.yaml`](https://github.com/devantler-tech/.github/blob/main/.github/workflows/create-release.yaml). It runs [semantic-release](https://semantic-release.gitbook.io/) on `push` to `main`, calculates the next semver from [conventional commit](https://www.conventionalcommits.org/) history, and creates the tag + GitHub release — which in turn triggers the CD pipeline above. Preserve a repository-owned release implementation when its requirements differ; a release entrypoint does not by itself justify a new reusable workflow.
 
 For application publishing, always use upstream releasers — e.g. [GoReleaser](https://goreleaser.com/) for Go or [dotnet-releaser](https://github.com/xoofx/dotnet-releaser) for .NET — rather than hand-rolling publish scripts.
 
