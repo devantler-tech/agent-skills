@@ -43,7 +43,7 @@ if ! rows=$(awk -F'\t' '
   {
     if (NF != 3) { printf "line %d: expected 3 tab-separated fields, found %d\n", NR, NF; bad = 1; next }
     if ($1 != "*" && $1 !~ /^[a-z0-9]+(-[a-z0-9]+)*$/) { printf "line %d: invalid skill name \"%s\"\n", NR, $1; bad = 1; next }
-    if ($2 !~ /^[1-9][0-9]*$/ || $3 !~ /^[1-9][0-9]*$/) { printf "line %d: limits must be positive whole numbers\n", NR; bad = 1; next }
+    if ($2 !~ /^[1-9][0-9]*$/ || $3 !~ /^[1-9][0-9]*$/ || length($2) > 9 || length($3) > 9) { printf "line %d: limits must be positive whole numbers of at most 9 digits\n", NR; bad = 1; next }
     if ($1 in seen) { printf "line %d: \"%s\" is listed more than once\n", NR, $1; bad = 1; next }
     seen[$1] = 1
     out = out $1 " " $2 " " $3 "\n"

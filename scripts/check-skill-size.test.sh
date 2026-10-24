@@ -151,6 +151,12 @@ r="$tmp/zero"; make_root "$r" "$default" 'alpha 0 30000'
 add_skill "$r" alpha 100 10
 expect "a zero limit fails" fail "$r" "limits must be positive whole numbers"
 
+# A limit too large for the shell's integer tests would make every comparison
+# error out and the skill pass, so it is refused before any comparison.
+r="$tmp/huge"; make_root "$r" "$default" 'alpha 99999999999999999999 30000'
+add_skill "$r" alpha 100 10
+expect "a limit longer than 9 digits fails" fail "$r" "at most 9 digits"
+
 r="$tmp/duplicate"; make_root "$r" "$default" 'alpha 600 30000' 'alpha 700 30000'
 add_skill "$r" alpha 100 10
 expect "a repeated skill row fails" fail "$r" '"alpha" is listed more than once'
