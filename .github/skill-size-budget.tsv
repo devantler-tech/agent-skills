@@ -10,6 +10,5 @@
 # Raising a ceiling means editing this file, so the increase shows in review.
 # Reference files under a skill's references/ directory are not counted.
 *	500	20000
-agent-improvement	583	41417
 portfolio-maintenance	446	34531
 product-engineering	500	23123
