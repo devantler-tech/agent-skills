@@ -9,6 +9,13 @@ set -Eeuo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 skill="${1:-$repo_root/agent-improvement/SKILL.md}"
+# Steps 1, 2, 3a and 5 keep a summary in SKILL.md; their complete text, which these contracts
+# pin, lives in the reference file each step links to.
+references="$(dirname "$skill")/references"
+gather_ref="$references/gathering.md"
+score_ref="$references/scoring.md"
+research_ref="$references/research-fallback.md"
+verify_ref="$references/verification.md"
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
@@ -146,14 +153,14 @@ check_diagnosis_contract() { # skill
   [ "$flat" = "$diagnosis_contract" ]
 }
 
-check_outcome_throughput_contract() { # skill
+check_outcome_throughput_contract() { # skill [score-procedure]
   local throughput_contract flat
   grep -Fq '| **Outcome throughput** |' "$1" || return 1
   flat="$(LC_ALL=C awk '
     /^\*\*Outcome throughput counts verified completions, not activity\.\*\*/ { capture=1 }
     capture && /^---$/ { exit }
     capture { print }
-  ' "$1" | LC_ALL=C tr '\n' ' ' | LC_ALL=C tr '[:upper:]' '[:lower:]' | LC_ALL=C tr -d '*' | LC_ALL=C sed -E 's/[[:space:]]+/ /g; s/ $//')"
+  ' "${2:-$1}" | LC_ALL=C tr '\n' ' ' | LC_ALL=C tr '[:upper:]' '[:lower:]' | LC_ALL=C tr -d '*' | LC_ALL=C sed -E 's/[[:space:]]+/ /g; s/ $//')"
   throughput_contract="outcome throughput counts verified completions, not activity. for each short and long window, record completed sessions, verified terminal outcomes, and terminal outcomes per completed session. "
   throughput_contract+="track sessions with at least one value-bearing state transition, unique work items advanced, and intermediate transitions under a separately named execution flow heading. these are leading indicators for diagnosis, never outcome-throughput numerators and never evidence that an intervention worked. count each work item once per scoring window and report revisits separately. "
   throughput_contract+="terminal outcomes are deployment-defined completions that deliver the work, for example a merged change, resolved work item, shipped release, verified production repair, or recorded decision when the decision is the deliverable. "
@@ -165,14 +172,14 @@ check_outcome_throughput_contract() { # skill
   [ "$flat" = "$throughput_contract" ]
 }
 
-check_self_observation_contract() { # skill
+check_self_observation_contract() { # skill [score-procedure]
   local self_contract flat
   grep -Fq '| **Observer effectiveness** |' "$1" || return 1
   flat="$(LC_ALL=C awk '
     /^\*\*The observer is one of its own measured subjects\.\*\*/ { capture=1 }
     capture && /^---$/ { exit }
     capture { print }
-  ' "$1" | LC_ALL=C tr '\n' ' ' | LC_ALL=C tr '[:upper:]' '[:lower:]' | LC_ALL=C tr -d '*' | LC_ALL=C sed -E 's/[[:space:]]+/ /g; s/ $//')"
+  ' "${2:-$1}" | LC_ALL=C tr '\n' ' ' | LC_ALL=C tr '[:upper:]' '[:lower:]' | LC_ALL=C tr -d '*' | LC_ALL=C sed -E 's/[[:space:]]+/ /g; s/ $//')"
   self_contract="the observer is one of its own measured subjects. keep two named scorecards: the execution plane (the agentic engineer) and the observation plane (every agent improver instance). never average them together or let improvement in one hide regression in the other. every required parameter reports separate raw numerators, denominators, observation volumes, attribution coverage, and unknowns per role and instance. "
   self_contract+="for the observation plane, report at minimum: scorecard coverage; diagnostic calibration as confirmed, false-positive, and unknown findings; hypothesis discipline as eligible, overdue, working, not-working, and no-verdict hypotheses; intervention effectiveness as verified-working changes per eligible shipped change; observer reliability and efficiency; and self-improvement outcome throughput as terminal verified rollouts. productive improver sessions and work advanced are execution-flow leading indicators, not improvement verdicts. "
   self_contract+="observation-plane verdicts require evidence independent of the improver run being scored: deterministic recomputation from an immutable or read-only source, or verification by a separate eligible run or instance. when the same improver instance's assertion is the only evidence, record unknown, never success. "
@@ -266,14 +273,14 @@ CLAUSES
 
 fail=0
 
-if check_contract "$skill"; then
+if check_contract "$verify_ref"; then
   printf '  ✅ live skill defines the hypothesis evidence floor\n'
 else
   printf '  ❌ live skill permits an underpowered hypothesis verdict\n' >&2
   fail=1
 fi
 
-if check_coordination_contract "$skill"; then
+if check_coordination_contract "$score_ref"; then
   printf '  ✅ live skill requires two-writer collision evidence\n'
 else
   printf '  ❌ live skill permits a single-session collision verdict\n' >&2
@@ -287,35 +294,35 @@ else
   fail=1
 fi
 
-if check_outcome_throughput_contract "$skill"; then
+if check_outcome_throughput_contract "$skill" "$score_ref"; then
   printf '  ✅ live skill guards outcome throughput with quality floors\n'
 else
   printf '  ❌ live skill does not continuously guard outcome throughput\n' >&2
   fail=1
 fi
 
-if check_self_observation_contract "$skill"; then
+if check_self_observation_contract "$skill" "$score_ref"; then
   printf '  ✅ live skill measures the Agent Improver without self-scoring shortcuts\n'
 else
   printf '  ❌ live skill does not independently monitor the Agent Improver\n' >&2
   fail=1
 fi
 
-if check_research_fallback_contract "$skill"; then
+if check_research_fallback_contract "$research_ref"; then
   printf '  ✅ live skill turns an evidence-clean run into bounded research and routed candidates\n'
 else
   printf '  ❌ live skill can stop idle when telemetry exposes no actionable improvement\n' >&2
   fail=1
 fi
 
-if check_corpus_coverage_contract "$skill"; then
+if check_corpus_coverage_contract "$gather_ref"; then
   printf '  ✅ live skill enumerates delegated transcripts and rejects a filter-sharing control\n'
 else
   printf '  ❌ live skill can measure a partial corpus and call a shared-filter recount a control\n' >&2
   fail=1
 fi
 
-if check_floor_disposition_contract "$skill"; then
+if check_floor_disposition_contract "$verify_ref"; then
   printf '  ✅ live skill reads a bounded no-regression sample as HELD within its coverage\n'
 else
   printf '  ❌ live skill can file gathered floor evidence as UNMEASURED and park a hypothesis forever\n' >&2
@@ -328,8 +335,8 @@ fi
 while IFS='|' read -r label expr; do
   [ -n "$label" ] || continue
   bad="$tmp/floor-bad-$label.md"
-  sed -E "$expr" "$skill" >"$bad"
-  if cmp -s "$skill" "$bad"; then
+  sed -E "$expr" "$verify_ref" >"$bad"
+  if cmp -s "$verify_ref" "$bad"; then
     printf '  ❌ floor ablation %s changed nothing\n' "$label" >&2
     fail=1
   elif check_floor_disposition_contract "$bad"; then
@@ -357,8 +364,8 @@ ABL
 while IFS='|' read -r label sentence; do
   [ -n "$label" ] || continue
   bad="$tmp/floor-contradiction-$label.md"
-  awk -v s="$sentence" '/^## 6\./ && !ins {print "   " s; print ""; ins=1} {print}' "$skill" >"$bad"
-  if cmp -s "$skill" "$bad"; then
+  awk -v s="$sentence" '{print} END {print ""; print "   " s}' "$verify_ref" >"$bad"
+  if cmp -s "$verify_ref" "$bad"; then
     printf '  ❌ floor contradiction %s changed nothing\n' "$label" >&2
     fail=1
   elif check_floor_disposition_contract "$bad"; then
@@ -982,7 +989,7 @@ check_deployment_liveness_contract() { # skill
   esac
 }
 
-if check_deployment_liveness_contract "$skill"; then
+if check_deployment_liveness_contract "$verify_ref"; then
   printf '  ✅ Verify gates an adverse verdict on proven deployment\n'
 else
   printf '  ❌ Verify does not require deployment liveness before an adverse verdict\n' >&2
@@ -1114,7 +1121,7 @@ check_sibling_liveness_contract() { # skill
   esac
 }
 
-if check_sibling_liveness_contract "$skill"; then
+if check_sibling_liveness_contract "$gather_ref"; then
   printf '  ✅ Gather requires sibling liveness and scopes unavailable evidence\n'
 else
   printf '  ❌ Gather lacks the sibling-liveness evidence gate\n' >&2
@@ -1126,8 +1133,8 @@ fi
 while IFS='|' read -r label expr; do
   [ -n "$label" ] || continue
   bad="$tmp/sibling-liveness-$label.md"
-  sed -E "$expr" "$skill" >"$bad"
-  if cmp -s "$skill" "$bad"; then
+  sed -E "$expr" "$gather_ref" >"$bad"
+  if cmp -s "$gather_ref" "$bad"; then
     printf '  ❌ sibling liveness ablation %s changed nothing\n' "$label" >&2
     fail=1
   elif check_sibling_liveness_contract "$bad"; then
@@ -1167,8 +1174,8 @@ EOF
 while IFS='|' read -r label sentence; do
   [ -n "$label" ] || continue
   bad="$tmp/sibling-liveness-contradiction-$label.md"
-  awk -v s="$sentence" '/^Supplement it with:$/ { print s } { print }' "$skill" >"$bad"
-  if cmp -s "$skill" "$bad" || check_sibling_liveness_contract "$bad"; then
+  awk -v s="$sentence" '/^Supplement it with:$/ { print s } { print }' "$gather_ref" >"$bad"
+  if cmp -s "$gather_ref" "$bad" || check_sibling_liveness_contract "$bad"; then
     printf '  ❌ sibling liveness contradiction %s does not fail closed\n' "$label" >&2
     fail=1
   else
@@ -1197,8 +1204,8 @@ awk '
   capture { saved=saved $0 "\n"; next }
   { print }
   END { print saved }
-' "$skill" >"$bad"
-if cmp -s "$skill" "$bad" || check_sibling_liveness_contract "$bad"; then
+' "$gather_ref" >"$bad"
+if cmp -s "$gather_ref" "$bad" || check_sibling_liveness_contract "$bad"; then
   printf '  ❌ sibling liveness must be required at the Gather evidence boundary\n' >&2
   fail=1
 else
