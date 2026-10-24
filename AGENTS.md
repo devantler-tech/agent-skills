@@ -25,6 +25,7 @@ scripts/
 ├── install.sh                  # Install every README-listed skill for one or more agents (user scope)
 ├── check-readme-index.sh       # lint-scripts gate: README ## Skills index ↔ on-disk skills + cross-column consistency
 ├── check-upstream-skills.sh    # 🔗 workflow: resolve each upstream index row against its source repo
+├── check-skill-size.sh         # lint-scripts gate: every SKILL.md within its budget in .github/skill-size-budget.tsv
 ├── publish-skills-release.sh   # Reused publication step: publish the tag, or report it already published
 └── *.test.sh                   # Hermetic self-test beside each script above (all in the lint-scripts gate)
 agent-instructions/             # In-house skill (each dir holds a conformant SKILL.md)
@@ -94,6 +95,9 @@ skills-ref validate ways-of-working
 # 3. Lint the scripts + check the README index lockstep (the `lint-scripts` CI job).
 shellcheck scripts/*.sh
 bash scripts/retired-repo-links.test.sh # verifies the documentation guard remains required and scoped
+./scripts/check-skill-size.sh        # every SKILL.md within its line and byte budget (.github/skill-size-budget.tsv);
+                                  # move detail into references/ rather than raising a ceiling
+./scripts/check-skill-size.test.sh   # self-test: passes inside a budget, fails past it, fails closed on a bad budget file
 ./scripts/check-readme-index.sh   # the exact check CI runs (no gh needed): non-empty parse,
                                   # parsed count == Skills-table rows, every in-house skill indexed,
                                   # every in-house index entry resolves to an on-disk skill dir, and
