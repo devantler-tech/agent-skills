@@ -246,6 +246,15 @@ jobs:
         # (copies the real scripts into throwaway fixtures): no gh or network.
         run: ./scripts/check-readme-index.test.sh
 
+      - name: 📏 Check SKILL.md size budgets
+        # Every activation loads the whole SKILL.md, so a skill may not grow past
+        # its budget in .github/skill-size-budget.tsv. Raising a ceiling means
+        # editing that file, which makes the increase visible in review.
+        run: ./scripts/check-skill-size.sh
+
+      - name: 🧪 Self-test the SKILL.md size budget check
+        run: ./scripts/check-skill-size.test.sh
+
       - name: 🧪 Verify Agent Improver hypothesis eligibility
         # Rate-based hypotheses must not receive a success/failure verdict
         # before both their time and observation-volume floors are met.

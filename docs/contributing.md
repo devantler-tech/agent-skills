@@ -48,8 +48,11 @@ an outage warning is not proof that a source exists. Resolve reported drift befo
 
 Add a root-level directory named after the skill, containing `SKILL.md` with valid `name`,
 `description`, and `license` frontmatter. Index it in the README as well. Keep the instructions
-short, reusable, and agent-neutral. Try them on a realistic task and record where a first-time
-reader needs unstated knowledge; format validation alone does not prove the instructions work.
+short, reusable, and agent-neutral. A `SKILL.md` may be at most 500 lines and 20,000 bytes; put
+detail an agent needs only at one step in a `references/` file and link it from that step.
+`scripts/check-skill-size.sh` enforces the budget recorded in `.github/skill-size-budget.tsv`.
+Try the instructions on a realistic task and record where a first-time reader needs unstated
+knowledge; format validation alone does not prove the instructions work.
 
 With GitHub CLI 2.90.0 or newer, run this from the repository root:
 
