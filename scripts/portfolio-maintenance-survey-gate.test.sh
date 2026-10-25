@@ -157,6 +157,8 @@ check_preemption_contract() { # skill
   return 0
 }
 
+# check_gate_contract <skill> — exit 0 when the dispatch decision, its table, the operative
+# preemption checks and every procedure marker region are present, in order, with their contracts.
 check_gate_contract() { # skill
   local block flat actual_table
   block="$(mktemp)"

@@ -83,6 +83,8 @@ resume_block() { # skill
   awk '/^<!-- resume-preemption:begin -->/{inblock=1; next} /^<!-- resume-preemption:end -->/{inblock=0} inblock' "$1"
 }
 
+# check_resume_pentad_contract <skill> — exit 0 when the resume preemption block holds the complete
+# hygiene pentad sentence; a missing, empty or malformed block fails closed.
 check_resume_pentad_contract() { # skill
   local block flat
   block="$(mktemp)"
