@@ -146,6 +146,7 @@ bash ./scripts/product-engineering-evidence.test.sh # exercises the optional evi
                                                    # preregistration, uncertainty, floors and recovery
 bash ./scripts/product-engineering-disclosure.test.sh # verifies the installed code-quality reference route
                                                       # and refuses disconnected or incomplete packages
+bash ./scripts/native-issue-triage-contract.test.sh # guards operative native-type guidance, fallback and UNKNOWN
 ./scripts/promotion-readiness-contract.test.sh # pins the complete promotion gate in each standalone
                                                # engineering skill and fresh revalidation before
                                                # both self-promotion and merge

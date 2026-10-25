@@ -275,6 +275,9 @@ jobs:
       - name: 🧪 Verify installed code-quality guidance
         run: bash ./scripts/product-engineering-disclosure.test.sh
 
+      - name: 🧪 Verify native issue triage guidance
+        run: bash ./scripts/native-issue-triage-contract.test.sh
+
       - name: 🧪 Verify raw evidence input boundaries
         run: bash ./scripts/evidence-json-boundaries.test.sh
 
