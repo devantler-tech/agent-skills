@@ -4,6 +4,7 @@ set -Eeuo pipefail
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 tmp=$(mktemp -d)
 finished=0
+# Remove only this test's private fixture and preserve failures, including Bash 3.2 aborts.
 cleanup() {
   local rc=$?
   rm -rf "$tmp"
@@ -12,6 +13,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# Verify one installable package's entrypoint route and adjacent conditional references.
 check() {
   local skill=$1 reference target
   reference="$skill/references/code-quality.md"
