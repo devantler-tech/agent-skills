@@ -144,6 +144,8 @@ bash ./scripts/agent-improvement-flow.test.sh # exercises the shipped offline fl
                                              # attribution, age, deduplication, and unknown evidence
 bash ./scripts/product-engineering-evidence.test.sh # exercises the optional evidence-bundle evaluator:
                                                    # preregistration, uncertainty, floors and recovery
+bash ./scripts/product-engineering-disclosure.test.sh # verifies the installed code-quality reference route
+                                                      # and refuses disconnected or incomplete packages
 ./scripts/promotion-readiness-contract.test.sh # pins the complete promotion gate in each standalone
                                                # engineering skill and fresh revalidation before
                                                # both self-promotion and merge

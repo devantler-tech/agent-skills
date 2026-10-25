@@ -272,6 +272,9 @@ jobs:
       - name: 🧪 Verify engineering evidence decisions
         run: bash ./scripts/product-engineering-evidence.test.sh
 
+      - name: 🧪 Verify installed code-quality guidance
+        run: bash ./scripts/product-engineering-disclosure.test.sh
+
       - name: 🧪 Verify raw evidence input boundaries
         run: bash ./scripts/evidence-json-boundaries.test.sh
 
