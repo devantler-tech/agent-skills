@@ -96,6 +96,7 @@ The GitOps repository audit requires [flux-schema 0.15 or newer](https://github.
 | `ways-of-working` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/main/ways-of-working) | `gh skill install devantler-tech/agent-skills ways-of-working` |
 | `write-readme` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/main/write-readme) | `gh skill install devantler-tech/agent-skills write-readme` |
 | `write-contributing` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/main/write-contributing) | `gh skill install devantler-tech/agent-skills write-contributing` |
+| `write-docs-introduction` | [`devantler-tech/agent-skills`](https://github.com/devantler-tech/agent-skills/tree/main/write-docs-introduction) | `gh skill install devantler-tech/agent-skills write-docs-introduction` |
 
 </details>
 

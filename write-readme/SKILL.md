@@ -27,6 +27,10 @@ product, not its development history. Use short paragraphs, familiar words and c
 Keep names readers use to recognize compatibility: “Encrypt secrets with SOPS” is clearer than
 either a bare tool list or a long explanation of encryption internals.
 
+Draw any diagram as a Mermaid block, which GitHub renders, never as ASCII art or box-drawing
+characters: fixed-width drawings overflow phone screens and screen readers read them as noise.
+Prefer a top-down layout with short labels, and keep any directory tree short and narrow.
+
 Use bullets for distinct benefits and a compact table when comparison helps. Keep a useful feature
 overview visible; do not move every reason to choose the product into a reference document. Avoid
 repeating the introduction, explaining every technical noun, or adding warnings for hypothetical
