@@ -64,8 +64,32 @@ check() {
 	done
 }
 
+# Step 1 keeps a summary in SKILL.md and links its complete survey procedure, where these clauses
+# live, in references/survey.md. Check the text an agent reads by following that link: the skill with
+# the reference inserted after the first line that links it. A dropped link or an emptied reference
+# removes the clauses, so the check fails closed.
+linked_skill() { # skill-dir output reference...
+	local dir="$1" out="$2"
+	shift 2
+	LC_ALL=C awk -v dir="$dir" -v refs="$*" '
+		BEGIN { n = split(refs, ref, " ") }
+		{
+			print
+			for (i = 1; i <= n; i++) {
+				if (!done[i] && index($0, "](" ref[i] ")")) {
+					while ((getline line < (dir "/" ref[i])) > 0) print line
+					close(dir "/" ref[i])
+					done[i] = 1
+				}
+			}
+		}
+	' "$dir/SKILL.md" >"$out"
+}
+
 fail=0
 [ -r "$skill" ] || { echo "cannot read $skill" >&2; exit 1; }
+linked_skill "$(dirname "$skill")" "$tmp/linked-skill.md" references/survey.md
+skill="$tmp/linked-skill.md"
 
 if check "$skill"; then
 	echo "  ✓ portfolio-maintenance defers PR driving to the Trust gate fact"

@@ -157,6 +157,8 @@ check_preemption_contract() { # skill
   return 0
 }
 
+# check_gate_contract <skill> — exit 0 when the dispatch decision, its table, the operative
+# preemption checks and every procedure marker region are present, in order, with their contracts.
 check_gate_contract() { # skill
   local block flat actual_table
   block="$(mktemp)"
@@ -184,8 +186,31 @@ check_gate_contract() { # skill
       '^<!-- full-survey:begin -->$' "$deferred_survey_contract"
 }
 
+# Step 1 keeps its dispatch table and a summary in SKILL.md and links its complete procedure in
+# references/survey.md. Check the text an agent reads by following that link: the skill with the
+# reference inserted after the first line that links it. A dropped link or an emptied reference
+# leaves the procedure's markers out, so the gate fails closed.
+linked_skill() { # skill-dir output reference...
+  local dir="$1" out="$2"
+  shift 2
+  LC_ALL=C awk -v dir="$dir" -v refs="$*" '
+    BEGIN { n = split(refs, ref, " ") }
+    {
+      print
+      for (i = 1; i <= n; i++) {
+        if (!done[i] && index($0, "](" ref[i] ")")) {
+          while ((getline line < (dir "/" ref[i])) > 0) print line
+          close(dir "/" ref[i])
+          done[i] = 1
+        }
+      }
+    }
+  ' "$dir/SKILL.md" >"$out"
+}
+
 fail=0
-skill_file="$repo_root/portfolio-maintenance/SKILL.md"
+skill_file="$tmp/linked-skill.md"
+linked_skill "$repo_root/portfolio-maintenance" "$skill_file" references/survey.md
 if check_gate_contract "$skill_file"; then
   printf '  ✅ fresh higher-rung work skips the broad survey without carry-forward\n'
 else

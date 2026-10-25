@@ -127,6 +127,30 @@ mutate() {
 	done
 }
 
+# portfolio-maintenance keeps a summary of operate rung 2 in SKILL.md and links its complete text,
+# where most of its clauses live, in references/driving-prs.md. Check the text an agent reads by
+# following that link: the skill with the reference inserted after the first line that links it. A
+# dropped link or an emptied reference removes those clauses, so the check fails closed.
+linked_skill() { # skill-dir output reference...
+	local dir="$1" out="$2"
+	shift 2
+	LC_ALL=C awk -v dir="$dir" -v refs="$*" '
+		BEGIN { n = split(refs, ref, " ") }
+		{
+			print
+			for (i = 1; i <= n; i++) {
+				if (!done[i] && index($0, "](" ref[i] ")")) {
+					while ((getline line < (dir "/" ref[i])) > 0) print line
+					close(dir "/" ref[i])
+					done[i] = 1
+				}
+			}
+		}
+	' "$dir/SKILL.md" >"$out"
+}
+linked_skill "$(dirname "$maintenance_skill")" "$tmp/portfolio-maintenance-linked.md" references/driving-prs.md
+maintenance_skill="$tmp/portfolio-maintenance-linked.md"
+
 fail=0
 
 if check "$product_skill" "${product_clauses[@]}"; then

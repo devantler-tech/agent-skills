@@ -83,6 +83,8 @@ resume_block() { # skill
   awk '/^<!-- resume-preemption:begin -->/{inblock=1; next} /^<!-- resume-preemption:end -->/{inblock=0} inblock' "$1"
 }
 
+# check_resume_pentad_contract <skill> — exit 0 when the resume preemption block holds the complete
+# hygiene pentad sentence; a missing, empty or malformed block fails closed.
 check_resume_pentad_contract() { # skill
   local block flat
   block="$(mktemp)"
@@ -95,9 +97,35 @@ check_resume_pentad_contract() { # skill
   grep -Fq "$resume_pentad_contract" <<<"$flat"
 }
 
+# portfolio-maintenance keeps a summary of steps 1 and 2 in SKILL.md and links their complete text
+# in references/. Check the text an agent reads by following those links: the skill with each
+# reference inserted after the first line that links it. A dropped link or an emptied reference
+# removes that text, so its checks fail closed.
+linked_skill() { # skill-dir output reference...
+  local dir="$1" out="$2"
+  shift 2
+  LC_ALL=C awk -v dir="$dir" -v refs="$*" '
+    BEGIN { n = split(refs, ref, " ") }
+    {
+      print
+      for (i = 1; i <= n; i++) {
+        if (!done[i] && index($0, "](" ref[i] ")")) {
+          while ((getline line < (dir "/" ref[i])) > 0) print line
+          close(dir "/" ref[i])
+          done[i] = 1
+        }
+      }
+    }
+  ' "$dir/SKILL.md" >"$out"
+}
+maintenance_text="$tmp/portfolio-maintenance-linked.md"
+linked_skill "$repo_root/portfolio-maintenance" "$maintenance_text" \
+  references/survey.md references/driving-prs.md
+
 fail=0
 for skill in portfolio-maintenance product-engineering self-improvement; do
   skill_file="$repo_root/$skill/SKILL.md"
+  [ "$skill" != portfolio-maintenance ] || skill_file="$maintenance_text"
   if check_readiness_contract "$skill_file"; then
     printf '  ✅ %s carries the complete readiness contract\n' "$skill"
   else
@@ -118,14 +146,14 @@ for skill in portfolio-maintenance product-engineering self-improvement; do
   fi
 done
 
-if check_trusted_merge_contract "$repo_root/portfolio-maintenance/SKILL.md"; then
+if check_trusted_merge_contract "$maintenance_text"; then
   printf '  ✅ existing-PR path revalidates directly before merge\n'
 else
   printf '  ❌ existing-PR path can merge on stale readiness\n' >&2
   fail=1
 fi
 
-if check_resume_pentad_contract "$repo_root/portfolio-maintenance/SKILL.md"; then
+if check_resume_pentad_contract "$maintenance_text"; then
   printf '  ✅ resume gate enumerates the complete hygiene pentad\n'
 else
   printf '  ❌ resume gate enumerates an abbreviated pentad\n' >&2
