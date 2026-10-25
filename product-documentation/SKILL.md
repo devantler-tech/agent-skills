@@ -41,7 +41,8 @@ without forcing every product into identical navigation:
 | Understand a design | Explanations of responsibilities, concepts and tradeoffs, linked from the relevant tasks |
 
 Give the home page a short product explanation and clear routes to a first result
-and common tasks. Choose concrete navigation labels from what users do or look up.
+and common tasks; the `write-docs-introduction` skill covers writing it, when that
+skill is available. Choose concrete navigation labels from what users do or look up.
 Keep troubleshooting near the failing task: symptom, likely cause, a diagnostic
 step, a correction and the result that confirms recovery.
 
@@ -62,6 +63,15 @@ Make navigation, headings, search, code blocks and theme contrast useful on narr
 and wide screens. Prefer native accessible components over custom controls unless
 the task requires them. Maintain canonical URLs, edit links, redirects when routes
 move, a useful missing-page path and downloadable examples where appropriate.
+
+Draw flows, architectures and sequences with Mermaid or the site's diagram
+component, never as ASCII art or box-drawing characters in a code block.
+Fixed-width drawings overflow narrow screens, break when fonts differ, and screen
+readers read them as noise. Prefer top-down layouts with short labels, give each
+diagram an accessible title and description, and leave colours to the site theme.
+Show directory layouts with the site's file-tree component where it has one. When
+converting a drawing, keep every step and label, then check the rendered result at
+phone width in light and dark themes.
 
 ## Verify the result people will use
 
