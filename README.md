@@ -1,4 +1,14 @@
-# Agent Skills
+# Agent Skills — historical source
+
+> The maintained skills have moved into [Agent Plugins](https://github.com/devantler-tech/agent-plugins). Use its [plugin catalogue](https://github.com/devantler-tech/agent-plugins/blob/main/docs/plugins.md) for current sources and installation. This repository is retained for its Git history, previous releases and existing links; it is leaving the active portfolio.
+
+To install the maintained engineering workflow directly, use:
+
+```sh
+gh skill install devantler-tech/agent-plugins plugins/engineering-practices/skills/ways-of-working --agent codex --scope project
+```
+
+The catalogue below records the former source layout.
 
 Reusable instructions that help AI coding assistants work with Kubernetes, GitHub, Go, web design, and software engineering. This catalogue is for developers using Codex, Claude Code, GitHub Copilot, Cursor, or another assistant that supports [Agent Skills](https://agentskills.io).
 
